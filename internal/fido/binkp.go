@@ -50,6 +50,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -90,7 +91,7 @@ func Poll(nd *NetworkDef, outboundFiles []string, inboundDir string) *PollResult
 	// Strip point from uplink address for lookup — we just need host:port.
 	addr, _ := ParseAddr(host)
 	port := nd.Port()
-	target := fmt.Sprintf("%s:%d", addrToIP(addr, host), port)
+	target := net.JoinHostPort(addrToIP(addr, host), strconv.Itoa(port))
 
 	conn, err := net.DialTimeout("tcp", target, 30*time.Second)
 	if err != nil {
