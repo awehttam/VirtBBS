@@ -190,7 +190,7 @@ dotnet run
 | Minor (x.**N**.0) | Bumped on significant feature additions |
 | Major (**N**.0.0) | Bumped on explicit request |
 
-Current version: **0.0.1**
+Current version: **0.0.8**
 
 ---
 

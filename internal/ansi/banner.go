@@ -26,6 +26,7 @@
 //
 // Change History:
 //   v0.0.6  2026-06-24  Initial implementation — dynamic ANSI block-letter banner
+//   v0.0.8  2026-06-25  Add apostrophe (') glyph to the block-letter font
 // ============================================================================
 
 // Package ansi provides ANSI escape sequence helpers and the dynamic BBS
@@ -420,5 +421,12 @@ var font = map[rune][5]string{
 		"  █  ",
 		"     ",
 		"  █  ",
+	},
+	'\'': {
+		" █   ",
+		" █   ",
+		"     ",
+		"     ",
+		"     ",
 	},
 }

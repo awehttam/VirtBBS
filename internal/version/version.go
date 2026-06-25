@@ -38,6 +38,9 @@
 //                        with word-wrap, cursor movement, cut/paste, insert/overwrite, quoted replies;
 //                        simple line editor with /S /A /L /? slash commands; user-selectable via
 //                        profile menu [M]; EditorType field added to user record
+//   v0.0.8  2026-06-25  Replaced the Fyne sysop GUI with a .NET/Avalonia UI console; ANSI banner
+//                        font now supports the apostrophe (') character; bumped golang.org/x/crypto
+//                        and Go toolchain to clear Dependabot vulnerabilities
 // ============================================================================
 
 // Package version holds the VirtBBS version number.
@@ -48,4 +51,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "0.0.7"
+const Version = "0.0.8"
