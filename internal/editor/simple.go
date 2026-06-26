@@ -17,8 +17,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-
-	"github.com/virtbbs/virtbbs/internal/ansi"
 )
 
 // runSimple implements the traditional PCBoard-style line-by-line editor.
@@ -30,20 +28,21 @@ import (
 //	/L — list the message so far
 //	/H or /? — help
 func runSimple(rw io.ReadWriter, cfg Config) Result {
-	writeStr(rw, "\r\n")
-	writeStr(rw, "\x1b[1;36m┌─ Message Editor ─────────────────────────────────────────────────────┐\x1b[0m\r\n")
-	writeStr(rw, "\x1b[36m│\x1b[0m Enter text one line at a time.  Blank line to end.                  \x1b[36m│\x1b[0m\r\n")
-	writeStr(rw, "\x1b[36m│\x1b[0m Commands: \x1b[1;33m/S\x1b[0m=Save  \x1b[1;33m/A\x1b[0m=Abort  \x1b[1;33m/L\x1b[0m=List  \x1b[1;33m/?\x1b[0m=Help           \x1b[36m│\x1b[0m\r\n")
-	writeStr(rw, "\x1b[1;36m└──────────────────────────────────────────────────────────────────────┘\x1b[0m\r\n")
+	enc := editorEncode(cfg)
+	writeStr(rw, enc, "\r\n")
+	writeStr(rw, enc, "\x1b[1;36m┌─ Message Editor ─────────────────────────────────────────────────────┐\x1b[0m\r\n")
+	writeStr(rw, enc, "\x1b[36m│\x1b[0m Enter text one line at a time.  Blank line to end.                  \x1b[36m│\x1b[0m\r\n")
+	writeStr(rw, enc, "\x1b[36m│\x1b[0m Commands: \x1b[1;33m/S\x1b[0m=Save  \x1b[1;33m/A\x1b[0m=Abort  \x1b[1;33m/L\x1b[0m=List  \x1b[1;33m/?\x1b[0m=Help           \x1b[36m│\x1b[0m\r\n")
+	writeStr(rw, enc, "\x1b[1;36m└──────────────────────────────────────────────────────────────────────┘\x1b[0m\r\n")
 
 	// Pre-populate with InitBody (e.g. quoted text for replies).
 	var lines []string
 	if cfg.InitBody != "" {
 		lines = splitLines(cfg.InitBody)
 		for _, l := range lines {
-			writeStr(rw, "\x1b[90m > \x1b[0m"+l+"\r\n")
+			writeStr(rw, enc, "\x1b[90m > \x1b[0m"+l+"\r\n")
 		}
-		writeStr(rw, "\r\n")
+		writeStr(rw, enc, "\r\n")
 	}
 
 	wrapCol := cfg.WrapCol
@@ -53,8 +52,8 @@ func runSimple(rw io.ReadWriter, cfg Config) Result {
 
 	for {
 		lineNum := len(lines) + 1
-		writeStr(rw, fmt.Sprintf("\x1b[32m%3d:\x1b[0m ", lineNum))
-		line := readLine(rw)
+		writeStr(rw, enc, fmt.Sprintf("\x1b[32m%3d:\x1b[0m ", lineNum))
+		line := readLine(rw, enc)
 
 		// Slash commands (only at start of line).
 		if strings.HasPrefix(line, "/") {
@@ -64,21 +63,21 @@ func runSimple(rw io.ReadWriter, cfg Config) Result {
 				body := joinLines(lines)
 				return Result{Body: body, Lines: len(lines)}
 			case "/A", "/ABORT":
-				writeStr(rw, "\x1b[1;31mMessage aborted.\x1b[0m\r\n")
+				writeStr(rw, enc, "\x1b[1;31mMessage aborted.\x1b[0m\r\n")
 				return Result{Aborted: true}
 			case "/L", "/LIST":
-				writeStr(rw, "\r\n\x1b[1;36m── Message so far ──────────────────────────────────\x1b[0m\r\n")
+				writeStr(rw, enc, "\r\n\x1b[1;36m── Message so far ──────────────────────────────────\x1b[0m\r\n")
 				for i, l := range lines {
-					writeStr(rw, fmt.Sprintf("\x1b[90m%3d│\x1b[0m %s\r\n", i+1, l))
+					writeStr(rw, enc, fmt.Sprintf("\x1b[90m%3d│\x1b[0m %s\r\n", i+1, l))
 				}
-				writeStr(rw, "\x1b[1;36m────────────────────────────────────────────────────\x1b[0m\r\n\r\n")
+				writeStr(rw, enc, "\x1b[1;36m────────────────────────────────────────────────────\x1b[0m\r\n\r\n")
 				continue
 			case "/H", "/?", "/HELP":
-				writeStr(rw, "\r\n\x1b[1;33mSimple Editor Commands:\x1b[0m\r\n")
-				writeStr(rw, "  \x1b[33m/S\x1b[0m  or blank line after text — Save and send\r\n")
-				writeStr(rw, "  \x1b[33m/A\x1b[0m  — Abort and discard message\r\n")
-				writeStr(rw, "  \x1b[33m/L\x1b[0m  — List message so far\r\n")
-				writeStr(rw, "  \x1b[33m/?\x1b[0m  — This help screen\r\n\r\n")
+				writeStr(rw, enc, "\r\n\x1b[1;33mSimple Editor Commands:\x1b[0m\r\n")
+				writeStr(rw, enc, "  \x1b[33m/S\x1b[0m  or blank line after text — Save and send\r\n")
+				writeStr(rw, enc, "  \x1b[33m/A\x1b[0m  — Abort and discard message\r\n")
+				writeStr(rw, enc, "  \x1b[33m/L\x1b[0m  — List message so far\r\n")
+				writeStr(rw, enc, "  \x1b[33m/?\x1b[0m  — This help screen\r\n\r\n")
 				continue
 			}
 		}
@@ -86,7 +85,7 @@ func runSimple(rw io.ReadWriter, cfg Config) Result {
 		// Blank line = end of message.
 		if line == "" {
 			if len(lines) == 0 {
-				writeStr(rw, "\x1b[1;31mNo message entered.\x1b[0m\r\n")
+				writeStr(rw, enc, "\x1b[1;31mNo message entered.\x1b[0m\r\n")
 				return Result{Aborted: true}
 			}
 			body := joinLines(lines)
@@ -105,7 +104,7 @@ func runSimple(rw io.ReadWriter, cfg Config) Result {
 			lines = append(lines, line[:split])
 			line = strings.TrimLeft(line[split:], " ")
 			if len(lines) >= cfg.MaxLines {
-				writeStr(rw, "\x1b[1;31mMaximum message length reached.\x1b[0m\r\n")
+				writeStr(rw, enc, "\x1b[1;31mMaximum message length reached.\x1b[0m\r\n")
 				body := joinLines(lines)
 				return Result{Body: body, Lines: len(lines)}
 			}
@@ -113,7 +112,7 @@ func runSimple(rw io.ReadWriter, cfg Config) Result {
 
 		lines = append(lines, line)
 		if len(lines) >= cfg.MaxLines {
-			writeStr(rw, "\x1b[1;31mMaximum message length reached.\x1b[0m\r\n")
+			writeStr(rw, enc, "\x1b[1;31mMaximum message length reached.\x1b[0m\r\n")
 			body := joinLines(lines)
 			return Result{Body: body, Lines: len(lines)}
 		}
@@ -121,7 +120,7 @@ func runSimple(rw io.ReadWriter, cfg Config) Result {
 }
 
 // readLine reads one line of input with basic backspace support.
-func readLine(rw io.ReadWriter) string {
+func readLine(rw io.ReadWriter, enc func(string) string) string {
 	var buf []byte
 	b := make([]byte, 1)
 	for {
@@ -131,15 +130,15 @@ func readLine(rw io.ReadWriter) string {
 		ch := b[0]
 		switch {
 		case ch == 0x0D || ch == 0x0A: // Enter
-			writeStr(rw, "\r\n")
+			writeStr(rw, enc, "\r\n")
 			return string(buf)
 		case ch == 0x08 || ch == 0x7F: // Backspace
 			if len(buf) > 0 {
 				buf = buf[:len(buf)-1]
-				writeStr(rw, "\x08 \x08")
+				writeStr(rw, enc, "\x08 \x08")
 			}
 		case ch == 0x03 || ch == 0x01: // Ctrl+C / Ctrl+A — signal abort via /A
-			writeStr(rw, "\r\n")
+			writeStr(rw, enc, "\r\n")
 			return "/A"
 		case ch >= 0x20: // printable
 			buf = append(buf, ch)
@@ -149,9 +148,6 @@ func readLine(rw io.ReadWriter) string {
 	return string(buf)
 }
 
-// writeStr writes a string to rw, ignoring errors. Box-drawing and other
-// special Unicode characters are translated to CP437 so classic BBS
-// terminals (SyncTerm, etc.) render them correctly instead of as garbage.
-func writeStr(w io.Writer, s string) {
-	_, _ = io.WriteString(w, ansi.ToCP437(s))
+func writeStr(w io.Writer, enc func(string) string, s string) {
+	_, _ = io.WriteString(w, enc(s))
 }

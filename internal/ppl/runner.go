@@ -35,7 +35,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/virtbbs/virtbbs/internal/ansi"
 )
@@ -65,20 +64,18 @@ func RunSource(src string, env *Environment) error {
 }
 
 // EnvFromSession creates a PPL Environment connected to a BBS session's I/O.
-// rw is the session ReadWriter, user fields are passed in separately.
-func EnvFromSession(rw io.ReadWriter, userName, userCity string, userSec, timesOn, nodeNum int, bbsName, sysopName string) *Environment {
-	rd := newBufReader(rw)
+// inputLine reads one line of user input after an optional prompt; the session
+// layer should supply a reader that treats both CR and LF as end-of-line (SSH
+// PTYs typically send CR only).
+func EnvFromSession(rw io.ReadWriter, userName, userCity string, userSec, timesOn, nodeNum int, bbsName, sysopName string, cp437Out bool, inputLine func(prompt string) string) *Environment {
+	if inputLine == nil {
+		inputLine = func(prompt string) string { return readLineRaw(rw, prompt, cp437Out) }
+	}
 	return &Environment{
 		Print: func(s string) {
-			_, _ = io.WriteString(rw, ansi.ToCP437(s))
+			_, _ = io.WriteString(rw, ansi.EncodeOutput(s, cp437Out))
 		},
-		Input: func(prompt string) string {
-			if prompt != "" {
-				_, _ = io.WriteString(rw, ansi.ToCP437(prompt))
-			}
-			line, _ := rd.ReadString('\n')
-			return strings.TrimRight(line, "\r\n")
-		},
+		Input: inputLine,
 		ReadKey: func() byte {
 			buf := make([]byte, 1)
 			_, _ = rw.Read(buf)
@@ -105,30 +102,34 @@ func EnvFromSession(rw io.ReadWriter, userName, userCity string, userSec, timesO
 	}
 }
 
-// newBufReader wraps an io.ReadWriter with a simple line reader.
-func newBufReader(r io.Reader) interface{ ReadString(byte) (string, error) } {
-	return &simpleBufReader{r: r}
-}
-
-type simpleBufReader struct {
-	r   io.Reader
-	buf []byte
-}
-
-func (b *simpleBufReader) ReadString(delim byte) (string, error) {
+// readLineRaw is a fallback line reader for tests/tools without a session.
+func readLineRaw(rw io.ReadWriter, prompt string, cp437Out bool) string {
+	if prompt != "" {
+		_, _ = io.WriteString(rw, ansi.EncodeOutput(prompt, cp437Out))
+	}
+	var buf []byte
+	single := make([]byte, 1)
 	for {
-		p := make([]byte, 1)
-		n, err := b.r.Read(p)
+		n, err := rw.Read(single)
 		if n > 0 {
-			b.buf = append(b.buf, p[0])
-			if p[0] == delim {
-				line := string(b.buf)
-				b.buf = b.buf[:0]
-				return line, nil
+			b := single[0]
+			if b == '\r' || b == '\n' {
+				break
 			}
+			if b == 0x08 || b == 0x7F {
+				if len(buf) > 0 {
+					buf = buf[:len(buf)-1]
+				}
+				continue
+			}
+			if b < 0x20 {
+				continue
+			}
+			buf = append(buf, b)
 		}
 		if err != nil {
-			return string(b.buf), err
+			break
 		}
 	}
+	return string(buf)
 }

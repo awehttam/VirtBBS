@@ -95,7 +95,7 @@ func Banner(name string) string {
 		line := rows[row].String()
 		// Pad to width.
 		padded := line
-		vis := visWidth(line)
+		vis := VisibleWidth(line)
 		if vis < width {
 			padded = line + strings.Repeat(" ", width-vis)
 		} else if vis > width {
@@ -108,7 +108,7 @@ func Banner(name string) string {
 			sb.WriteString(bnWhite)
 		}
 		sb.WriteString(bnCyan + bnBold + "║" + bnReset + bnBold)
-		sb.WriteString(" " + padded)
+		sb.WriteString(padded)
 		sb.WriteString(bnCyan + bnBold + "║\r\n")
 	}
 
@@ -116,30 +116,9 @@ func Banner(name string) string {
 	sb.WriteString(bnCyan + bnBold + "║" + strings.Repeat(" ", width) + "║\r\n")
 
 	// Bottom border.
-	sb.WriteString("╚" + strings.Repeat("═", width) + "╝\r\n")
-	sb.WriteString(bnReset)
+	sb.WriteString("╚" + strings.Repeat("═", width) + "╝" + bnReset + "\r\n")
 
 	return sb.String()
-}
-
-// visWidth returns the visible character width (ignoring ANSI escape sequences).
-func visWidth(s string) int {
-	w := 0
-	inEsc := false
-	for _, c := range s {
-		if inEsc {
-			if c == 'm' {
-				inEsc = false
-			}
-			continue
-		}
-		if c == '\x1b' {
-			inEsc = true
-			continue
-		}
-		w++
-	}
-	return w
 }
 
 // font maps uppercase letters and digits to 5-row block-letter glyphs.

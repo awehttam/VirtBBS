@@ -61,6 +61,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/virtbbs/virtbbs/internal/ansi"
 )
 
 // ErrNotFound is returned when no matching display file is found.
@@ -140,8 +142,11 @@ func expand(content string, vars *Vars) string {
 		"@PAUSE@", "", // can't pause in a simple string render; strip it
 	}
 	r := strings.NewReplacer(replacements...)
-	// Normalise line endings: bare \n → \r\n for terminal compatibility.
 	out := r.Replace(content)
+	out = ansi.DecodeANSBytes(out)
+	out = ansi.ExpandPCBAnsi(out)
+	out = alignBoxLines(out)
+	// Normalise line endings: bare \n → \r\n for terminal compatibility.
 	out = strings.ReplaceAll(out, "\r\n", "\n")
 	out = strings.ReplaceAll(out, "\r", "\n")
 	out = strings.ReplaceAll(out, "\n", "\r\n")

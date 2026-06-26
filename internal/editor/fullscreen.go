@@ -91,11 +91,16 @@ func moveTo(row, col int) string {
 	return fmt.Sprintf("\x1b[%d;%dH", row, col)
 }
 
+func (e *fsEditor) writeStr(s string) {
+	_, _ = io.WriteString(e.rw, e.enc(s))
+}
+
 // ─── Editor state ─────────────────────────────────────────────────────────────
 
 type fsEditor struct {
 	rw      io.ReadWriter
 	cfg     Config
+	enc     func(string) string
 	lines   []string  // text buffer (each element = one line, no newlines)
 	cx      int       // cursor column (0-based char index into current line)
 	cy      int       // cursor row (0-based index into lines[])
@@ -118,6 +123,7 @@ func runFullScreen(rw io.ReadWriter, cfg Config) Result {
 	e := &fsEditor{
 		rw:     rw,
 		cfg:    cfg,
+		enc:    editorEncode(cfg),
 		lines:  lines,
 		cx:     0,
 		cy:     0,
@@ -253,11 +259,11 @@ func (e *fsEditor) draw() {
 	e.buildStatusRow(&sb)
 	// Position cursor.
 	sb.WriteString(e.cursorPos())
-	writeStr(e.rw, sb.String())
+	e.writeStr( sb.String())
 }
 
 func (e *fsEditor) clearScreen() {
-	writeStr(e.rw, ansiClear+ansiHome+ansiReset)
+	e.writeStr( ansiClear+ansiHome+ansiReset)
 }
 
 // ── Title bar ─────────────────────────────────────────────────────────────────
@@ -265,7 +271,7 @@ func (e *fsEditor) clearScreen() {
 func (e *fsEditor) drawTitleBar() {
 	var sb strings.Builder
 	e.buildTitleBar(&sb)
-	writeStr(e.rw, sb.String()+e.cursorPos())
+	e.writeStr( sb.String()+e.cursorPos())
 }
 
 func (e *fsEditor) buildTitleBar(sb *strings.Builder) {
@@ -355,7 +361,7 @@ func (e *fsEditor) buildLineContent(sb *strings.Builder, lineIdx int) {
 func (e *fsEditor) drawStatusRow() {
 	var sb strings.Builder
 	e.buildStatusRow(&sb)
-	writeStr(e.rw, sb.String()+e.cursorPos())
+	e.writeStr( sb.String()+e.cursorPos())
 }
 
 func (e *fsEditor) buildStatusRow(sb *strings.Builder) {
@@ -395,7 +401,7 @@ func (e *fsEditor) cursorPos() string {
 // Also redraws the title bar so line/col stays current.
 func (e *fsEditor) redrawCursor() {
 	e.drawTitleBar()
-	writeStr(e.rw, e.cursorPos())
+	e.writeStr( e.cursorPos())
 }
 
 // redrawFromLine redraws from lineIdx down to the bottom of the text area.
@@ -417,7 +423,7 @@ func (e *fsEditor) redrawFromLine(lineIdx int) {
 	}
 	e.buildTitleBar(&sb)
 	sb.WriteString(e.cursorPos())
-	writeStr(e.rw, sb.String())
+	e.writeStr( sb.String())
 }
 
 // redrawLine redraws a single line and repositions the cursor.
@@ -432,7 +438,7 @@ func (e *fsEditor) redrawLine(lineIdx int) {
 	sb.WriteString(ansiErasEOL)
 	e.buildTitleBar(&sb)
 	sb.WriteString(e.cursorPos())
-	writeStr(e.rw, sb.String())
+	e.writeStr( sb.String())
 }
 
 // ─── Scrolling ────────────────────────────────────────────────────────────────
@@ -868,7 +874,7 @@ func (e *fsEditor) save() Result {
 func (e *fsEditor) confirmAbort() bool {
 	// Draw prompt in status row.
 	msg := colErr + " Abort message? All text will be lost. (Y/N): " + ansiReset
-	writeStr(e.rw, moveTo(statusRow, 1)+colStatus+msg+strings.Repeat(" ", 10)+ansiReset+moveTo(statusRow, 50))
+	e.writeStr( moveTo(statusRow, 1)+colStatus+msg+strings.Repeat(" ", 10)+ansiReset+moveTo(statusRow, 50))
 
 	// Read single key.
 	kp := e.kr.next()
@@ -923,6 +929,6 @@ func (e *fsEditor) showHelp() {
 
 	sb.WriteString("\r\n")
 	sb.WriteString(colPrompt + "  Press any key to return to editor…" + ansiReset)
-	writeStr(e.rw, sb.String())
+	e.writeStr( sb.String())
 	e.kr.next() // wait for any key
 }

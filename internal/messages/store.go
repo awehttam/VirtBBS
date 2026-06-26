@@ -263,6 +263,13 @@ func (s *Store) MarkExported(id int64) error {
 	return err
 }
 
+// TotalCount returns the number of non-deleted messages across all conferences.
+func (s *Store) TotalCount() (int, error) {
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM messages WHERE status!='D'`).Scan(&n)
+	return n, err
+}
+
 // HighMsgNumber returns the highest message number in a conference.
 func (s *Store) HighMsgNumber(conferenceID int) (int, error) {
 	var n int

@@ -1,0 +1,62 @@
+; stats.pps — Display BBS and user statistics
+; Requires GETUSER + GETSTATS (VirtBBS session/callers/message counters)
+
+GETUSER
+GETSTATS
+
+CLS
+PRINTLN "╔═══════════════════════════════════════════════╗"
+PRINTLN "║              BBS Statistics                   ║"
+PRINTLN "╠═══════════════════════════════════════════════╣"
+PRINTLN "║  " + BBSNAME + SPACE(43 - LEN(BBSNAME)) + "║"
+PRINTLN "╚═══════════════════════════════════════════════╝"
+PRINTLN ""
+
+PROCEDURE ShowField(STRING label, STRING value)
+    PRINTLN "  " + label + SPACE(14 - LEN(label)) + ": " + value
+ENDPROC
+
+PROCEDURE Section(STRING title)
+    PRINTLN ""
+    PRINTLN "  ┌─ " + title + SPACE(40 - LEN(title)) + "┐"
+ENDPROC
+
+Section "This Call — " + U_NAME
+ShowField "Node",        STR(NODENUM)
+ShowField "Time on",     STR(S_TIMEON) + " min"
+IF S_TIMELEFT > 0 THEN
+    ShowField "Time left", STR(S_TIMELEFT) + " min"
+ENDIF
+ShowField "Msgs read",   STR(S_MSGREAD)
+ShowField "Msgs posted", STR(S_MSGLEFT)
+ShowField "Files down",  STR(S_FILEDOWN)
+ShowField "Files up",    STR(S_FILEUP)
+PRINTLN "  └" + SPACE(42) + "┘"
+
+PRINTLN "  Press Enter to continue..."
+INPUTSTR junk, ""
+
+Section "Your Account"
+ShowField "Times on",    STR(U_TIMESON)
+ShowField "Last login",  U_LASTDATE + " " + U_LASTTIME
+ShowField "Uploads",     STR(U_UPLOADS) + "  (" + STR(U_KUP) + " KB)"
+ShowField "Downloads",   STR(U_DOWNLOADS) + "  (" + STR(U_KDOWN) + " KB)"
+ShowField "New mail",    STR(U_NEWMSG)
+PRINTLN "  └" + SPACE(42) + "┘"
+
+Section "System Today"
+ShowField "Calls today", STR(BBS_TODAYCALLS)
+ShowField "Unique users", STR(BBS_TODAYUNIQUE)
+PRINTLN "  └" + SPACE(42) + "┘"
+
+Section "Message Base"
+ShowField "Conferences", STR(BBS_CONFS)
+ShowField "Total msgs",  STR(BBS_MSGS)
+PRINTLN "  └" + SPACE(42) + "┘"
+
+PRINTLN ""
+PRINTLN "  Press Enter to continue..."
+INPUTSTR junk, ""
+PRINTLN ""
+
+END

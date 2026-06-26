@@ -75,6 +75,29 @@ type Environment struct {
 	UserSec      int
 	UserTimesOn  int
 	UserMailWait bool
+	// Lifetime user file/connection stats (from users DB).
+	UserUploads         int
+	UserDownloads       int
+	UserBytesUploaded   int64
+	UserBytesDownloaded int64
+	UserLastLoginDate   string
+	UserLastLoginTime   string
+	// This-session activity (reset each call; written to callers log at logoff).
+	SessMsgsRead  int
+	SessMsgsLeft  int
+	SessFilesDown int
+	SessFilesUp   int
+	SessMinutes   int
+	SessTimeLeft  int
+	// BBS-wide and per-user message stats.
+	NewMsgsTotal   int
+	BBSCallsToday  int
+	BBSUniqueToday int
+	BBSMsgTotal    int
+	BBSConfCount   int
+	BBSFileTotal   int
+	BBSFileToday   int
+	BBSFileMonth   int
 	// BBS info
 	BBSName      string
 	SysopName    string
@@ -409,6 +432,29 @@ func (interp *Interpreter) execCall(n *CallStmt) (signal, error) {
 		interp.setVar("U_SEC", IntVal(int64(interp.env.UserSec)))
 		interp.setVar("U_TIMESON", IntVal(int64(interp.env.UserTimesOn)))
 		interp.setVar("U_MAILW", BoolVal(interp.env.UserMailWait))
+
+	case "GETSTATS":
+		e := interp.env
+		interp.setVar("U_UPLOADS", IntVal(int64(e.UserUploads)))
+		interp.setVar("U_DOWNLOADS", IntVal(int64(e.UserDownloads)))
+		interp.setVar("U_KUP", IntVal(e.UserBytesUploaded/1024))
+		interp.setVar("U_KDOWN", IntVal(e.UserBytesDownloaded/1024))
+		interp.setVar("U_LASTDATE", StrVal(e.UserLastLoginDate))
+		interp.setVar("U_LASTTIME", StrVal(e.UserLastLoginTime))
+		interp.setVar("S_MSGREAD", IntVal(int64(e.SessMsgsRead)))
+		interp.setVar("S_MSGLEFT", IntVal(int64(e.SessMsgsLeft)))
+		interp.setVar("S_FILEDOWN", IntVal(int64(e.SessFilesDown)))
+		interp.setVar("S_FILEUP", IntVal(int64(e.SessFilesUp)))
+		interp.setVar("S_TIMEON", IntVal(int64(e.SessMinutes)))
+		interp.setVar("S_TIMELEFT", IntVal(int64(e.SessTimeLeft)))
+		interp.setVar("U_NEWMSG", IntVal(int64(e.NewMsgsTotal)))
+		interp.setVar("BBS_TODAYCALLS", IntVal(int64(e.BBSCallsToday)))
+		interp.setVar("BBS_TODAYUNIQUE", IntVal(int64(e.BBSUniqueToday)))
+		interp.setVar("BBS_MSGS", IntVal(int64(e.BBSMsgTotal)))
+		interp.setVar("BBS_CONFS", IntVal(int64(e.BBSConfCount)))
+		interp.setVar("BBS_FILETOTAL", IntVal(int64(e.BBSFileTotal)))
+		interp.setVar("BBS_FILETODAY", IntVal(int64(e.BBSFileToday)))
+		interp.setVar("BBS_FILEMONTH", IntVal(int64(e.BBSFileMonth)))
 
 	case "PUTUSER":
 		interp.env.UserName = interp.getVar("U_NAME").ToString()

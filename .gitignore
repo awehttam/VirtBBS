@@ -30,6 +30,7 @@ android/**/local.properties
 /data/*.pem
 /logs/*.log
 /logs/*.DAT
+/files/
 
 # OS / editor
 .DS_Store

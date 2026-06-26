@@ -236,6 +236,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("node store: %v", err)
 	}
+	if err := nodeStore.ClearAll(); err != nil {
+		log.Fatalf("node store clear: %v", err)
+	}
 
 	callerLogPath := cfg.Paths.CallerLog
 	if callerLogPath == "" {
@@ -317,6 +320,8 @@ func main() {
 			log.Printf("VirtTerm error: %v", err)
 		}
 	}()
+
+	files.StartDailyLocalFile(fileStore)
 
 	// Start the automatic FidoNet poll/toss scheduler (one goroutine per
 	// enabled network with a configured uplink — see internal/scheduler).

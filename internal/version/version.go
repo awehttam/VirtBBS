@@ -116,6 +116,10 @@
 //                        and see nodelist import status — both previously
 //                        added server-side in Phases 0/2 but never surfaced
 //                        in the GUI.
+//   v0.9.1  2026-06-26  VirtTerm/VirtTermMac: new internal/userapi session.whoami
+//                        endpoint so clients can show the logged-in user's name and
+//                        the BBS name (e.g. in a window title bar) without scraping
+//                        the terminal byte stream for it.
 // ============================================================================
 
 // Package version holds the VirtBBS version number.
@@ -126,4 +130,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "0.9.0"
+const Version = "0.9.1"

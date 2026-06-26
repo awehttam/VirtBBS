@@ -33,6 +33,8 @@ public class DynamicMenuBuilder
 
     private MenuItem? _bbsMenu;
     private MenuItem? _sysopItem;
+    private MenuItem? _logonItem;
+    private MenuItem? _logoffItem;
 
     // Mirrors mainMenu()'s exact set of single-keystroke commands.
     private static readonly (string Label, char Key)[] FixedBbsItems =

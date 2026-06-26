@@ -35,6 +35,7 @@ package node
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -114,8 +115,37 @@ func (s *Store) Unregister(nodeID int) error {
 	return err
 }
 
+// ClearAll removes every node row. Called at server startup to drop sessions
+// that ended without running session cleanup (crash, kill -9, etc.).
+func (s *Store) ClearAll() error {
+	_, err := s.db.Exec(`DELETE FROM nodes`)
+	return err
+}
+
+// PurgeInactive deletes node rows that no longer have a live connection in the
+// in-memory registry (orphaned SQLite rows left after an unclean disconnect).
+func (s *Store) PurgeInactive() error {
+	active := ActiveIDs()
+	if len(active) == 0 {
+		_, err := s.db.Exec(`DELETE FROM nodes`)
+		return err
+	}
+	placeholders := make([]string, len(active))
+	args := make([]any, len(active))
+	for i, id := range active {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+	q := fmt.Sprintf(`DELETE FROM nodes WHERE id NOT IN (%s)`, strings.Join(placeholders, ","))
+	_, err := s.db.Exec(q, args...)
+	return err
+}
+
 // List returns all currently active nodes.
 func (s *Store) List() ([]*NodeInfo, error) {
+	if err := s.PurgeInactive(); err != nil {
+		return nil, err
+	}
 	rows, err := s.db.Query(`SELECT id, status, COALESCE(user_id,0), user_name, city, operation, updated_at FROM nodes ORDER BY id`)
 	if err != nil {
 		return nil, err

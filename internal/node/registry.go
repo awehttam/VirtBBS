@@ -103,6 +103,17 @@ func UnregisterControl(nodeID int) {
 	reg.mu.Unlock()
 }
 
+// ActiveIDs returns the node IDs that currently have a live network connection.
+func ActiveIDs() []int {
+	reg.mu.RLock()
+	defer reg.mu.RUnlock()
+	ids := make([]int, 0, len(reg.regs))
+	for id := range reg.regs {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 // KickNode forcibly disconnects the node with the given ID.
 func KickNode(nodeID int) error {
 	reg.mu.RLock()

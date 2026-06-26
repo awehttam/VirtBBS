@@ -42,6 +42,8 @@ package editor
 import (
 	"io"
 	"strings"
+
+	"github.com/virtbbs/virtbbs/internal/ansi"
 )
 
 // Editor type identifiers stored in user preferences.
@@ -73,6 +75,10 @@ type Config struct {
 
 	// BBSName is shown in the editor title bar.
 	BBSName string
+
+	// CP437Out is true for Telnet (SyncTerm etc.); false for SSH UTF-8 terminals.
+	// When zero, defaults to CP437 for backward compatibility.
+	CP437Out bool
 }
 
 // Result is the outcome of an editing session.
@@ -86,6 +92,10 @@ type Result struct {
 
 	// Lines is the number of lines in the composed message.
 	Lines int
+}
+
+func editorEncode(cfg Config) func(string) string {
+	return func(s string) string { return ansi.EncodeOutput(s, cfg.CP437Out) }
 }
 
 // Edit invokes the editor described by cfg and returns the result.

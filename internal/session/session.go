@@ -81,6 +81,7 @@ type session struct {
 	remoteAddr string
 	deps       Deps
 	echoInput  bool // true for Telnet (server echoes); false for SSH (PTY echoes)
+	cp437Out   bool // true for Telnet (SyncTerm etc.); false for SSH UTF-8 terminals
 
 	// Idle / time limit support
 	idleTimer *time.Timer // reset on each keypress; fires to close conn
@@ -103,6 +104,7 @@ func Run(rw io.ReadWriteCloser, remoteAddr string, deps Deps, echoInput bool) {
 		remoteAddr: remoteAddr,
 		deps:       deps,
 		echoInput:  echoInput,
+		cp437Out:   echoInput, // Telnet → CP437; SSH/macOS Terminal → UTF-8
 	}
 
 	nodeID, err := deps.Nodes.Register()
@@ -121,7 +123,7 @@ func Run(rw io.ReadWriteCloser, remoteAddr string, deps Deps, echoInput bool) {
 			for {
 				select {
 				case msg := <-ctrl.Messages:
-					_, _ = io.WriteString(rw, ansi.ToCP437(msg))
+					_, _ = io.WriteString(rw, ansi.EncodeOutput(msg, s.cp437Out))
 				case <-ctrl.Done():
 					return
 				}
@@ -135,7 +137,7 @@ func Run(rw io.ReadWriteCloser, remoteAddr string, deps Deps, echoInput bool) {
 	if cfg.Session.IdleTimeoutMins > 0 {
 		d := time.Duration(cfg.Session.IdleTimeoutMins) * time.Minute
 		s.idleTimer = time.AfterFunc(d, func() {
-			_, _ = io.WriteString(rw, ansi.ToCP437("\r\n\033[1;31m*** Idle timeout — disconnecting ***\033[0m\r\n"))
+			_, _ = io.WriteString(rw, ansi.EncodeOutput("\r\n\033[1;31m*** Idle timeout — disconnecting ***\033[0m\r\n", s.cp437Out))
 			_ = rw.Close()
 		})
 		defer s.idleTimer.Stop()
@@ -153,7 +155,7 @@ func Run(rw io.ReadWriteCloser, remoteAddr string, deps Deps, echoInput bool) {
 	if cfg.Session.TimePerCallMins > 0 {
 		d := time.Duration(cfg.Session.TimePerCallMins) * time.Minute
 		s.callTimer = time.AfterFunc(d, func() {
-			_, _ = io.WriteString(rw, ansi.ToCP437("\r\n\033[1;33m*** Your time for this call has expired. Goodbye! ***\033[0m\r\n"))
+			_, _ = io.WriteString(rw, ansi.EncodeOutput("\r\n\033[1;33m*** Your time for this call has expired. Goodbye! ***\033[0m\r\n", s.cp437Out))
 			_ = rw.Close()
 		})
 		defer s.callTimer.Stop()
@@ -217,21 +219,20 @@ func Run(rw io.ReadWriteCloser, remoteAddr string, deps Deps, echoInput bool) {
 
 func (s *session) banner() {
 	cfg := config.Get()
-	w := 42
-	line := func(content string) string {
-		pad := w - 4 - len(content)
-		if pad < 0 {
-			pad = 0
-		}
-		return ansi.Bold() + ansi.Color(ansi.BrightCyan) + "║  " +
-			ansi.Color(ansi.BrightWhite) + content + strings.Repeat(" ", pad) +
-			ansi.Color(ansi.BrightCyan) + "║" + ansi.Reset()
-	}
+	const innerW = 40 // visible chars between ║ borders
 	border := ansi.Bold() + ansi.Color(ansi.BrightCyan)
-	s.writeln(border + "╔" + strings.Repeat("═", w-2) + "╗" + ansi.Reset())
+	line := func(content string) string {
+		content = padRight(content, innerW-2)
+		pad := innerW - 2 - len(content)
+		return border + "║  " + ansi.Reset() +
+			ansi.Bold() + ansi.Color(ansi.BrightWhite) + content + ansi.Reset() +
+			strings.Repeat(" ", pad) +
+			border + "║" + ansi.Reset()
+	}
+	s.writeln(border + "╔" + strings.Repeat("═", innerW) + "╗" + ansi.Reset())
 	s.writeln(line(cfg.BBS.Name))
 	s.writeln(line("Powered by VirtBBS"))
-	s.writeln(border + "╚" + strings.Repeat("═", w-2) + "╝" + ansi.Reset())
+	s.writeln(border + "╚" + strings.Repeat("═", innerW) + "╝" + ansi.Reset())
 	s.writeln("")
 }
 
@@ -320,10 +321,10 @@ func (s *session) mainMenu() {
 			"  [M]essages   [F]iles   [C]onference   [U]sers   [W]ho's online" +
 			ansi.Reset())
 		s.writeln(ansi.Color(ansi.BrightWhite) +
-			"  [T]alk       [D]oors   [P]PE           [R]profile [G]oodbye" +
+			"  [T]alk       [D]oors   [P]PE   [S]tats   [R]profile [G]oodbye" +
 			ansi.Reset())
 		if s.user.Sysop {
-			s.writeln(ansi.Color(ansi.BrightYellow) + "  [S]ysop menu" + ansi.Reset())
+			s.writeln(ansi.Color(ansi.BrightYellow) + "  [!] Sysop menu" + ansi.Reset())
 		}
 		s.write(ansi.Prompt("\r\nCommand: "))
 
@@ -346,6 +347,8 @@ func (s *session) mainMenu() {
 		case "R":
 			s.profileMenu()
 		case "S":
+			s.showStats()
+		case "!":
 			if s.user.Sysop {
 				s.sysopMenu()
 			}
@@ -514,6 +517,7 @@ func (s *session) runEditor(subject, initBody string) editor.Result {
 		ANSI:     s.user.ANSI,
 		MaxLines: 500,
 		BBSName:  cfg.BBS.Name,
+		CP437Out: s.cp437Out,
 	})
 }
 
@@ -575,9 +579,11 @@ func (s *session) filesMenu() {
 	_ = s.deps.Nodes.Update(s.nodeID, node.StatusFiles, "File Area", s.user.ID, s.user.Name, s.user.City)
 	for {
 		s.writeln(ansi.Header("File Area"))
-		s.writeln(ansi.Color(ansi.BrightWhite) +
-			"  [L]ist dirs   [B]rowse dir   [D]ownload   [U]pload   [S]earch   [Q]uit" +
-			ansi.Reset())
+		menu := "  [L]ist dirs   [B]rowse dir   [D]ownload   [U]pload   [S]earch"
+		if s.user.Sysop {
+			menu += "   [E]dit desc"
+		}
+		s.writeln(ansi.Color(ansi.BrightWhite) + menu + "   [Q]uit" + ansi.Reset())
 		s.write(ansi.Prompt("File command: "))
 		cmd := strings.ToUpper(strings.TrimSpace(s.readline()))
 		switch cmd {
@@ -591,6 +597,12 @@ func (s *session) filesMenu() {
 			s.uploadFile()
 		case "S":
 			s.searchFiles()
+		case "E":
+			if s.user.Sysop {
+				s.sysopEditFileDesc()
+			} else {
+				s.writeln(ansi.Colorize(ansi.Red, "Unknown command."))
+			}
 		case "Q", "":
 			return
 		default:
@@ -774,7 +786,12 @@ func (s *session) uploadFile() {
 
 	filename := receivedPath[strings.LastIndex(receivedPath, "/")+1:]
 	_ = s.deps.Files.RegisterUpload(dirID, filename, desc, s.user.Name)
-	s.statFilesUp++
+	var size int64
+	if info, err := os.Stat(receivedPath); err == nil {
+		size = info.Size()
+	}
+	s.recordFileUpload(size)
+	s.rebuildLocalFile()
 	s.writeln(ansi.Colorize(ansi.BrightGreen, "Upload complete! Thank you, "+s.user.Name+"!"))
 }
 
@@ -804,7 +821,7 @@ func (s *session) sysopMenu() {
 	for {
 		s.writeln(ansi.Header("Sysop Menu"))
 		s.writeln(ansi.Color(ansi.BrightYellow) +
-			"  [N]ode list   [K]ick node   [C]onference   [L]og   [F]ido   [Q]uit" +
+			"  [N]ode list   [K]ick node   [C]onference   [L]og   [F]ido   [S]can files   [Q]uit" +
 			ansi.Reset())
 		s.write(ansi.Prompt("Sysop command: "))
 		cmd := strings.ToUpper(strings.TrimSpace(s.readline()))
@@ -819,6 +836,8 @@ func (s *session) sysopMenu() {
 			s.sysopCallersLog()
 		case "F":
 			s.sysopFidoMenu()
+		case "S":
+			s.sysopScanFiles()
 		case "Q", "":
 			return
 		}
@@ -1577,6 +1596,115 @@ func (s *session) netmailCompose() {
 		"NetMail queued → %s (next hop: %s)", pktPath, nextHop.String())))
 }
 
+func (s *session) sysopScanFiles() {
+	s.writeln(ansi.Header("Scan File Directories"))
+	s.writeln(ansi.Color(ansi.BrightWhite) +
+		"  Scanning disk folders and updating the file catalog..." + ansi.Reset())
+
+	totals, err := s.deps.Files.ScanAll(s.user.Name)
+	if err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Scan failed: "+err.Error()))
+		return
+	}
+	if totals.Dirs == 0 {
+		s.writeln(ansi.Colorize(ansi.Yellow, "No file directories configured."))
+		return
+	}
+
+	for _, res := range totals.Results {
+		for _, added := range res.AddedFiles {
+			s.recordFileUpload(added.Size)
+		}
+		restored := ""
+		if res.Restored > 0 {
+			restored = fmt.Sprintf("  restored: %d", res.Restored)
+		}
+		s.writeln(fmt.Sprintf("  %s%-20s%s  on disk: %d  added: %d  missing: %d%s",
+			ansi.Color(ansi.BrightCyan), res.DirName, ansi.Reset(),
+			res.OnDisk, res.Added, res.Missing, restored))
+	}
+	s.rebuildLocalFile()
+	s.writeln("")
+	s.writeln(ansi.Colorize(ansi.BrightGreen,
+		fmt.Sprintf("Scan complete — %d director%s, %d file(s) added, %d marked missing.",
+			totals.Dirs, pluralS(totals.Dirs), totals.Added, totals.Missing)))
+}
+
+func (s *session) sysopEditFileDesc() {
+	s.listDirs()
+	s.write(ansi.Prompt("Directory # : "))
+	dirInput := strings.TrimSpace(s.readline())
+	dirID, err := strconv.ParseInt(dirInput, 10, 64)
+	if err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Invalid directory number."))
+		return
+	}
+	dir, err := s.deps.Files.GetDir(dirID)
+	if err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Directory not found."))
+		return
+	}
+	fileList, err := s.deps.Files.ListFiles(dirID)
+	if err != nil || len(fileList) == 0 {
+		s.writeln(ansi.Colorize(ansi.Yellow, "No files in this directory."))
+		return
+	}
+	s.writeln(ansi.Header("Directory: " + dir.Name))
+	for _, f := range fileList {
+		s.writeln(fmt.Sprintf("  %s%-20s%s  %s",
+			ansi.Color(ansi.BrightWhite), f.Filename, ansi.Reset(), f.Description))
+	}
+	s.write(ansi.Prompt("Filename to edit: "))
+	filename := strings.TrimSpace(s.readline())
+	if filename == "" {
+		return
+	}
+	var found bool
+	for _, f := range fileList {
+		if strings.EqualFold(f.Filename, filename) {
+			filename = f.Filename
+			found = true
+			break
+		}
+	}
+	if !found {
+		s.writeln(ansi.Colorize(ansi.Red, "File not found."))
+		return
+	}
+	s.write(ansi.Prompt("New description: "))
+	desc := strings.TrimSpace(s.readline())
+	if err := s.deps.Files.UpdateDescription(dirID, filename, desc); err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Error: "+err.Error()))
+		return
+	}
+	s.writeln(ansi.Colorize(ansi.BrightGreen, "Description updated."))
+	s.rebuildLocalFile()
+}
+
+func (s *session) recordFileUpload(size int64) {
+	s.statFilesUp++
+	if s.user == nil {
+		return
+	}
+	s.user.Uploads++
+	s.user.BytesUploaded += size
+	_ = s.deps.Users.Update(s.user)
+}
+
+func (s *session) rebuildLocalFile() {
+	cfg := config.Get()
+	if err := s.deps.Files.BuildLocalFile(cfg.BBS.Name); err != nil {
+		s.writeln(ansi.Colorize(ansi.Yellow, "Note: could not rebuild file listing: "+err.Error()))
+	}
+}
+
+func pluralS(n int) string {
+	if n == 1 {
+		return "y"
+	}
+	return "ies"
+}
+
 func (s *session) sysopCreateConference() {
 	s.write(ansi.Prompt("Conference name: "))
 	name := strings.TrimSpace(s.readline())
@@ -1953,6 +2081,230 @@ func (s *session) ppeMenu() {
 	s.runPPE(path)
 }
 
+// pplReadLine handles INPUTSTR/INPUTINT prompts for PPE programs.
+func (s *session) pplReadLine(prompt string) string {
+	if prompt != "" {
+		s.write(prompt)
+	}
+	return s.readline()
+}
+
+// bbsStats holds the counters shown by the main-menu Stats screen and GETSTATS.
+type bbsStats struct {
+	UserUploads         int
+	UserDownloads       int
+	UserBytesUploaded   int64
+	UserBytesDownloaded int64
+	UserLastLoginDate   string
+	UserLastLoginTime   string
+	UserTimesOn         int
+	NewMsgsTotal        int
+	SessMsgsRead        int
+	SessMsgsLeft        int
+	SessFilesDown       int
+	SessFilesUp         int
+	SessMinutes         int
+	SessTimeLeft        int
+	BBSCallsToday       int
+	BBSUniqueToday      int
+	BBSMsgTotal         int
+	BBSConfCount        int
+	BBSFileTotal        int
+	BBSFileToday        int
+	BBSFileMonth        int
+}
+
+func (s *session) gatherStats() bbsStats {
+	var st bbsStats
+	if s.user == nil {
+		return st
+	}
+	st.UserUploads = s.user.Uploads
+	st.UserDownloads = s.user.Downloads
+	st.UserBytesUploaded = s.user.BytesUploaded
+	st.UserBytesDownloaded = s.user.BytesDownloaded
+	st.UserLastLoginDate = s.user.LastLoginDate
+	st.UserLastLoginTime = s.user.LastLoginTime
+	st.UserTimesOn = s.user.TimesOnline
+	st.SessMsgsRead = s.statMsgsRead
+	st.SessMsgsLeft = s.statMsgsLeft
+	st.SessFilesDown = s.statFilesDown
+	st.SessFilesUp = s.statFilesUp
+	st.SessMinutes = int(time.Since(s.startTime).Minutes())
+	st.SessTimeLeft = s.timeLeft()
+
+	if counts, err := s.deps.Users.NewMessageCounts(s.user.ID); err == nil {
+		for _, n := range counts {
+			st.NewMsgsTotal += n
+		}
+	}
+	if unique, total, err := s.deps.Callers.DailyStats(); err == nil {
+		st.BBSUniqueToday = unique
+		st.BBSCallsToday = total
+	}
+	if n, err := s.deps.Messages.TotalCount(); err == nil {
+		st.BBSMsgTotal = n
+	}
+	if confs, err := s.deps.Conferences.List(); err == nil {
+		st.BBSConfCount = len(confs)
+	}
+	if cat, err := s.deps.Files.GetCatalogStats(); err == nil {
+		st.BBSFileTotal = cat.Total
+		st.BBSFileToday = cat.Today
+		st.BBSFileMonth = cat.LastMonth
+	}
+	return st
+}
+
+const statsPageLines = 23
+
+// statsPager writes the stats screen and pauses every 23 lines.
+type statsPager struct {
+	s     *session
+	lines int
+}
+
+func (p *statsPager) writeln(text string) {
+	p.s.writeln(text)
+	p.lines++
+	if p.lines >= statsPageLines {
+		p.pause()
+	}
+}
+
+func (p *statsPager) pause() {
+	p.s.write(ansi.Prompt("\r\n  Press a key to continue... "))
+	_ = p.s.readline()
+	p.s.writeln("")
+	p.lines = 0
+}
+
+func (p *statsPager) section(title string) {
+	p.writeln("")
+	p.writeln(ansi.Bold() + ansi.Color(ansi.BrightYellow) + "  ► " + title + ansi.Reset())
+	p.writeln(ansi.Color(ansi.BrightCyan) + "  " + strings.Repeat("─", 58) + ansi.Reset())
+}
+
+func (p *statsPager) line(label, value string) {
+	p.writeln(fmt.Sprintf("  %s%-14s%s %s%s",
+		ansi.Color(ansi.BrightCyan), label, ansi.Reset(),
+		ansi.Color(ansi.White), value+ansi.Reset()))
+}
+
+func (p *statsPager) lineHighlight(label, value string) {
+	p.writeln(fmt.Sprintf("  %s%-14s%s %s%s",
+		ansi.Color(ansi.BrightCyan), label, ansi.Reset(),
+		ansi.Color(ansi.BrightYellow), value+ansi.Reset()))
+}
+
+// showStats displays BBS/user statistics (same data as ppe/stats.pps) using ANSI.
+func (s *session) showStats() {
+	cfg := config.Get()
+	st := s.gatherStats()
+	p := &statsPager{s: s}
+
+	s.write(ansi.ClearScreen())
+	const statsInnerW = 58
+	statsBorder := ansi.Bold() + ansi.Color(ansi.BrightCyan)
+	statsLine := func(inner string) string {
+		return statsBorder + "  ║" + ansi.Reset() + inner + statsBorder + "║" + ansi.Reset()
+	}
+
+	p.writeln("")
+	p.writeln(statsBorder + "  ╔" + strings.Repeat("═", statsInnerW) + "╗" + ansi.Reset())
+	p.writeln(statsLine(ansi.Bold() + ansi.Color(ansi.BrightWhite) + padCenter("BBS Statistics", statsInnerW)))
+	p.writeln(statsBorder + "  ╠" + strings.Repeat("═", statsInnerW) + "╣" + ansi.Reset())
+	p.writeln(statsLine("  " + ansi.Bold() + ansi.Color(ansi.BrightYellow) + padRight(cfg.BBS.Name, statsInnerW-2)))
+	p.writeln(statsBorder + "  ╚" + strings.Repeat("═", statsInnerW) + "╝" + ansi.Reset())
+	p.writeln("")
+
+	p.section("This Call — " + s.user.Name)
+	p.line("Node", fmt.Sprintf("%d", s.nodeID))
+	p.line("Time on", fmt.Sprintf("%d min", st.SessMinutes))
+	if st.SessTimeLeft > 0 {
+		p.line("Time left", fmt.Sprintf("%d min", st.SessTimeLeft))
+	}
+	p.line("Msgs read", fmt.Sprintf("%d", st.SessMsgsRead))
+	p.line("Msgs posted", fmt.Sprintf("%d", st.SessMsgsLeft))
+	p.line("Files down", fmt.Sprintf("%d", st.SessFilesDown))
+	p.line("Files up", fmt.Sprintf("%d", st.SessFilesUp))
+
+	p.section("Your Account")
+	p.line("Times on", fmt.Sprintf("%d", st.UserTimesOn))
+	p.line("Last login", st.UserLastLoginDate+" "+st.UserLastLoginTime)
+	p.line("Uploads", fmt.Sprintf("%d  (%d KB)", st.UserUploads, st.UserBytesUploaded/1024))
+	p.line("Downloads", fmt.Sprintf("%d  (%d KB)", st.UserDownloads, st.UserBytesDownloaded/1024))
+	if st.NewMsgsTotal > 0 {
+		p.lineHighlight("New mail", fmt.Sprintf("%d waiting", st.NewMsgsTotal))
+	} else {
+		p.line("New mail", "0")
+	}
+
+	p.section("System Today")
+	p.line("Calls today", fmt.Sprintf("%d", st.BBSCallsToday))
+	p.line("Unique users", fmt.Sprintf("%d", st.BBSUniqueToday))
+
+	p.section("Message Base")
+	p.line("Conferences", fmt.Sprintf("%d", st.BBSConfCount))
+	p.line("Total msgs", fmt.Sprintf("%d", st.BBSMsgTotal))
+
+	p.section("File Areas")
+	p.line("Total files", fmt.Sprintf("%d", st.BBSFileTotal))
+	p.line("Added today", fmt.Sprintf("%d", st.BBSFileToday))
+	p.line("This session", fmt.Sprintf("%d", st.SessFilesUp))
+	p.line("Last 30 days", fmt.Sprintf("%d", st.BBSFileMonth))
+
+	p.writeln("")
+	p.writeln(ansi.Color(ansi.BrightBlack) + strings.Repeat("─", 62) + ansi.Reset())
+	s.writeln("")
+}
+
+func padRight(s string, width int) string {
+	if len(s) >= width {
+		if width <= 3 {
+			return s[:width]
+		}
+		return s[:width-3] + "..."
+	}
+	return s + strings.Repeat(" ", width-len(s))
+}
+
+func padCenter(s string, width int) string {
+	if len(s) >= width {
+		return padRight(s, width)
+	}
+	left := (width - len(s)) / 2
+	return strings.Repeat(" ", left) + s + strings.Repeat(" ", width-len(s)-left)
+}
+
+// populatePplStats fills extended statistics into a PPL environment for GETSTATS.
+func (s *session) populatePplStats(env *ppl.Environment) {
+	if env == nil {
+		return
+	}
+	st := s.gatherStats()
+	env.UserUploads = st.UserUploads
+	env.UserDownloads = st.UserDownloads
+	env.UserBytesUploaded = st.UserBytesUploaded
+	env.UserBytesDownloaded = st.UserBytesDownloaded
+	env.UserLastLoginDate = st.UserLastLoginDate
+	env.UserLastLoginTime = st.UserLastLoginTime
+	env.SessMsgsRead = st.SessMsgsRead
+	env.SessMsgsLeft = st.SessMsgsLeft
+	env.SessFilesDown = st.SessFilesDown
+	env.SessFilesUp = st.SessFilesUp
+	env.SessMinutes = st.SessMinutes
+	env.SessTimeLeft = st.SessTimeLeft
+	env.NewMsgsTotal = st.NewMsgsTotal
+	env.BBSCallsToday = st.BBSCallsToday
+	env.BBSUniqueToday = st.BBSUniqueToday
+	env.BBSMsgTotal = st.BBSMsgTotal
+	env.BBSConfCount = st.BBSConfCount
+	env.BBSFileTotal = st.BBSFileTotal
+	env.BBSFileToday = st.BBSFileToday
+	env.BBSFileMonth = st.BBSFileMonth
+}
+
 // runPPE executes a PPL source file (.PPS) in the context of this session.
 func (s *session) runPPE(ppsPath string) {
 	cfg := config.Get()
@@ -1962,7 +2314,10 @@ func (s *session) runPPE(ppsPath string) {
 		s.user.SecurityLevel, s.user.TimesOnline,
 		s.nodeID,
 		cfg.BBS.Name, cfg.Sysop.Name,
+		s.cp437Out,
+		s.pplReadLine,
 	)
+	s.populatePplStats(env)
 	_ = s.deps.Nodes.Update(s.nodeID, node.StatusDoor, "PPE: "+ppsPath, s.user.ID, s.user.Name, s.user.City)
 	if err := ppl.Run(ppsPath, env); err != nil {
 		s.writeln(ansi.Colorize(ansi.Red, "PPE error: "+err.Error()))
@@ -1973,7 +2328,7 @@ func (s *session) runPPE(ppsPath string) {
 // ── I/O helpers ───────────────────────────────────────────────────────────────
 
 func (s *session) write(text string) {
-	_, _ = io.WriteString(s.rw, ansi.ToCP437(text))
+	_, _ = io.WriteString(s.rw, ansi.EncodeOutput(text, s.cp437Out))
 }
 
 func (s *session) writeln(text string) {

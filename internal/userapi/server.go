@@ -35,6 +35,9 @@
 //                        (real binary QWK/REP packets, base64-in-JSON) and
 //                        files.download/files.upload (base64-in-JSON file
 //                        content transfer, security-filtered by directory ReadSec).
+//   v0.9.1  2026-06-26  VirtTerm/VirtTermMac: session.whoami so clients can show
+//                        the logged-in user's name and the BBS's name (e.g. in a
+//                        window title bar) without scraping the terminal stream.
 // ============================================================================
 
 // Package userapi provides a token-authenticated JSON-over-TCP API for
@@ -146,6 +149,18 @@ func (s *Server) handle(c net.Conn) {
 
 func (s *Server) dispatch(req Request, u *users.User) (any, error) {
 	switch req.Method {
+
+	// session.whoami lets a client (VirtTerm, VirtTermMac, VirtAnd) show
+	// the logged-in user's name and the BBS's name — e.g. in a window
+	// title bar — without needing to scrape it out of the terminal byte
+	// stream. No params; identity comes entirely from the auth token.
+	case "session.whoami":
+		return map[string]any{
+			"name":           u.Name,
+			"security_level": u.SecurityLevel,
+			"sysop":          u.Sysop,
+			"bbs_name":       config.Get().BBS.Name,
+		}, nil
 
 	case "conferences.list":
 		all, err := s.Deps.Conferences.List()
@@ -276,6 +291,7 @@ func (s *Server) dispatch(req Request, u *users.User) (any, error) {
 		if err := s.Deps.Files.RegisterUpload(p.DirID, p.Filename, p.Description, u.Name); err != nil {
 			return nil, err
 		}
+		_ = s.Deps.Files.BuildLocalFile(config.Get().BBS.Name)
 		return "uploaded", nil
 
 	// ── QWK / REP offline mail (VirtAnd) ────────────────────────────────────

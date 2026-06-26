@@ -43,22 +43,25 @@ WHILE NOT done
         INTEGER secret
         INTEGER guess
         INTEGER tries
+        BOOLEAN won
         secret = RANDOM(10) + 1
         tries = 0
+        won = FALSE
         PRINTLN ""
         PRINTLN "I'm thinking of a number between 1 and 10..."
-        WHILE guess <> secret AND tries < 5
+        WHILE NOT won AND tries < 5
             INPUTINT guess, "Your guess: "
             tries = tries + 1
-            IF guess < secret THEN
-                PRINTLN "Too low!"
-            ELSEIF guess > secret THEN
-                PRINTLN "Too high!"
-            ELSE
+            IF guess = secret THEN
+                won = TRUE
                 PRINTLN "Correct! You got it in " + STR(tries) + " tries!"
+            ELSEIF guess < secret THEN
+                PRINTLN "Too low!"
+            ELSE
+                PRINTLN "Too high!"
             ENDIF
         WEND
-        IF guess <> secret THEN
+        IF NOT won THEN
             PRINTLN "The number was " + STR(secret) + ". Better luck next time!"
         ENDIF
         PRINTLN ""

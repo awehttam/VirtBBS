@@ -47,3 +47,12 @@ public class NodelistVersion
     [JsonPropertyName("imported_at")] public string ImportedAt { get; set; } = "";
     [JsonPropertyName("node_count")] public int NodeCount { get; set; }
 }
+
+/// <summary>Result of "session.whoami" — the logged-in user's identity plus the BBS's name.</summary>
+public class WhoAmI
+{
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("security_level")] public int SecurityLevel { get; set; }
+    [JsonPropertyName("sysop")] public bool Sysop { get; set; }
+    [JsonPropertyName("bbs_name")] public string BbsName { get; set; } = "";
+}

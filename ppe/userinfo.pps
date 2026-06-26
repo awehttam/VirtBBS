@@ -5,11 +5,11 @@ GETUSER
 
 CLS
 PRINTLN "┌─────────────────────────────────────────────┐"
-PRINTLN "│              Your User Profile               │"
+PRINTLN "│              Your User Profile              │"
 PRINTLN "├─────────────────────────────────────────────┤"
 
 PROCEDURE ShowField(STRING label, STRING value)
-    PRINTLN "│  " + label + SPACE(12 - LEN(label)) + ": " + value + SPACE(27 - LEN(value)) + "│"
+    PRINTLN "│  " + label + SPACE(12 - LEN(label)) + ": " + value + SPACE(29 - LEN(value)) + "│"
 ENDPROC
 
 ShowField "Name",     U_NAME
