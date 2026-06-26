@@ -65,13 +65,24 @@ protocol logic (which is the unmodified, shared code listed above).
 
 ## Known limitations (same as VirtTerm, by design — see the plan)
 
+- **No Zmodem support — file uploads/downloads through the BBS's `[F]iles`
+  menu do not work in this client.** VirtBBS's file transfers
+  (`internal/transfer/zmodem.go`) are pure-Go Zmodem over the raw Telnet/SSH
+  byte stream: the server sends a `ZRQINIT`/`ZRINIT` handshake and expects
+  the *terminal client itself* to recognize it and switch into Zmodem
+  receive/send mode. Neither `VirtTerm` nor `VirtTermMac` does any such
+  detection — `TerminalConnection` just forwards raw bytes to the ANSI
+  screen renderer, so a Zmodem handshake would be displayed as garbage
+  characters instead of triggering a download. Implementing this would mean
+  porting (or binding to) a Zmodem implementation client-side, sniffing the
+  incoming byte stream for the handshake sequence, and wiring up a real file
+  picker (`SaveFileDialog`/`OpenFileDialog` — Avalonia's equivalent is
+  `IStorageProvider`) for where downloaded files land and which file gets
+  uploaded. Not yet done in either client.
 - Fixed 80x25 grid — no resize negotiation, since VirtBBS's own session
   layer is hard-baked to this size.
 - No native UI for any multi-step BBS flow (composing a message,
   transferring a file) — those are typed directly into the terminal pane.
-- No "who am I" endpoint exists in `internal/userapi` yet, so whether the
-  Sysop Menu item is shown is just a checkbox in the Connect dialog
-  (`AppSettings.IsSysop`), not a real security check.
 - The server's TLS certificate is self-signed with no CA, so
   `TerminalConnection` accepts any certificate (same trust-on-first-connect
   model as SSH host keys).

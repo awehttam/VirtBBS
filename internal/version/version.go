@@ -120,6 +120,19 @@
 //                        endpoint so clients can show the logged-in user's name and
 //                        the BBS name (e.g. in a window title bar) without scraping
 //                        the terminal byte stream for it.
+//   v0.10.0 2026-06-26  File catalog tools, stats, and display fixes: sysop file
+//                        directory scan (registers disk files, flags missing
+//                        entries, extracts FILE_ID.DIZ from ZIPs, counts scan
+//                        adds as uploads); daily + on-change LOCALFIL.ZIP
+//                        (SLDIR-style master listing with FILE_ID.DIZ, General
+//                        file area); sysop [E]dit desc in the file menu; new
+//                        [S]tats main-menu screen and PPL GETSTATS statement
+//                        (session/account/system counters — see ppe/stats.md);
+//                        sysop functions moved from 'S' to '!' on the main menu
+//                        so 'S' is free for Stats; LOGON.ANS PCBoard ANSI
+//                        expansion/CP437 decode/box-alignment fixes; stale
+//                        node-row purge on list/startup; PPL input via session
+//                        readline.
 // ============================================================================
 
 // Package version holds the VirtBBS version number.
@@ -130,4 +143,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "0.9.1"
+const Version = "0.10.0"

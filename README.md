@@ -19,7 +19,9 @@ PCBoard was one of the most influential Bulletin Board Systems (BBS) of its era,
 | **User database** | SQLite — supports importer from PCBoard binary USERS file |
 | **Message base** | SQLite with multi-conference support. Importer from PCBoard MSGS format |
 | **File areas** | Per-directory file listings, upload/download tracking |
-| **Zmodem transfer** | Pure-Go Zmodem implementation (no external `sz`/`rz` binaries) |
+| **File catalog tools** | Sysop directory scan (registers disk files, flags missing ones, pulls `FILE_ID.DIZ` from ZIPs), `[E]dit desc`, and a daily `LOCALFIL.ZIP` (SLDIR-style master listing) |
+| **Stats** | `[S]tats` main-menu screen and PPL `GETSTATS` — session/account/system counters (see `ppe/stats.md`) |
+| **Zmodem transfer** | Pure-Go Zmodem implementation (no external `sz`/`rz` binaries) — Telnet/SSH only; not yet wired into VirtTerm/VirtTermMac (see their READMEs) |
 | **PPL interpreter** | Tree-walking interpreter for PCBoard Programming Language `.PPS` source files |
 | **ANSI colour** | Full ANSI escape sequence rendering for menus and displays |
 | **Multi-node** | Node status tracking via SQLite (replaces PCBoard's `USERNET.XXX`) |
@@ -199,7 +201,7 @@ dotnet run
 | Minor (x.**N**.0) | Bumped on significant feature additions |
 | Major (**N**.0.0) | Bumped on explicit request |
 
-Current version: **0.5.0**
+Current version: **0.10.0**
 
 ---
 

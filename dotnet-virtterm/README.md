@@ -59,14 +59,23 @@ identically to a real DOS font.
 
 ## Known limitations (by design, see the plan)
 
+- **No Zmodem support — file uploads/downloads through the BBS's `[F]iles`
+  menu do not work in this client.** VirtBBS's file transfers
+  (`internal/transfer/zmodem.go`) are pure-Go Zmodem over the raw Telnet/SSH
+  byte stream: the server sends a `ZRQINIT`/`ZRINIT` handshake and expects
+  the *terminal client itself* to recognize it and switch into Zmodem
+  receive/send mode. `TerminalConnection` just forwards raw bytes to the
+  ANSI screen renderer — there's no handshake detection, so a Zmodem
+  transfer would render as garbage characters instead of triggering a
+  download/upload. Implementing this would mean porting (or binding to) a
+  Zmodem implementation client-side, sniffing the incoming stream for the
+  handshake, and wiring up a real file picker
+  (`OpenFileDialog`/`SaveFileDialog`) for the upload source / download
+  destination. Not yet done.
 - Fixed 80x25 grid — no resize negotiation. VirtBBS's own session layer is
   hard-baked to this size, so there's nothing to negotiate.
 - No native UI for composing messages, browsing files, or any other
   multi-step BBS flow — those are typed directly into the terminal pane.
-- No "who am I" endpoint exists in `internal/userapi` yet, so whether the
-  Sysop Menu item is shown is just a checkbox in Settings
-  (`AppSettings.IsSysop`), not a real security check — the BBS itself still
-  enforces the actual security-level gate if a non-sysop sends `S` anyway.
 - The server's TLS certificate is self-signed with no CA, so
   `TerminalConnection` accepts any certificate (same trust-on-first-connect
   model as SSH host keys) rather than validating against a certificate
