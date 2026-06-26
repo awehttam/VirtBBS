@@ -81,7 +81,7 @@ public class DynamicMenuBuilder
             bbsMenu.DropDownItems.Add(item);
         }
         bbsMenu.DropDownItems.Add(new ToolStripSeparator());
-        _sysopItem = new ToolStripMenuItem("&Sysop Menu", null, (_, _) => Keystroke?.Invoke((byte)'S'))
+        _sysopItem = new ToolStripMenuItem("&Sysop Menu", null, (_, _) => Keystroke?.Invoke((byte)'!')) // mainMenu()'s actual sysop key, not 'S' (that's now Stats)
         {
             Visible = false, // only shown once the logged-in user is known to be a sysop
         };

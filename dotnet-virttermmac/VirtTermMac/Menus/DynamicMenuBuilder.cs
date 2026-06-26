@@ -85,7 +85,7 @@ public class DynamicMenuBuilder
         }
         bbsMenu.Items.Add(new Separator());
         _sysopItem = new MenuItem { Header = "_Sysop Menu", IsVisible = false };
-        _sysopItem.Click += (_, _) => Keystroke?.Invoke((byte)'S');
+        _sysopItem.Click += (_, _) => Keystroke?.Invoke((byte)'!'); // mainMenu()'s actual sysop key, not 'S' (that's now Stats)
         bbsMenu.Items.Add(_sysopItem);
         var goodbyeItem = new MenuItem { Header = "_Goodbye" };
         goodbyeItem.Click += (_, _) => Keystroke?.Invoke((byte)'G');
