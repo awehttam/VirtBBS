@@ -1,0 +1,13 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="VirtTermMac.Views.MainWindow"
+        Title="VirtTermMac"
+        WindowStartupLocation="CenterScreen">
+    <!--
+        Content is built entirely in code-behind (MainWindow.axaml.cs),
+        mirroring VirtTerm's WinForms MainForm — the menu is dynamically
+        generated (DynamicMenuBuilder) and the terminal control's size is
+        determined at runtime from font metrics, so there's nothing
+        meaningful to declare statically here.
+    -->
+</Window>

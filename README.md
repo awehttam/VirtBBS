@@ -38,7 +38,9 @@ VirtBBS/
 ├── gui-dotnet/
 │   └── VirtBBS.GUI/       # Sysop console (.NET / Avalonia UI)
 ├── dotnet-virtterm/
-│   └── VirtTerm/          # Graphical terminal client (.NET / WinForms) — own TLS protocol
+│   └── VirtTerm/          # Graphical terminal client (.NET / WinForms, Windows only) — own TLS protocol
+├── dotnet-virttermmac/
+│   └── VirtTermMac/       # Same client, ported to Avalonia UI (macOS/Linux/Windows)
 ├── android/
 │   └── VirtAnd/           # Android point client (Kotlin) — offline-first, QWK/REP sync
 ├── internal/

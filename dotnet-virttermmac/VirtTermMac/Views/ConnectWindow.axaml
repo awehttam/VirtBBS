@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="VirtTermMac.Views.ConnectWindow"
+        Title="Connect to VirtBBS"
+        Width="420" Height="320"
+        CanResize="false"
+        WindowStartupLocation="CenterOwner">
+
+    <DockPanel Margin="16">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                    HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+            <Button Content="Cancel" Click="OnCancel"/>
+            <Button Content="Connect" Click="OnConnect" IsDefault="True"/>
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Host:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="0" Grid.Column="1" x:Name="HostBox"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Terminal port:" VerticalAlignment="Center"/>
+                <NumericUpDown Grid.Row="1" Grid.Column="1" x:Name="TermPortBox" Minimum="1" Maximum="65535"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="User API port:" VerticalAlignment="Center"/>
+                <NumericUpDown Grid.Row="2" Grid.Column="1" x:Name="ApiPortBox" Minimum="1" Maximum="65535"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="API token:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="3" Grid.Column="1" x:Name="TokenBox" PasswordChar="*"/>
+            </Grid>
+
+            <CheckBox x:Name="IsSysopBox" Content="I am the sysop (shows the Sysop Menu item)"/>
+
+            <TextBlock Text="Generate a token on the BBS: Profile menu -&gt; [T]okens -&gt; [G]enerate."
+                       TextWrapping="Wrap" Opacity="0.7" Margin="0,8,0,0"/>
+        </StackPanel>
+    </DockPanel>
+
+</Window>

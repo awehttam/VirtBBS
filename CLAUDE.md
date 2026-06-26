@@ -27,10 +27,11 @@ Or invoke the full path: `/usr/local/share/dotnet/dotnet build …`
 
 ## .NET projects
 
-| Project | Directory | Target | macOS build? |
-|---------|-----------|--------|--------------|
-| Sysop GUI (Avalonia) | `gui-dotnet/VirtBBS.GUI/` | `net8.0` | Yes |
-| Terminal client (WinForms) | `dotnet-virtterm/VirtTerm/` | `net8.0-windows` | No — Windows only |
+| Project | Directory | Target | macOS build? | macOS run? |
+|---------|-----------|--------|--------------|------------|
+| Sysop GUI (Avalonia) | `gui-dotnet/VirtBBS.GUI/` | `net8.0` | Yes | Yes |
+| Terminal client (WinForms) | `dotnet-virtterm/VirtTerm/` | `net8.0-windows` | Type-check only (`-p:EnableWindowsTargeting=true`) | No — Windows only |
+| Terminal client (Avalonia port) | `dotnet-virttermmac/VirtTermMac/` | `net8.0` | Yes | Yes |
 
 ### Sysop GUI (primary .NET app on macOS)
 
@@ -52,6 +53,18 @@ dotnet build -p:EnableWindowsTargeting=true
 ```
 
 This only unblocks compilation against the Windows reference assemblies — it does not make the app runnable here. Don't rely on it as a substitute for a real run.
+
+### Terminal client, Avalonia port (VirtTermMac)
+
+`dotnet-virttermmac/VirtTermMac` is an Avalonia UI port of `VirtTerm`, built specifically to run on macOS/Linux (and still Windows). Unlike `VirtTerm` it builds *and runs* here:
+
+```bash
+cd dotnet-virttermmac/VirtTermMac
+dotnet build
+dotnet run
+```
+
+Most of the non-UI logic (`AnsiScreen`, `Cp437`, `TerminalConnection`, `UserApiClient`, `Models`, `AppSettings`, `NodelistSyncService`) is carried over from `VirtTerm` unmodified, just with the namespace changed. Only the UI layer (`TerminalControl`, the menu builder, the windows) was rewritten for Avalonia — see `dotnet-virttermmac/README.md` for the full file-by-file breakdown and what's been verified.
 
 ## Go server
 
