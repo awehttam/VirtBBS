@@ -114,12 +114,24 @@ public class AnsiScreen
         const string marker = "\r\nCommand: ";
         if (_tailLen < marker.Length) { IsAtCommandPrompt = false; return; }
 
-        bool match = true;
-        for (int j = 0; j < marker.Length; j++)
+        // Search anywhere in the rolling tail, not just at the very end.
+        // ansi.Prompt() on the server always appends a trailing ANSI reset
+        // sequence ("\x1b[0m") right after the marker text, and Changed only
+        // fires once per Feed() call (after the whole chunk, including that
+        // trailing reset, has been processed) — an exact suffix match would
+        // therefore always see the marker already pushed out of the tail end
+        // by those few extra bytes, making this permanently false.
+        bool found = false;
+        for (int start = 0; start <= _tailLen - marker.Length; start++)
         {
-            if (_tail[_tailLen - marker.Length + j] != (byte)marker[j]) { match = false; break; }
+            bool match = true;
+            for (int j = 0; j < marker.Length; j++)
+            {
+                if (_tail[start + j] != (byte)marker[j]) { match = false; break; }
+            }
+            if (match) { found = true; break; }
         }
-        IsAtCommandPrompt = match;
+        IsAtCommandPrompt = found;
     }
 
     private void ProcessByte(byte b)
