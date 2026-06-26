@@ -27,6 +27,8 @@
 // Change History:
 //   v0.3.0  2026-06-25  Initial implementation — automatic per-network
 //                        FidoNet poll+toss scheduler
+//   v0.5.0  2026-06-25  Add a second per-network ticker for automatic
+//                        nodelist fetching (fido.FetchAndImport)
 // ============================================================================
 
 // Package scheduler runs background tasks for the VirtBBS server. Currently
@@ -63,11 +65,14 @@ func Start(store *messages.Store, confStore *conferences.Store) (stop func()) {
 	var stopped bool
 
 	for _, nd := range cfg.Fido.AllNetworks() {
-		if !nd.Enabled || nd.Uplink == "" {
+		if !nd.Enabled {
 			continue
 		}
 		name := nd.Name
-		go runNetwork(name, store, confStore, stopCh)
+		if nd.Uplink != "" {
+			go runNetwork(name, store, confStore, stopCh)
+		}
+		go runNodelistFetch(name, store, stopCh)
 	}
 
 	return func() {
@@ -124,6 +129,54 @@ func runNetwork(networkName string, store *messages.Store, confStore *conference
 				for _, e := range result.Toss.Errors {
 					log.Printf("fido scheduler: %s toss error: %s", networkName, e)
 				}
+			}
+		}
+	}
+}
+
+// runNodelistFetch downloads and imports a fresh nodelist for one network
+// on its own ticker until stop is closed, re-reading live config every
+// tick (see fido.FetchAndImport). Independent of the poll ticker above —
+// a network without an uplink configured can still want a current
+// nodelist for address lookups.
+func runNodelistFetch(networkName string, store *messages.Store, stop <-chan struct{}) {
+	nd := config.Get().Fido.NetworkByName(networkName)
+	if nd == nil {
+		return
+	}
+	interval := nd.EffectiveNodelistInterval()
+	log.Printf("nodelist scheduler: %s — fetching every %s from %s",
+		networkName, interval, nd.EffectiveNodelistURL())
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+			cfg := config.Get()
+			nd := cfg.Fido.NetworkByName(networkName)
+			if nd == nil || !nd.Enabled {
+				continue
+			}
+
+			if newInterval := nd.EffectiveNodelistInterval(); newInterval != interval {
+				interval = newInterval
+				ticker.Reset(interval)
+				log.Printf("nodelist scheduler: %s — interval changed to %s", networkName, interval)
+			}
+
+			result, err := fido.FetchAndImport(nd, store.DB())
+			if err != nil {
+				log.Printf("nodelist scheduler: %s fetch error: %v", networkName, err)
+				continue
+			}
+			log.Printf("nodelist scheduler: %s import complete (%d inserted, %d updated, %d skipped)",
+				networkName, result.Inserted, result.Updated, result.Skipped)
+			for _, e := range result.Errors {
+				log.Printf("nodelist scheduler: %s import error: %s", networkName, e)
 			}
 		}
 	}

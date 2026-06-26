@@ -81,6 +81,15 @@
 //                        details). RequestAreaFix/SendPing now take *NetworkDef for full
 //                        multi-network support. Documented DB auto-migration in
 //                        Installation.md.
+//   v0.5.0  2026-06-25  Automatic nodelist updates: per network, defaults to scanning
+//                        https://www.darkrealms.ca/ for the current day's "Fidonet Daily
+//                        Nodelist (Z1/ZIP) day NNN" link (the real download URL changes
+//                        daily and isn't derivable from a fixed pattern), downloading and
+//                        ZIP-sniffing the result (not trusting the URL's misleading
+//                        extension), then importing via the existing ImportFile. New
+//                        nodelist_url/nodelist_update_interval_hours config, a second
+//                        per-network scheduler ticker, a sysop "[L]oad nodelist now" menu
+//                        option, and a fido.nodelist.fetch API endpoint.
 // ============================================================================
 
 // Package version holds the VirtBBS version number.
@@ -91,4 +100,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "0.4.0"
+const Version = "0.5.0"

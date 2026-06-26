@@ -22,7 +22,7 @@ Example: /opt/virtbbs      (Linux)
 
 ### 2. Copy the release files
 
-From the `releases/0.4.0/` package, copy the following into your installation directory:
+From the `releases/0.5.0/` package, copy the following into your installation directory:
 
 ```
 <install-dir>/
@@ -104,7 +104,7 @@ bin/virtbbs
 The server will log startup messages:
 
 ```
-2026/06/25 12:00:00 VirtBBS 0.4.0 starting
+2026/06/25 12:00:00 VirtBBS 0.5.0 starting
 2026/06/24 12:00:00 Telnet listening on :2323
 2026/06/24 12:00:00 SSH listening on :3232
 2026/06/24 12:00:00 Management API listening on 0.0.0.0:9999
@@ -309,4 +309,4 @@ make sure you've fully stopped the old process before starting the new one.
 
 ## Version
 
-This guide covers VirtBBS **0.4.0**.
+This guide covers VirtBBS **0.5.0**.

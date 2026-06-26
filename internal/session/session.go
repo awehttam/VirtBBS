@@ -951,7 +951,7 @@ func (s *session) sysopFidoMenu() {
 			s.writeln("")
 		}
 		s.writeln(ansi.Color(ansi.BrightYellow) +
-			"  [T]oss inbound   [S]can outbound   [N]odelist   [E]cho flags   [P]oll uplink" + ansi.Reset())
+			"  [T]oss inbound   [S]can outbound   [N]odelist   [L]oad nodelist now   [E]cho flags   [P]oll uplink" + ansi.Reset())
 		s.writeln(ansi.Color(ansi.BrightYellow) +
 			"  [I]Ping a node   [X]Trace a node   [A]reaFix   [F]ileFix   [Q]uit" + ansi.Reset())
 		s.write(ansi.Prompt("FidoNet command: "))
@@ -980,6 +980,8 @@ func (s *session) sysopFidoMenu() {
 			}
 		case "N":
 			s.nodelistBrowser()
+		case "L":
+			s.fidoLoadNodelist()
 		case "E":
 			s.echoFlagConference()
 		case "P":
@@ -1436,6 +1438,28 @@ func (s *session) pickFidoNetwork(verb string) *fido.NetworkDef {
 }
 
 // fidoPoll calls the uplink via BinkP, sending any outbound bundles.
+// fidoLoadNodelist fetches and imports a fresh nodelist for a chosen
+// network right now, instead of waiting for the scheduler's next tick —
+// see internal/fido/nodelistfetch.go.
+func (s *session) fidoLoadNodelist() {
+	target := s.pickFidoNetwork("fetch a nodelist for")
+	if target == nil {
+		return
+	}
+	s.writeln(ansi.Colorize(ansi.White, "Fetching nodelist from "+target.EffectiveNodelistURL()+"…"))
+	result, err := fido.FetchAndImport(target, s.deps.Messages.DB())
+	if err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Nodelist fetch error: "+err.Error()))
+		return
+	}
+	s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf(
+		"Nodelist import complete: %d inserted, %d updated, %d skipped.",
+		result.Inserted, result.Updated, result.Skipped)))
+	for _, e := range result.Errors {
+		s.writeln(ansi.Colorize(ansi.Red, "  Error: "+e))
+	}
+}
+
 func (s *session) fidoPoll() {
 	target := s.pickFidoNetwork("poll")
 	if target == nil {

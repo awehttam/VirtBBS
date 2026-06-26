@@ -31,6 +31,8 @@
 //   v0.1.0  2026-06-25  Add TaglinesFile for the configurable echomail tagline feature
 //   v0.2.0  2026-06-25  Add Downlinks + AreaFixPassword for the AreaFix responder/requester
 //   v0.3.0  2026-06-25  Add PollIntervalMins for the automatic poll/toss scheduler
+//   v0.5.0  2026-06-25  Add NodelistURL/NodelistUpdateIntervalHours for automatic
+//                        nodelist fetching (see internal/fido/nodelistfetch.go)
 // ============================================================================
 
 package fido
@@ -81,10 +83,30 @@ type Config struct {
 	// AreaFixPassword.
 	FileFixPassword string `toml:"filefix_password" json:"filefix_password"`
 
+	// NodelistURL is where the automatic nodelist fetcher downloads from.
+	// May be a direct file URL, or (the default if left blank) a discovery
+	// page that gets scanned for today's "Fidonet Daily Nodelist (Z1/ZIP)
+	// day NNN" link — see internal/fido/nodelistfetch.go and
+	// DefaultNodelistDiscoveryURL.
+	NodelistURL string `toml:"nodelist_url" json:"nodelist_url"`
+
+	// NodelistUpdateIntervalHours overrides how often the scheduler
+	// automatically fetches a fresh nodelist, in hours. 0/unset means the
+	// scheduler default of 24 hours. Any positive value is clamped to a
+	// 1-hour minimum.
+	NodelistUpdateIntervalHours int `toml:"nodelist_update_interval_hours" json:"nodelist_update_interval_hours"`
+
 	// Networks lists additional FidoNet-compatible networks (LovlyNet, etc.).
 	// Each entry is a fully independent network with its own address space.
 	Networks []NetworkDef `toml:"networks" json:"networks"`
 }
+
+// DefaultNodelistDiscoveryURL is used when NodelistURL is left blank: a
+// page listing daily FidoNet Zone 1 nodelist downloads, scanned for the
+// "Fidonet Daily Nodelist (Z1/ZIP) day NNN" link (the actual file href
+// changes daily and isn't derivable from a fixed pattern, so the page is
+// scanned fresh on every fetch — see internal/fido/nodelistfetch.go).
+const DefaultNodelistDiscoveryURL = "https://www.darkrealms.ca/"
 
 // Downlink describes one system that subscribes to echomail areas from this
 // BBS via AreaFix (case-insensitive netmail to "AreaFix").
@@ -111,12 +133,15 @@ type NetworkDef struct {
 	// network's TaglinesFile in AllNetworks() if left blank.
 	TaglinesFile string `toml:"taglines_file" json:"taglines_file"`
 
-	// Downlinks/AreaFixPassword/PollIntervalMins/FileAreas/FileFixPassword — see the matching Config fields.
-	Downlinks        []Downlink     `toml:"downlinks" json:"downlinks"`
-	AreaFixPassword  string         `toml:"areafix_password" json:"areafix_password"`
-	PollIntervalMins int            `toml:"poll_interval_mins" json:"poll_interval_mins"`
-	FileAreas        map[string]int `toml:"file_areas" json:"file_areas"`
-	FileFixPassword  string         `toml:"filefix_password" json:"filefix_password"`
+	// Downlinks/AreaFixPassword/PollIntervalMins/FileAreas/FileFixPassword/
+	// NodelistURL/NodelistUpdateIntervalHours — see the matching Config fields.
+	Downlinks                   []Downlink     `toml:"downlinks" json:"downlinks"`
+	AreaFixPassword             string         `toml:"areafix_password" json:"areafix_password"`
+	PollIntervalMins            int            `toml:"poll_interval_mins" json:"poll_interval_mins"`
+	FileAreas                   map[string]int `toml:"file_areas" json:"file_areas"`
+	FileFixPassword             string         `toml:"filefix_password" json:"filefix_password"`
+	NodelistURL                 string         `toml:"nodelist_url" json:"nodelist_url"`
+	NodelistUpdateIntervalHours int            `toml:"nodelist_update_interval_hours" json:"nodelist_update_interval_hours"`
 }
 
 // DefaultConfig returns a Config with sensible disabled defaults.
@@ -200,9 +225,11 @@ func (c *Config) AllNetworks() []NetworkDef {
 		TaglinesFile:     c.TaglinesFile,
 		Downlinks:        c.Downlinks,
 		AreaFixPassword:  c.AreaFixPassword,
-		PollIntervalMins: c.PollIntervalMins,
-		FileAreas:        c.FileAreas,
-		FileFixPassword:  c.FileFixPassword,
+		PollIntervalMins:            c.PollIntervalMins,
+		FileAreas:                   c.FileAreas,
+		FileFixPassword:             c.FileFixPassword,
+		NodelistURL:                 c.NodelistURL,
+		NodelistUpdateIntervalHours: c.NodelistUpdateIntervalHours,
 	}
 	result := []NetworkDef{primary}
 	result = append(result, c.Networks...)
@@ -302,6 +329,37 @@ func (n *NetworkDef) EffectivePollInterval() time.Duration {
 		return MinPollInterval
 	}
 	return d
+}
+
+// DefaultNodelistInterval is how often the scheduler fetches a fresh
+// nodelist when NodelistUpdateIntervalHours is unset (0).
+const DefaultNodelistInterval = 24 * time.Hour
+
+// MinNodelistInterval is the smallest nodelist fetch interval the
+// scheduler will honour, regardless of sysop configuration.
+const MinNodelistInterval = 1 * time.Hour
+
+// EffectiveNodelistInterval returns how often the scheduler should fetch a
+// fresh nodelist for this network: NodelistUpdateIntervalHours if set,
+// clamped to a 1-hour minimum, otherwise DefaultNodelistInterval (24h).
+func (n *NetworkDef) EffectiveNodelistInterval() time.Duration {
+	if n.NodelistUpdateIntervalHours <= 0 {
+		return DefaultNodelistInterval
+	}
+	d := time.Duration(n.NodelistUpdateIntervalHours) * time.Hour
+	if d < MinNodelistInterval {
+		return MinNodelistInterval
+	}
+	return d
+}
+
+// EffectiveNodelistURL returns NodelistURL if configured, otherwise
+// DefaultNodelistDiscoveryURL.
+func (n *NetworkDef) EffectiveNodelistURL() string {
+	if n.NodelistURL != "" {
+		return n.NodelistURL
+	}
+	return DefaultNodelistDiscoveryURL
 }
 
 // DownlinkByAddr finds a configured Downlink by address (ignoring point),

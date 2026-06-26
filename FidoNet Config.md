@@ -2,8 +2,8 @@
 
 This guide covers every FidoNet setting in `VirtBBS.DAT`, how echomail/netmail
 routing works, the BinkP server, how to add additional FidoNet-compatible
-networks, AreaFix, FileFix, and the PING/TRACE test utilities. It covers
-VirtBBS **0.4.0**.
+networks, AreaFix, FileFix, the PING/TRACE test utilities, and automatic
+nodelist updates. It covers VirtBBS **0.5.0**.
 
 ---
 
@@ -40,6 +40,8 @@ All FidoNet settings live under the `[fido]` table in `VirtBBS.DAT`:
 | `areafix_password` | Password **we** send when requesting areas from **our own uplink's** AreaFix — see §8.4. |
 | `filefix_password` | Password **we** send when requesting file areas from **our own uplink's** FileFix — see §9. |
 | `poll_interval_mins` | Overrides how often the automatic scheduler polls this network's uplink, in minutes. `0`/unset = 6 hours. Any value below 5 is clamped up to 5 — see §6.2. |
+| `nodelist_url` | Direct file URL or discovery page for automatic nodelist updates. Blank = scan `https://www.darkrealms.ca/` — see §12. |
+| `nodelist_update_interval_hours` | Overrides how often the scheduler fetches a fresh nodelist, in hours. `0`/unset = 24 hours. Any value below 1 is clamped up to 1 — see §12.2. |
 | `[fido.file_areas]` | Maps FileFix tags to local file directory IDs — see §9.1. |
 | `[fido.areas]` | Maps echomail `AREA:` tags to local conference IDs — see §3. |
 | `[[fido.downlinks]]` | Systems that subscribe to our echomail areas via AreaFix — see §8.1. |
@@ -436,7 +438,53 @@ than just confirming receipt.
 
 ---
 
-## 12. Quick reference — all `[fido]` fields
+## 12. Automatic nodelist updates
+
+VirtBBS can automatically keep each network's nodelist current, without
+any manual download/import step.
+
+### 12.1 How it works
+
+By default (no configuration needed), VirtBBS fetches from
+**`https://www.darkrealms.ca/`** — a publicly available FidoNet Zone 1
+nodelist mirror — once per day, per enabled network:
+
+1. The discovery page's HTML is scanned for a table row containing the text **"Fidonet Daily Nodelist (Z1/ZIP) day NNN"**; that row's download link is resolved into a full URL. The day number changes daily and the URL isn't derivable from a fixed pattern, so the page is scanned fresh on every fetch rather than guessed.
+2. The linked file is downloaded and sniffed for a ZIP signature (not trusted by extension — darkrealms.ca serves its daily file under a `.Z##`-style name despite it being a ZIP archive).
+3. If it's a ZIP, the nodelist file inside is extracted; otherwise the response is used as-is.
+4. The result is imported via the same logic as a manual `[N]odelist` import, upserting into the nodelist database for that network.
+
+### 12.2 Configuration
+
+```toml
+[fido]
+  ...
+  nodelist_url                   = ""   # blank = use the darkrealms.ca discovery page
+  nodelist_update_interval_hours = 0    # 0 = scheduler default (24h); else clamped to >=1
+```
+
+| Field | Meaning |
+|---|---|
+| `nodelist_url` | Either a direct file URL (recognised by extension — `.zip`, `.lzh`, a classic `NODELIST.###`, or a `.Z##`-style suffix) downloaded as-is, or a discovery page (the default if left blank) scanned per §12.1. Override this if darkrealms.ca ever becomes unavailable or you prefer a different source/mirror. |
+| `nodelist_update_interval_hours` | Overrides how often the scheduler fetches a fresh nodelist for this network. `0`/unset = 24 hours. Any value below 1 is clamped up to 1. |
+
+Each `[[fido.networks]]` entry has its own independent `nodelist_url` /
+`nodelist_update_interval_hours` — every enabled network gets its own
+fetch schedule, same as the poll scheduler (§6.2).
+
+### 12.3 Manual fetch
+
+- **In-BBS:** Sysop menu → FidoNet → `[L]oad nodelist now` (pick a network if more than one is configured)
+- **API:** `fido.nodelist.fetch` (params: `{"network": "<name>"}`, default network if blank)
+
+### 12.4 Limitations
+
+- Only full nodelist replacement is supported — no NODEDIFF incremental patching. Each fetch downloads and imports the complete current list, which is simpler and self-contained at the cost of a slightly larger download (typically under 200KB) each cycle.
+- The default source's discovery-page scan depends on darkrealms.ca's current page wording ("Fidonet Daily Nodelist (Z1/ZIP) day NNN") and table layout. If they restructure their page, the scan will fail gracefully (logged, the scheduler keeps retrying on its normal interval) rather than crash — but won't recover until either their page reverts or you override `nodelist_url` with a different source.
+
+---
+
+## 13. Quick reference — all `[fido]` fields
 
 ```toml
 [fido]
@@ -452,6 +500,8 @@ than just confirming receipt.
   areafix_password   = ""               # password WE send to OUR uplink's AreaFix
   filefix_password   = ""               # password WE send to OUR uplink's FileFix
   poll_interval_mins = 0                # 0 = scheduler default (6h); else clamped to >=5
+  nodelist_url                   = ""   # blank = scan https://www.darkrealms.ca/
+  nodelist_update_interval_hours = 0    # 0 = scheduler default (24h); else clamped to >=1
 
   [fido.areas]                       # AREA: tag → conference ID (inbound routing)
     TAG_NAME = 1
@@ -478,6 +528,8 @@ than just confirming receipt.
   areafix_password   = ""
   filefix_password   = ""
   poll_interval_mins = 0
+  nodelist_url                   = ""
+  nodelist_update_interval_hours = 0
 
   [fido.networks.areas]
     TAG_NAME = 3

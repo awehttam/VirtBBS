@@ -381,6 +381,19 @@ func (s *Server) dispatch(req Request) (any, error) {
 		}
 		return fido.ImportFile(s.Deps.Messages.DB(), p.Path, p.Network)
 
+	case "fido.nodelist.fetch":
+		var p struct{ Network string }
+		_ = json.Unmarshal(req.Params, &p)
+		cfg := config.Get()
+		if !cfg.Fido.Enabled {
+			return nil, fmt.Errorf("FidoNet is not enabled")
+		}
+		nd := cfg.Fido.NetworkByName(p.Network)
+		if nd == nil {
+			return nil, fmt.Errorf("network %q not found", p.Network)
+		}
+		return fido.FetchAndImport(nd, s.Deps.Messages.DB())
+
 	default:
 		return nil, fmt.Errorf("unknown method: %s", req.Method)
 	}
