@@ -20,6 +20,7 @@ dotnet-virtterm/**/obj/
 # Android / Gradle
 android/**/build/
 android/**/.gradle/
+android/**/.kotlin/
 android/**/local.properties
 
 # Runtime data

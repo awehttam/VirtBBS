@@ -57,28 +57,31 @@ blind the way the whole project would otherwise have to be.
 
 ## Building
 
-Requires the Android SDK (and, for `:app`, an emulator or device to
-actually run on).
+Gradle wrapper and version catalog match
+[ClonesApp](/Volumes/JohnDovey/Projects/ClonesApp) (Gradle 9.5.1, AGP
+8.13.2, Kotlin 2.0, JDK 17). See `../../CLAUDE.md` for SDK paths and
+AI-assistant notes.
+
+Copy `local.properties.example` to `local.properties` if you don't already
+have one:
+
+```bash
+sdk.dir=/Volumes/JohnDovey/Android/Sdk
+```
 
 ```bash
 cd android/VirtAnd
-./gradlew :core:test    # pure JVM — no Android SDK needed
-./gradlew :app:build    # needs the Android SDK configured
+export JAVA_HOME="/usr/local/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
+
+./gradlew :core:test           # pure JVM — no Android SDK needed
+./gradlew :app:assembleDebug   # needs Android SDK + local.properties
+./android-build.sh               # same as :app:assembleDebug
 ```
 
-No Gradle wrapper is checked in yet (`gradlew`/`gradle-wrapper.properties`)
-— generate one on a machine with network access and the Android SDK:
+Open in Android Studio: **File → Open →** `android/VirtAnd`
 
-```bash
-gradle wrapper --gradle-version 8.7
-```
-
-> **JDK note:** if your `gradle`/`java` resolves to a JDK newer than ~21,
-> Kotlin 1.9.x's bundled `JavaVersion` parser can throw
-> `IllegalArgumentException` on the version string (this happened during
-> development — Gradle's launcher defaulted to a separate Homebrew
-> `openjdk@26` install). Set `JAVA_HOME` to a JDK 17 explicitly if you hit
-> `Internal compiler error` from `compileKotlin`.
+> **JDK note:** use JDK 17 explicitly. Newer JDKs can break older Kotlin
+> toolchains or trigger `Internal compiler error` from `compileKotlin`.
 
 ## Verification status
 
@@ -90,10 +93,10 @@ US-ASCII, which silently replaces any byte > 0x7F (including the 0xE3
 soft-CR marker itself) with U+FFFD, corrupting every multi-line message
 body. Fixed by switching to ISO-8859-1, a lossless 1:1 byte↔char mapping.
 
-**`:app` was not compiled** — configuring an `com.android.application`
-module requires the Android SDK, which wasn't available. It was written
-and manually reviewed with the same rigor as `:core`, and that review
-caught two more real bugs along the way:
+**`:app` now builds** with the Android SDK on the JohnDovey drive
+(`./gradlew :app:assembleDebug`, Gradle 9.5.1 + AGP 8.13.2 + Kotlin 2.0,
+matching ClonesApp). It was originally written without an SDK available;
+manual review before the first real compile caught two bugs:
 - `executeQueuedDownloads` originally called `files.download` and threw
   the response away without ever saving the file — fixed to decode the
   base64 payload and write it to app-specific external storage.
@@ -103,11 +106,10 @@ caught two more real bugs along the way:
   needed to be persisted at pick-time via
   `takePersistableUriPermission` — fixed.
 
-Treat `:app` as a careful first draft, not a verified build. Expect to fix
-whatever a real Android Studio / `gradle :app:build` run catches that this
-review couldn't — version mismatches between the pinned library versions
-above and whatever Android Gradle Plugin/Kotlin version you build with are
-the most likely source of friction.
+The first real `:app:assembleDebug` also needed two small compile fixes
+(missing `kotlinx.serialization.json.int`/`long` imports in `SyncEngine.kt`,
+`@OptIn(ExperimentalMaterial3Api::class)` for `TopAppBar` in `MainActivity.kt`).
+Runtime behaviour on a device/emulator still needs manual verification.
 
 ## Known limitations (by design, see the plan)
 

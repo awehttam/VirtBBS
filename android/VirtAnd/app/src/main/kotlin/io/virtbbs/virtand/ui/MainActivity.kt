@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -66,6 +67,7 @@ private sealed class Tab(val route: String, val label: String) {
     data object Settings : Tab("settings", "Settings")
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VirtAndApp(viewModel: MainViewModel) {
     val nav: NavHostController = rememberNavController()

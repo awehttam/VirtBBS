@@ -1,0 +1,2 @@
+## Copy to local.properties (gitignored) and adjust if your SDK path differs.
+sdk.dir=/Volumes/JohnDovey/Android/Sdk

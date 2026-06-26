@@ -1,12 +1,12 @@
 // VirtAnd — settings.gradle.kts
 //
 // Two modules:
-//   core — pure Kotlin/JVM business logic (API client, QWK packet parsing,
-//          sync engine), no Android dependency, fully buildable/testable
-//          with a plain JVM toolchain.
-//   app  — the actual Android application (Activities, Room, WorkManager,
-//          UI). Requires the Android SDK to even configure; see
-//          android/VirtAnd/README.md for build/verification status.
+//   core — pure Kotlin/JVM business logic (API client, QWK packet parsing).
+//   app  — Android application (Room, WorkManager, Compose UI).
+//
+// Build tooling matches ClonesApp (see ../CLAUDE.md and ../../CLAUDE.md).
+enableFeaturePreview("STABLE_CONFIGURATION_CACHE")
+
 pluginManagement {
     repositories {
         google()
@@ -14,8 +14,11 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
-
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
 dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
