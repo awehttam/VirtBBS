@@ -34,6 +34,9 @@
 //                        cfg.Network.VirtTermBind:VirtTermPort, reusing session.Run
 //                        exactly like the Telnet handler (self-signed cert at
 //                        data/virtterm_cert.pem / data/virtterm_key.pem)
+//   v0.12.0 2026-06-27  Detect a vanished underlying volume (USB/external
+//                        drive ejected while running) via a watchVolume
+//                        goroutine and exit gracefully instead of spinning.
 // ============================================================================
 
 // virtbbs is the VirtBBS server — Telnet + SSH BBS with a built-in management API.
@@ -49,6 +52,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/term"
@@ -365,7 +369,46 @@ func main() {
 		}
 	}()
 
+	go watchVolume(cfg.Paths.DB)
+
 	log.Fatal(apiSrv.ListenAndServe())
+}
+
+// watchVolume periodically confirms dbPath (and its containing directory)
+// is still reachable, and exits the process with a clear message if it
+// isn't — e.g. the external/USB drive VirtBBS is running from gets
+// ejected out from under it. Without this, a vanished volume left the
+// process running indefinitely, pegging the CPU as SQLite/the OS kept
+// retrying syscalls against a now-dead mount point on every connection and
+// scheduler tick, with no way to stop it short of `kill -9` (observed
+// directly: ~200-250% CPU, unkillable via plain SIGTERM, since nothing in
+// the program ever checked for or reacted to the underlying filesystem
+// disappearing).
+//
+// A repeated stat() failure is the simplest reliable signal available
+// here: SQLite itself can report all sorts of driver-specific errors for
+// a dead mount depending on OS/filesystem, but a missing/inaccessible
+// regular file is unambiguous and cheap to check on a slow ticker.
+func watchVolume(dbPath string) {
+	const (
+		checkInterval  = 5 * time.Second
+		failuresToExit = 3
+	)
+	failures := 0
+	for {
+		time.Sleep(checkInterval)
+		if _, err := os.Stat(dbPath); err != nil {
+			failures++
+			log.Printf("volume check: cannot stat database %q (%v) — %d/%d", dbPath, err, failures, failuresToExit)
+			if failures >= failuresToExit {
+				log.Fatalf("volume check: database %q unreachable for %d consecutive checks — "+
+					"the underlying drive was likely disconnected. Exiting rather than spinning.",
+					dbPath, failuresToExit)
+			}
+			continue
+		}
+		failures = 0
+	}
 }
 
 // runInitSysop interactively creates or resets the sysop account and

@@ -154,6 +154,16 @@
 //                        mid-section. Added an explicit pause right before
 //                        the first section header so the title/banner block
 //                        always displays in full before the first pause.
+//   v0.12.0 2026-06-27  Detect a vanished underlying volume (e.g. the USB/
+//                        external drive VirtBBS runs from getting ejected)
+//                        and exit gracefully instead of spinning forever.
+//                        cmd/virtbbs/main.go now runs a watchVolume
+//                        goroutine that os.Stat()s the database path every
+//                        5s; after 3 consecutive failures it logs a clear
+//                        diagnostic and exits, rather than leaving the
+//                        process pegging the CPU and requiring a manual
+//                        kill -9 (observed directly: ~200-250% CPU,
+//                        unresponsive to plain SIGTERM).
 // ============================================================================
 
 // Package version holds the VirtBBS version number.
@@ -164,4 +174,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "0.11.1"
+const Version = "0.12.0"
