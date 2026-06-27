@@ -12,7 +12,7 @@
         </StackPanel>
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Opacity="0.8" TextWrapping="Wrap" Margin="0,8,0,0"/>
 
-        <Grid ColumnDefinitions="2*,8,1*">
+        <Grid ColumnDefinitions="2*,8,1*" RowDefinitions="*">
             <DataGrid Grid.Column="0" ItemsSource="{Binding Pending}" SelectedItem="{Binding Selected}"
                       IsReadOnly="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
@@ -24,7 +24,8 @@
                 </DataGrid.Columns>
             </DataGrid>
             <GridSplitter Grid.Column="1" Width="8"/>
-            <StackPanel Grid.Column="2" Spacing="6">
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="6">
                 <TextBlock Text="Approve Request" FontWeight="Bold"/>
                 <TextBlock Text="Net #:"/>
                 <NumericUpDown Value="{Binding ApproveNet}" Minimum="0" Maximum="9999"/>
@@ -38,6 +39,7 @@
                 <TextBlock Text="Assigned password (shown once):"/>
                 <TextBox Text="{Binding ApprovedPassword}" IsReadOnly="True"/>
             </StackPanel>
+            </ScrollViewer>
         </Grid>
     </DockPanel>
 </UserControl>

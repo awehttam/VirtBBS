@@ -7,7 +7,7 @@
              x:Class="VirtBBS.GUI.Views.UsersView"
              x:DataType="vm:UsersViewModel">
 
-    <Grid Margin="10" ColumnDefinitions="2*,8,1*">
+    <Grid Margin="10" ColumnDefinitions="2*,8,1*" RowDefinitions="*">
 
         <DockPanel Grid.Column="0">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
@@ -31,34 +31,38 @@
 
         <GridSplitter Grid.Column="1" Width="8" Background="Transparent"/>
 
-        <StackPanel Grid.Column="2" Spacing="6">
-            <TextBlock Text="Edit User" FontWeight="Bold"/>
-            <TextBlock Text="City:"/>
-            <TextBox Text="{Binding EditCity}"/>
-            <TextBlock Text="Phone:"/>
-            <TextBox Text="{Binding EditPhone}"/>
-            <TextBlock Text="Security Level:"/>
-            <NumericUpDown Value="{Binding EditSecurity}" Minimum="0" Maximum="999"/>
-            <TextBlock Text="Page Length:"/>
-            <NumericUpDown Value="{Binding EditPageLength}" Minimum="0" Maximum="99"/>
-            <CheckBox Content="ANSI" IsChecked="{Binding EditAnsi}"/>
-            <CheckBox Content="Sysop" IsChecked="{Binding EditSysop}"/>
-            <CheckBox Content="Deleted" IsChecked="{Binding EditDeleted}"/>
-            <TextBlock Text="Editor Type:"/>
-            <ComboBox SelectedItem="{Binding EditEditorType}" HorizontalAlignment="Stretch">
-                <ComboBox.Items>
-                    <x:String>simple</x:String>
-                    <x:String>full</x:String>
-                </ComboBox.Items>
-            </ComboBox>
-            <TextBlock Text="Comment:"/>
-            <TextBox Text="{Binding EditComment}" AcceptsReturn="True" Height="60" TextWrapping="Wrap"/>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Content="Save"   Command="{Binding SaveCommand}"/>
-                <Button Content="Delete" Command="{Binding DeleteCommand}"/>
+        <ScrollViewer Grid.Column="2"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="6">
+                <TextBlock Text="Edit User" FontWeight="Bold"/>
+                <TextBlock Text="City:"/>
+                <TextBox Text="{Binding EditCity}"/>
+                <TextBlock Text="Phone:"/>
+                <TextBox Text="{Binding EditPhone}"/>
+                <TextBlock Text="Security Level:"/>
+                <NumericUpDown Value="{Binding EditSecurity}" Minimum="0" Maximum="999"/>
+                <TextBlock Text="Page Length:"/>
+                <NumericUpDown Value="{Binding EditPageLength}" Minimum="0" Maximum="99"/>
+                <CheckBox Content="ANSI" IsChecked="{Binding EditAnsi}"/>
+                <CheckBox Content="Sysop" IsChecked="{Binding EditSysop}"/>
+                <CheckBox Content="Deleted" IsChecked="{Binding EditDeleted}"/>
+                <TextBlock Text="Editor Type:"/>
+                <ComboBox SelectedItem="{Binding EditEditorType}" HorizontalAlignment="Stretch">
+                    <ComboBox.Items>
+                        <x:String>simple</x:String>
+                        <x:String>full</x:String>
+                    </ComboBox.Items>
+                </ComboBox>
+                <TextBlock Text="Comment:"/>
+                <TextBox Text="{Binding EditComment}" AcceptsReturn="True" Height="60" TextWrapping="Wrap"/>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Content="Save"   Command="{Binding SaveCommand}"/>
+                    <Button Content="Delete" Command="{Binding DeleteCommand}"/>
+                </StackPanel>
+                <TextBlock Text="{Binding Status}" Opacity="0.8" TextWrapping="Wrap"/>
             </StackPanel>
-            <TextBlock Text="{Binding Status}" Opacity="0.8" TextWrapping="Wrap"/>
-        </StackPanel>
+        </ScrollViewer>
 
     </Grid>
 

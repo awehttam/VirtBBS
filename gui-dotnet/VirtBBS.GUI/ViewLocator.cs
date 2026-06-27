@@ -20,11 +20,13 @@ public class ViewLocator : IDataTemplate
             return null;
         
         var name = param.GetType().FullName!.Replace("ViewModel", "View", StringComparison.Ordinal);
-        var type = Type.GetType(name);
+        var type = Type.GetType(name) ?? typeof(ViewLocator).Assembly.GetType(name);
 
         if (type != null)
         {
-            return (Control)Activator.CreateInstance(type)!;
+            var control = (Control)Activator.CreateInstance(type)!;
+            control.DataContext = param;
+            return control;
         }
         
         return new TextBlock { Text = "Not Found: " + name };

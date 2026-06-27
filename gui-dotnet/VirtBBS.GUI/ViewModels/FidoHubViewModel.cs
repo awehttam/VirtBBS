@@ -4,7 +4,7 @@ using VirtBBS.GUI.Models;
 
 namespace VirtBBS.GUI.ViewModels;
 
-public class FidoHubViewModel(ApiClient client)
+public class FidoHubViewModel(ApiClient client) : ViewModelBase
 {
     public FidoNetworksViewModel Networks { get; } = new(client);
     public FidoRoutingViewModel Routing { get; } = new(client);

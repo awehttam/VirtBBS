@@ -4,7 +4,7 @@
              x:Class="VirtBBS.GUI.Views.FileAreasView"
              x:DataType="vm:FileAreasViewModel">
 
-    <Grid Margin="10" ColumnDefinitions="2*,8,1*">
+    <Grid Margin="10" ColumnDefinitions="2*,8,1*" RowDefinitions="*">
         <DockPanel Grid.Column="0">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
                 <Button Content="Refresh" Command="{Binding LoadCommand}"/>
@@ -23,24 +23,28 @@
 
         <GridSplitter Grid.Column="1" Width="8"/>
 
-        <StackPanel Grid.Column="2" Spacing="6">
-            <TextBlock Text="Edit File Area" FontWeight="Bold"/>
-            <TextBlock Text="Name:"/>
-            <TextBox Text="{Binding EditName}"/>
-            <TextBlock Text="Description:"/>
-            <TextBox Text="{Binding EditDescription}"/>
-            <TextBlock Text="Path (under files root):"/>
-            <TextBox Text="{Binding EditPath}"/>
-            <TextBlock Text="Read security:"/>
-            <NumericUpDown Value="{Binding EditReadSec}" Minimum="0" Maximum="999"/>
-            <TextBlock Text="Upload security:"/>
-            <NumericUpDown Value="{Binding EditUploadSec}" Minimum="0" Maximum="999"/>
-            <CheckBox Content="Active" IsChecked="{Binding EditActive}"/>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Content="Save" Command="{Binding SaveCommand}"/>
-                <Button Content="New" Command="{Binding CreateCommand}"/>
+        <ScrollViewer Grid.Column="2"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="6">
+                <TextBlock Text="Edit File Area" FontWeight="Bold"/>
+                <TextBlock Text="Name:"/>
+                <TextBox Text="{Binding EditName}"/>
+                <TextBlock Text="Description:"/>
+                <TextBox Text="{Binding EditDescription}"/>
+                <TextBlock Text="Path (under files root):"/>
+                <TextBox Text="{Binding EditPath}"/>
+                <TextBlock Text="Read security:"/>
+                <NumericUpDown Value="{Binding EditReadSec}" Minimum="0" Maximum="999"/>
+                <TextBlock Text="Upload security:"/>
+                <NumericUpDown Value="{Binding EditUploadSec}" Minimum="0" Maximum="999"/>
+                <CheckBox Content="Active" IsChecked="{Binding EditActive}"/>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Content="Save" Command="{Binding SaveCommand}"/>
+                    <Button Content="New" Command="{Binding CreateCommand}"/>
+                </StackPanel>
+                <TextBlock Text="{Binding Status}" Opacity="0.8" TextWrapping="Wrap"/>
             </StackPanel>
-            <TextBlock Text="{Binding Status}" Opacity="0.8" TextWrapping="Wrap"/>
-        </StackPanel>
+        </ScrollViewer>
     </Grid>
 </UserControl>

@@ -7,7 +7,7 @@
              x:Class="VirtBBS.GUI.Views.ConferencesView"
              x:DataType="vm:ConferencesViewModel">
 
-    <Grid Margin="10" ColumnDefinitions="2*,8,1*">
+    <Grid Margin="10" ColumnDefinitions="2*,8,1*" RowDefinitions="*">
 
         <DockPanel Grid.Column="0">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
@@ -31,29 +31,33 @@
 
         <GridSplitter Grid.Column="1" Width="8" Background="Transparent"/>
 
-        <StackPanel Grid.Column="2" Spacing="6">
-            <TextBlock Text="Edit Conference" FontWeight="Bold"/>
-            <TextBlock Text="Name:"/>
-            <TextBox Text="{Binding EditName}"/>
-            <TextBlock Text="Description:"/>
-            <TextBox Text="{Binding EditDescription}"/>
-            <CheckBox Content="Public" IsChecked="{Binding EditPublic}"/>
-            <TextBlock Text="Read Security:"/>
-            <NumericUpDown Value="{Binding EditReadSec}" Minimum="0" Maximum="999"/>
-            <TextBlock Text="Write Security:"/>
-            <NumericUpDown Value="{Binding EditWriteSec}" Minimum="0" Maximum="999"/>
-            <TextBlock Text="Sysop Security:"/>
-            <NumericUpDown Value="{Binding EditSysopSec}" Minimum="0" Maximum="999"/>
-            <CheckBox Content="Echo (FidoNet)" IsChecked="{Binding EditEcho}"/>
-            <TextBlock Text="Echo Tag (AREA:):"/>
-            <TextBox Text="{Binding EditEchoTag}"/>
-            <TextBlock Text="Uplink Addr (override):"/>
-            <TextBox Text="{Binding EditUplinkAddr}"/>
-            <TextBlock Text="Network:"/>
-            <ComboBox ItemsSource="{Binding NetworkNames}" SelectedItem="{Binding EditNetwork}"/>
-            <Button Content="Save" Command="{Binding SaveCommand}"/>
-            <TextBlock Text="{Binding Status}" Opacity="0.8" TextWrapping="Wrap"/>
-        </StackPanel>
+        <ScrollViewer Grid.Column="2"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="6">
+                <TextBlock Text="Edit Conference" FontWeight="Bold"/>
+                <TextBlock Text="Name:"/>
+                <TextBox Text="{Binding EditName}"/>
+                <TextBlock Text="Description:"/>
+                <TextBox Text="{Binding EditDescription}"/>
+                <CheckBox Content="Public" IsChecked="{Binding EditPublic}"/>
+                <TextBlock Text="Read Security:"/>
+                <NumericUpDown Value="{Binding EditReadSec}" Minimum="0" Maximum="999"/>
+                <TextBlock Text="Write Security:"/>
+                <NumericUpDown Value="{Binding EditWriteSec}" Minimum="0" Maximum="999"/>
+                <TextBlock Text="Sysop Security:"/>
+                <NumericUpDown Value="{Binding EditSysopSec}" Minimum="0" Maximum="999"/>
+                <CheckBox Content="Echo (FidoNet)" IsChecked="{Binding EditEcho}"/>
+                <TextBlock Text="Echo Tag (AREA:):"/>
+                <TextBox Text="{Binding EditEchoTag}"/>
+                <TextBlock Text="Uplink Addr (override):"/>
+                <TextBox Text="{Binding EditUplinkAddr}"/>
+                <TextBlock Text="Network:"/>
+                <ComboBox ItemsSource="{Binding NetworkNames}" SelectedItem="{Binding EditNetwork}"/>
+                <Button Content="Save" Command="{Binding SaveCommand}"/>
+                <TextBlock Text="{Binding Status}" Opacity="0.8" TextWrapping="Wrap"/>
+            </StackPanel>
+        </ScrollViewer>
 
     </Grid>
 

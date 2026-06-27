@@ -15,7 +15,7 @@
 
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Opacity="0.8" TextWrapping="Wrap" Margin="0,8,0,0"/>
 
-        <ScrollViewer>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="10" MaxWidth="900">
                 <TextBlock Text="Node Settings" FontWeight="Bold" FontSize="14"/>
                 <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="6">

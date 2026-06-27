@@ -40,7 +40,7 @@
             </TabItem>
 
             <TabItem Header="Members">
-                <Grid ColumnDefinitions="2*,8,1*" Margin="4">
+                <Grid ColumnDefinitions="2*,8,1*" RowDefinitions="*" Margin="4">
                     <DockPanel Grid.Column="0">
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
                             <Button Content="Export Table" Command="{Binding ExportRoutingTableCommand}"/>
@@ -56,7 +56,8 @@
                         </DataGrid>
                     </DockPanel>
                     <GridSplitter Grid.Column="1" Width="8"/>
-                    <StackPanel Grid.Column="2" Spacing="4">
+                    <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="4">
                         <TextBlock Text="Edit Member" FontWeight="Bold"/>
                         <TextBox Text="{Binding EditBbsName}" PlaceholderText="BBS name"/>
                         <TextBox Text="{Binding EditSysopName}" PlaceholderText="Sysop"/>
@@ -69,6 +70,7 @@
                         <TextBox Text="{Binding RoutingExportText}" AcceptsReturn="True" Height="80" TextWrapping="Wrap"/>
                         <TextBox Text="{Binding RoutingImportText}" AcceptsReturn="True" Height="80" TextWrapping="Wrap" PlaceholderText="Paste routing table"/>
                     </StackPanel>
+                    </ScrollViewer>
                 </Grid>
             </TabItem>
         </TabControl>
