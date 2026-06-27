@@ -2158,7 +2158,10 @@ func (s *session) gatherStats() bbsStats {
 
 const statsPageLines = 23
 
-// statsPager writes the stats screen and pauses every 23 lines.
+// statsPager writes the stats screen and pauses every 23 lines (plus one
+// explicit pause right before the first section header, so the header/
+// banner block isn't split mid-way through by wherever the 23-line count
+// happens to land).
 type statsPager struct {
 	s     *session
 	lines int
@@ -2217,6 +2220,7 @@ func (s *session) showStats() {
 	p.writeln(statsLine("  " + ansi.Bold() + ansi.Color(ansi.BrightYellow) + padRight(cfg.BBS.Name, statsInnerW-2)))
 	p.writeln(statsBorder + "  ╚" + strings.Repeat("═", statsInnerW) + "╝" + ansi.Reset())
 	p.writeln("")
+	p.pause() // pause right before the first section, not wherever the 23-line counter happens to land
 
 	p.section("This Call — " + s.user.Name)
 	p.line("Node", fmt.Sprintf("%d", s.nodeID))

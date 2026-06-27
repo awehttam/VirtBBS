@@ -149,6 +149,11 @@
 //                        like the payload; and ReceiveFile only reading one
 //                        data subpacket per ZDATA header instead of the full
 //                        run of subpackets a real transfer sends.
+//   v0.11.1 2026-06-27  Fix the Stats screen's pager: the 23-line auto-pause
+//                        landed wherever the count happened to fall, often
+//                        mid-section. Added an explicit pause right before
+//                        the first section header so the title/banner block
+//                        always displays in full before the first pause.
 // ============================================================================
 
 // Package version holds the VirtBBS version number.
@@ -159,4 +164,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "0.11.0"
+const Version = "0.11.1"
