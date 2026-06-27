@@ -251,6 +251,49 @@ public class AreaFixSubscription
     public string AreasText => string.Join(", ", Areas);
 }
 
+public class FidoJoinRequest
+{
+    [JsonPropertyName("ID")]                public long  ID                { get; set; }
+    [JsonPropertyName("Network")]           public string Network           { get; set; } = "";
+    [JsonPropertyName("BBSName")]           public string BBSName           { get; set; } = "";
+    [JsonPropertyName("SysopName")]         public string SysopName         { get; set; } = "";
+    [JsonPropertyName("Location")]          public string Location          { get; set; } = "";
+    [JsonPropertyName("Contact")]           public string Contact           { get; set; } = "";
+    [JsonPropertyName("RequestedNet")]      public int?   RequestedNet      { get; set; }
+    [JsonPropertyName("BinkpHost")]         public string BinkpHost         { get; set; } = "";
+    [JsonPropertyName("Status")]            public string Status            { get; set; } = "";
+    [JsonPropertyName("CreatedAt")]         public string CreatedAt         { get; set; } = "";
+}
+
+public class TextExport
+{
+    [JsonPropertyName("text")] public string Text { get; set; } = "";
+}
+
+public class JoinApproveResult
+{
+    [JsonPropertyName("member")]   public FidoMember Member   { get; set; } = new();
+    [JsonPropertyName("password")] public string Password { get; set; } = "";
+}
+
+public class RoutingImportResult
+{
+    [JsonPropertyName("Updated")] public int Updated { get; set; }
+    [JsonPropertyName("Unknown")] public List<string> Unknown { get; set; } = new();
+    [JsonPropertyName("Errors")]  public List<string> Errors  { get; set; } = new();
+}
+
+public class RoutesImportResult
+{
+    [JsonPropertyName("Added")]  public int Added  { get; set; }
+    [JsonPropertyName("Errors")] public List<string> Errors { get; set; } = new();
+}
+
+public class PktResult
+{
+    [JsonPropertyName("pkt")] public string Pkt { get; set; } = "";
+}
+
 // ── FidoNet ───────────────────────────────────────────────────────────────────
 
 public record FidoNode

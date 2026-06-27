@@ -32,6 +32,11 @@ android/**/local.properties
 /files/
 /fido/
 
+# Local FidoNet operational files (not part of source)
+ROUTES.BBS
+NODELIST.*
+NODEDIFF.*
+
 # OS / editor
 .DS_Store
 *.swp

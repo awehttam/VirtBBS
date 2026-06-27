@@ -46,19 +46,19 @@ import (
 
 // JoinRequest is a pending (or decided) application to join a hub network.
 type JoinRequest struct {
-	ID                 int64
-	Network            string
-	RequestedByUserID  int
-	BBSName            string
-	SysopName          string
-	Location           string
-	Contact            string
-	RequestedNet       *int
-	BinkpHost          string
-	Status             string // pending/approved/denied
-	CreatedAt          string
-	DecidedAt          string
-	DecidedBy          string
+	ID                int64  `json:"ID"`
+	Network           string `json:"Network"`
+	RequestedByUserID int    `json:"RequestedByUserID"`
+	BBSName           string `json:"BBSName"`
+	SysopName         string `json:"SysopName"`
+	Location          string `json:"Location"`
+	Contact           string `json:"Contact"`
+	RequestedNet      *int   `json:"RequestedNet,omitempty"`
+	BinkpHost         string `json:"BinkpHost"`
+	Status            string `json:"Status"`
+	CreatedAt         string `json:"CreatedAt"`
+	DecidedAt         string `json:"DecidedAt,omitempty"`
+	DecidedBy         string `json:"DecidedBy,omitempty"`
 }
 
 // Member is one approved (or remotely-announced) node of a hub network.

@@ -11,6 +11,12 @@
         <TabItem Header="Routing">
             <ContentControl Content="{Binding Routing}"/>
         </TabItem>
+        <TabItem Header="Join Requests">
+            <ContentControl Content="{Binding Join}"/>
+        </TabItem>
+        <TabItem Header="Tools">
+            <ContentControl Content="{Binding Tools}"/>
+        </TabItem>
         <TabItem Header="Operations">
             <ContentControl Content="{Binding Operations}"/>
         </TabItem>

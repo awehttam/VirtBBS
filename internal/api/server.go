@@ -537,6 +537,268 @@ func (s *Server) dispatch(req Request) (any, error) {
 		}
 		return out, nil
 
+	case "fido.join.list":
+		var p struct{ Network string }
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		if p.Network == "" {
+			p.Network = fido.PrimaryNetworkName
+		}
+		mdb := fido.OpenMembersDB(s.Deps.Messages.DB())
+		return mdb.ListPending(p.Network)
+
+	case "fido.join.approve":
+		var p struct {
+			Network string
+			ID      int64
+			Net     int
+			Node    int
+			IsHost  bool
+			Password string
+		}
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		if p.Network == "" {
+			p.Network = fido.PrimaryNetworkName
+		}
+		nd, err := networkDef(p.Network)
+		if err != nil {
+			return nil, err
+		}
+		if !nd.IsHub() {
+			return nil, fmt.Errorf("network %q is not a hub", p.Network)
+		}
+		mdb := fido.OpenMembersDB(s.Deps.Messages.DB())
+		joinReq, err := mdb.GetJoinRequest(p.ID)
+		if err != nil || joinReq == nil || joinReq.Status != "pending" {
+			return nil, fmt.Errorf("join request not found or already decided")
+		}
+		net := p.Net
+		if net == 0 {
+			if joinReq.RequestedNet != nil {
+				net = *joinReq.RequestedNet
+			} else {
+				net = 1
+			}
+		}
+		node := p.Node
+		isHost := p.IsHost
+		if !isHost && node == 0 {
+			node, err = mdb.NextNodeNum(p.Network, net)
+			if err != nil {
+				return nil, err
+			}
+		}
+		password := p.Password
+		if password == "" {
+			password = randomMemberPassword()
+		}
+		m, err := mdb.ApproveJoinRequest(nd, joinReq, net, node, isHost, password, saveNetworkDownlink)
+		if err != nil {
+			return nil, err
+		}
+		cfg := config.Get()
+		_ = fido.ApplyNodeAnnounceInfo(nd, s.Deps.Messages.DB(), s.Deps.Conferences, s.Deps.Messages, m, "NEW")
+		_, _, _ = fido.GenerateNodelist(s.Deps.Messages.DB(), nd, cfg.BBS.Name, cfg.Sysop.Name)
+		return map[string]any{"member": m, "password": password}, nil
+
+	case "fido.join.deny":
+		var p struct {
+			Network   string
+			ID        int64
+			DecidedBy string
+		}
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		mdb := fido.OpenMembersDB(s.Deps.Messages.DB())
+		by := p.DecidedBy
+		if by == "" {
+			by = "Sysop"
+		}
+		return nil, mdb.Deny(p.ID, by)
+
+	case "fido.members.update":
+		var p fido.Member
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		mdb := fido.OpenMembersDB(s.Deps.Messages.DB())
+		return nil, mdb.UpdateMemberInfo(&p)
+
+	case "fido.routing.export":
+		var p struct{ Network string }
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		if p.Network == "" {
+			p.Network = fido.PrimaryNetworkName
+		}
+		data, err := fido.ExportRoutingTable(s.Deps.Messages.DB(), p.Network)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]string{"text": string(data)}, nil
+
+	case "fido.routing.import":
+		var p struct {
+			Network string
+			Text    string
+		}
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		if p.Network == "" {
+			p.Network = fido.PrimaryNetworkName
+		}
+		return fido.ImportRoutingTable(s.Deps.Messages.DB(), p.Network, []byte(p.Text))
+
+	case "fido.routes.export":
+		var p struct{ Network string }
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		if p.Network == "" {
+			p.Network = fido.PrimaryNetworkName
+		}
+		data, err := fido.ExportRoutesBBS(s.Deps.Messages.DB(), p.Network)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]string{"text": string(data)}, nil
+
+	case "fido.routes.import":
+		var p struct {
+			Network string
+			Text    string
+		}
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		if p.Network == "" {
+			p.Network = fido.PrimaryNetworkName
+		}
+		return fido.ImportRoutesBBS(s.Deps.Messages.DB(), p.Network, []byte(p.Text))
+
+	case "fido.ping.send":
+		var p struct {
+			Network string
+			FromName string
+			ToName   string
+			ToAddr   string
+		}
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		nd, err := networkDef(p.Network)
+		if err != nil {
+			return nil, err
+		}
+		if p.FromName == "" {
+			p.FromName = "Sysop"
+		}
+		pkt, err := fido.SendPing(nd, p.FromName, p.ToName, p.ToAddr)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]string{"pkt": pkt}, nil
+
+	case "fido.trace.send":
+		var p struct {
+			Network string
+			FromName string
+			ToName   string
+			ToAddr   string
+		}
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		nd, err := networkDef(p.Network)
+		if err != nil {
+			return nil, err
+		}
+		if p.FromName == "" {
+			p.FromName = "Sysop"
+		}
+		pkt, err := fido.SendTrace(nd, p.FromName, p.ToName, p.ToAddr)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]string{"pkt": pkt}, nil
+
+	case "fido.areafix.request":
+		var p struct {
+			Network string
+			FromName string
+			Adds     []string
+			Removes  []string
+		}
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		nd, err := networkDef(p.Network)
+		if err != nil {
+			return nil, err
+		}
+		if p.FromName == "" {
+			p.FromName = "Sysop"
+		}
+		pkt, err := fido.RequestAreaFix(nd, p.FromName, p.Adds, p.Removes)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]string{"pkt": pkt}, nil
+
+	case "fido.filefix.request":
+		var p struct {
+			Network string
+			FromName string
+			Adds     []string
+			Removes  []string
+		}
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		nd, err := networkDef(p.Network)
+		if err != nil {
+			return nil, err
+		}
+		if p.FromName == "" {
+			p.FromName = "Sysop"
+		}
+		pkt, err := fido.RequestFileFix(nd, p.FromName, p.Adds, p.Removes)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]string{"pkt": pkt}, nil
+
+	case "fido.filefix.subscriptions":
+		var p struct{ Network string }
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		if p.Network == "" {
+			p.Network = fido.PrimaryNetworkName
+		}
+		nd, err := networkDef(p.Network)
+		if err != nil {
+			return nil, err
+		}
+		filefixDB := fido.OpenFileFixDB(s.Deps.Messages.DB())
+		type subEntry struct {
+			Downlink string   `json:"Downlink"`
+			Name     string   `json:"Name"`
+			Areas    []string `json:"Areas"`
+		}
+		var out []subEntry
+		for _, dl := range nd.Downlinks {
+			tags, _ := filefixDB.SubscriptionsFor(p.Network, dl.Address)
+			out = append(out, subEntry{Downlink: dl.Address, Name: dl.Name, Areas: tags})
+		}
+		return out, nil
+
 	default:
 		return nil, fmt.Errorf("unknown method: %s", req.Method)
 	}

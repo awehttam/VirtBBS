@@ -13,40 +13,64 @@
 
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Opacity="0.8" Margin="0,8,0,0"/>
 
-        <Grid RowDefinitions="Auto,*,Auto,*" RowSpacing="8">
-            <TextBlock Grid.Row="0" Text="ROUTES.BBS Static Routes" FontWeight="Bold"/>
-            <DataGrid Grid.Row="1" ItemsSource="{Binding Routes}" SelectedItem="{Binding SelectedRoute}"
-                      IsReadOnly="True" AutoGenerateColumns="False">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Pattern" Binding="{Binding Pattern}" Width="180"/>
-                    <DataGridTextColumn Header="Route To" Binding="{Binding RouteTo}" Width="180"/>
-                    <DataGridCheckBoxColumn Header="Default" Binding="{Binding IsDefault}" Width="70"/>
-                    <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt}" Width="*"/>
-                </DataGrid.Columns>
-            </DataGrid>
+        <TabControl>
+            <TabItem Header="ROUTES.BBS">
+                <Grid RowDefinitions="*,Auto,120" Margin="4">
+                    <DataGrid Grid.Row="0" ItemsSource="{Binding Routes}" SelectedItem="{Binding SelectedRoute}"
+                              IsReadOnly="True" AutoGenerateColumns="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Pattern" Binding="{Binding Pattern}" Width="180"/>
+                            <DataGridTextColumn Header="Route To" Binding="{Binding RouteTo}" Width="180"/>
+                            <DataGridCheckBoxColumn Header="Default" Binding="{Binding IsDefault}" Width="70"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6" Margin="0,6">
+                        <TextBox Text="{Binding NewPattern}" Width="160" PlaceholderText="pattern"/>
+                        <TextBox Text="{Binding NewRouteTo}" Width="160" PlaceholderText="route to"/>
+                        <Button Content="Add" Command="{Binding AddRouteCommand}"/>
+                        <Button Content="Remove" Command="{Binding RemoveRouteCommand}"/>
+                        <Button Content="Export" Command="{Binding ExportRoutesCommand}"/>
+                        <Button Content="Import" Command="{Binding ImportRoutesCommand}"/>
+                    </StackPanel>
+                    <Grid Grid.Row="2" ColumnDefinitions="*,*">
+                        <TextBox Grid.Column="0" Text="{Binding RoutesExportText}" AcceptsReturn="True" TextWrapping="Wrap" Margin="0,0,4,0"/>
+                        <TextBox Grid.Column="1" Text="{Binding RoutesImportText}" AcceptsReturn="True" TextWrapping="Wrap" PlaceholderText="Paste ROUTES.BBS to import"/>
+                    </Grid>
+                </Grid>
+            </TabItem>
 
-            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6">
-                <TextBox Text="{Binding NewPattern}" Width="160" PlaceholderText="pattern"/>
-                <TextBox Text="{Binding NewRouteTo}" Width="160" PlaceholderText="route to"/>
-                <Button Content="Add Route" Command="{Binding AddRouteCommand}"/>
-                <Button Content="Remove Selected" Command="{Binding RemoveRouteCommand}"/>
-            </StackPanel>
-
-            <DockPanel Grid.Row="3">
-                <TextBlock DockPanel.Dock="Top" Text="Member Routing Table (VirtNet hub)" FontWeight="Bold" Margin="0,8,0,4"/>
-                <DataGrid ItemsSource="{Binding Members}" SelectedItem="{Binding SelectedMember}"
-                          IsReadOnly="True" AutoGenerateColumns="False">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="110"/>
-                        <DataGridTextColumn Header="BBS" Binding="{Binding BBSName}" Width="140"/>
-                        <DataGridTextColumn Header="Sysop" Binding="{Binding SysopName}" Width="120"/>
-                        <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="120"/>
-                        <DataGridTextColumn Header="BinkP Host" Binding="{Binding BinkpHost}" Width="*"/>
-                        <DataGridCheckBoxColumn Header="Host" Binding="{Binding IsHost}" Width="50"/>
-                        <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="55"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </DockPanel>
-        </Grid>
+            <TabItem Header="Members">
+                <Grid ColumnDefinitions="2*,8,1*" Margin="4">
+                    <DockPanel Grid.Column="0">
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+                            <Button Content="Export Table" Command="{Binding ExportRoutingTableCommand}"/>
+                            <Button Content="Import Table" Command="{Binding ImportRoutingTableCommand}"/>
+                        </StackPanel>
+                        <DataGrid ItemsSource="{Binding Members}" SelectedItem="{Binding SelectedMember}"
+                                  IsReadOnly="True" AutoGenerateColumns="False">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="110"/>
+                                <DataGridTextColumn Header="BBS" Binding="{Binding BBSName}" Width="120"/>
+                                <DataGridTextColumn Header="BinkP Host" Binding="{Binding BinkpHost}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                    <GridSplitter Grid.Column="1" Width="8"/>
+                    <StackPanel Grid.Column="2" Spacing="4">
+                        <TextBlock Text="Edit Member" FontWeight="Bold"/>
+                        <TextBox Text="{Binding EditBbsName}" PlaceholderText="BBS name"/>
+                        <TextBox Text="{Binding EditSysopName}" PlaceholderText="Sysop"/>
+                        <TextBox Text="{Binding EditLocation}" PlaceholderText="Location"/>
+                        <TextBox Text="{Binding EditContact}" PlaceholderText="Contact"/>
+                        <TextBox Text="{Binding EditBinkpHost}" PlaceholderText="BinkP host:port"/>
+                        <TextBox Text="{Binding EditPassword}" PlaceholderText="Password"/>
+                        <Button Content="Save Member" Command="{Binding SaveMemberCommand}"/>
+                        <TextBlock Text="Export / import (bulk host/password edit):" FontWeight="Bold" Margin="0,8,0,0"/>
+                        <TextBox Text="{Binding RoutingExportText}" AcceptsReturn="True" Height="80" TextWrapping="Wrap"/>
+                        <TextBox Text="{Binding RoutingImportText}" AcceptsReturn="True" Height="80" TextWrapping="Wrap" PlaceholderText="Paste routing table"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </DockPanel>
 </UserControl>

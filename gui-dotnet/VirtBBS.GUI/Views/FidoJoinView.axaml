@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VirtBBS.GUI.ViewModels"
+             x:Class="VirtBBS.GUI.Views.FidoJoinView"
+             x:DataType="vm:FidoJoinViewModel">
+
+    <DockPanel Margin="10">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="Network:" VerticalAlignment="Center"/>
+            <ComboBox ItemsSource="{Binding NetworkNames}" SelectedItem="{Binding SelectedNetwork}" Width="180"/>
+            <Button Content="Reload" Command="{Binding LoadCommand}"/>
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Opacity="0.8" TextWrapping="Wrap" Margin="0,8,0,0"/>
+
+        <Grid ColumnDefinitions="2*,8,1*">
+            <DataGrid Grid.Column="0" ItemsSource="{Binding Pending}" SelectedItem="{Binding Selected}"
+                      IsReadOnly="True" AutoGenerateColumns="False">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="40"/>
+                    <DataGridTextColumn Header="BBS" Binding="{Binding BBSName}" Width="140"/>
+                    <DataGridTextColumn Header="Sysop" Binding="{Binding SysopName}" Width="120"/>
+                    <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="120"/>
+                    <DataGridTextColumn Header="Host" Binding="{Binding BinkpHost}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            <GridSplitter Grid.Column="1" Width="8"/>
+            <StackPanel Grid.Column="2" Spacing="6">
+                <TextBlock Text="Approve Request" FontWeight="Bold"/>
+                <TextBlock Text="Net #:"/>
+                <NumericUpDown Value="{Binding ApproveNet}" Minimum="0" Maximum="9999"/>
+                <TextBlock Text="Node # (0 = auto):"/>
+                <NumericUpDown Value="{Binding ApproveNode}" Minimum="0" Maximum="9999"/>
+                <CheckBox Content="Net Host (node 0)" IsChecked="{Binding ApproveIsHost}"/>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Content="Approve" Command="{Binding ApproveCommand}"/>
+                    <Button Content="Deny" Command="{Binding DenyCommand}"/>
+                </StackPanel>
+                <TextBlock Text="Assigned password (shown once):"/>
+                <TextBox Text="{Binding ApprovedPassword}" IsReadOnly="True"/>
+            </StackPanel>
+        </Grid>
+    </DockPanel>
+</UserControl>

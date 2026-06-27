@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VirtBBS.GUI.ViewModels"
+             x:Class="VirtBBS.GUI.Views.FidoToolsView"
+             x:DataType="vm:FidoToolsViewModel">
+
+    <ScrollViewer Margin="10">
+        <StackPanel Spacing="12" MaxWidth="640">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Network:" VerticalAlignment="Center"/>
+                <ComboBox ItemsSource="{Binding NetworkNames}" SelectedItem="{Binding SelectedNetwork}" Width="180"/>
+            </StackPanel>
+
+            <TextBlock Text="Ping / Trace" FontWeight="Bold"/>
+            <TextBox Text="{Binding PingAddr}" PlaceholderText="Ping address"/>
+            <TextBox Text="{Binding PingToName}" PlaceholderText="To name (optional)"/>
+            <Button Content="Send Ping" Command="{Binding PingCommand}" HorizontalAlignment="Left"/>
+            <TextBox Text="{Binding TraceAddr}" PlaceholderText="Trace address"/>
+            <TextBox Text="{Binding TraceToName}" PlaceholderText="To name (optional)"/>
+            <Button Content="Send Trace" Command="{Binding TraceCommand}" HorizontalAlignment="Left"/>
+
+            <TextBlock Text="Upstream AreaFix Request" FontWeight="Bold"/>
+            <TextBox Text="{Binding AreaFixAdds}" PlaceholderText="Tags to subscribe (space-separated)"/>
+            <TextBox Text="{Binding AreaFixRemoves}" PlaceholderText="Tags to unsubscribe"/>
+            <Button Content="Send AreaFix Request" Command="{Binding RequestAreaFixCommand}" HorizontalAlignment="Left"/>
+
+            <TextBlock Text="Upstream FileFix Request" FontWeight="Bold"/>
+            <TextBox Text="{Binding FileFixAdds}" PlaceholderText="Tags to subscribe"/>
+            <TextBox Text="{Binding FileFixRemoves}" PlaceholderText="Tags to unsubscribe"/>
+            <Button Content="Send FileFix Request" Command="{Binding RequestFileFixCommand}" HorizontalAlignment="Left"/>
+
+            <TextBlock Text="{Binding Status}" Opacity="0.8" TextWrapping="Wrap"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
