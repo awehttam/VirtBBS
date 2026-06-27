@@ -87,12 +87,8 @@ type Store struct {
 	db *sql.DB
 }
 
-// Open opens (or creates) the SQLite database at path and applies the schema.
-func Open(path string) (*Store, error) {
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		return nil, fmt.Errorf("open db %s: %w", path, err)
-	}
+// Open attaches to the shared database handle and applies the schema.
+func Open(db *sql.DB) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		return nil, fmt.Errorf("apply schema: %w", err)
 	}
@@ -131,7 +127,8 @@ func containsAny(s string, subs ...string) bool {
 	return false
 }
 
-func (s *Store) Close() error { return s.db.Close() }
+// Close is a no-op; the shared *sql.DB is owned by the caller.
+func (s *Store) Close() error { return nil }
 
 // Create inserts a new user, hashing the plain-text password.
 func (s *Store) Create(u *User, plainPassword string) error {

@@ -42,6 +42,7 @@ import (
 	"time"
 
 	"github.com/virtbbs/virtbbs/internal/conferences"
+	"github.com/virtbbs/virtbbs/internal/db"
 	"github.com/virtbbs/virtbbs/internal/fido"
 	"github.com/virtbbs/virtbbs/internal/files"
 	"github.com/virtbbs/virtbbs/internal/messages"
@@ -54,29 +55,31 @@ func TestUserAPISmoke(t *testing.T) {
 	filesRoot := filepath.Join(dir, "files")
 	_ = os.MkdirAll(filesRoot, 0755)
 
-	userStore, err := users.Open(dbPath)
+	sqlDB, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("db.Open: %v", err)
+	}
+	defer sqlDB.Close()
+
+	userStore, err := users.Open(sqlDB)
 	if err != nil {
 		t.Fatalf("users.Open: %v", err)
 	}
-	defer userStore.Close()
 
-	msgStore, err := messages.Open(dbPath)
+	msgStore, err := messages.Open(sqlDB)
 	if err != nil {
 		t.Fatalf("messages.Open: %v", err)
 	}
-	defer msgStore.Close()
 
-	confStore, err := conferences.Open(dbPath)
+	confStore, err := conferences.Open(sqlDB)
 	if err != nil {
 		t.Fatalf("conferences.Open: %v", err)
 	}
-	defer confStore.Close()
 
-	fileStore, err := files.Open(dbPath, filesRoot)
+	fileStore, err := files.Open(sqlDB, filesRoot)
 	if err != nil {
 		t.Fatalf("files.Open: %v", err)
 	}
-	defer fileStore.Close()
 
 	// Create two conferences with different ReadSec, and one regular user.
 	if err := confStore.Create(&conferences.Conference{ID: 1, Name: "Public", ReadSec: 10}); err != nil {

@@ -69,12 +69,8 @@ type Store struct {
 	db *sql.DB
 }
 
-// Open opens the database and applies the schema.
-func Open(path string) (*Store, error) {
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		return nil, err
-	}
+// Open attaches to the shared database handle and applies the schema.
+func Open(db *sql.DB) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		return nil, fmt.Errorf("messages schema: %w", err)
 	}
@@ -124,7 +120,8 @@ func containsAny(s string, subs ...string) bool {
 	return false
 }
 
-func (s *Store) Close() error { return s.db.Close() }
+// Close is a no-op; the shared *sql.DB is owned by the caller.
+func (s *Store) Close() error { return nil }
 
 // DB returns the underlying *sql.DB for packages that need direct access
 // (e.g. fido nodelist operations that share the same database file).

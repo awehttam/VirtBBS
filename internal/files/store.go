@@ -78,19 +78,17 @@ type Store struct {
 	filesRoot string
 }
 
-// Open opens the database, applies the schema, and sets the files root path.
-func Open(dbPath, filesRoot string) (*Store, error) {
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		return nil, err
-	}
+// Open attaches to the shared database handle, applies the schema, and sets
+// the files root path.
+func Open(db *sql.DB, filesRoot string) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		return nil, fmt.Errorf("files schema: %w", err)
 	}
 	return &Store{db: db, filesRoot: filesRoot}, nil
 }
 
-func (s *Store) Close() error { return s.db.Close() }
+// Close is a no-op; the shared *sql.DB is owned by the caller.
+func (s *Store) Close() error { return nil }
 
 // ListDirs returns all active file directories.
 func (s *Store) ListDirs() ([]*Dir, error) {

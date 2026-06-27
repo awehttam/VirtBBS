@@ -59,13 +59,9 @@ type Store struct {
 	db *sql.DB
 }
 
-// Open opens the shared messages database for conference access and runs
-// any pending migrations.
-func Open(path string) (*Store, error) {
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		return nil, err
-	}
+// Open attaches to the shared database handle and runs any pending migrations.
+// The messages schema (conferences table) must already be applied.
+func Open(db *sql.DB) (*Store, error) {
 	s := &Store{db: db}
 	if err := s.migrate(); err != nil {
 		return nil, fmt.Errorf("conferences migration: %w", err)
@@ -110,7 +106,8 @@ func contains(s, sub string) bool {
 	return false
 }
 
-func (s *Store) Close() error { return s.db.Close() }
+// Close is a no-op; the shared *sql.DB is owned by the caller.
+func (s *Store) Close() error { return nil }
 
 const confCols = `id, name, description, public, read_sec, write_sec, sysop_sec,
 	echo, echo_tag, uplink_addr, network`

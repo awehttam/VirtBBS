@@ -44,7 +44,6 @@ package main
 
 import (
 	"bufio"
-	"database/sql"
 	"flag"
 	"fmt"
 	"io"
@@ -57,12 +56,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/term"
 
-	_ "modernc.org/sqlite"
-
 	"github.com/virtbbs/virtbbs/internal/api"
 	"github.com/virtbbs/virtbbs/internal/callers"
 	"github.com/virtbbs/virtbbs/internal/conferences"
 	"github.com/virtbbs/virtbbs/internal/config"
+	"github.com/virtbbs/virtbbs/internal/db"
 	"github.com/virtbbs/virtbbs/internal/fido"
 	"github.com/virtbbs/virtbbs/internal/files"
 	"github.com/virtbbs/virtbbs/internal/messages"
@@ -106,23 +104,22 @@ func main() {
 		_ = os.MkdirAll(dir, 0755)
 	}
 
-	// Open shared SQLite database
-	db, err := sql.Open("sqlite", cfg.Paths.DB)
+	// Open shared SQLite database (WAL + single pool for all stores).
+	sqlDB, err := db.Open(cfg.Paths.DB)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}
-	defer db.Close()
-	db.SetMaxOpenConns(1) // SQLite single-writer
+	defer sqlDB.Close()
 
-	// Open stores
-	if err := os.MkdirAll("data", 0755); err != nil {
-		log.Fatalf("create data dir: %v", err)
-	}
-	userStore, err := users.Open(cfg.Paths.DB)
+	userStore, err := users.Open(sqlDB)
 	if err != nil {
 		log.Fatalf("users store: %v", err)
 	}
 	defer userStore.Close()
+
+	if err := os.MkdirAll("data", 0755); err != nil {
+		log.Fatalf("create data dir: %v", err)
+	}
 
 	// ── One-shot import / fido commands ─────────────────────────────────────
 	if *initSysop {
@@ -161,7 +158,7 @@ func main() {
 	}
 
 	if *importMsgs != "" {
-		msgStore, err := messages.Open(cfg.Paths.DB)
+		msgStore, err := messages.Open(sqlDB)
 		if err != nil {
 			log.Fatalf("messages store: %v", err)
 		}
@@ -176,14 +173,14 @@ func main() {
 	}
 
 	if *fidoToss || *fidoScan {
-		msgStore, err := messages.Open(cfg.Paths.DB)
+		msgStore, err := messages.Open(sqlDB)
 		if err != nil {
 			log.Fatalf("messages store: %v", err)
 		}
 		defer msgStore.Close()
 		fidoCfg := &cfg.Fido
 
-		confStore, _ := conferences.Open(cfg.Paths.DB)
+		confStore, _ := conferences.Open(sqlDB)
 		if confStore != nil {
 			defer confStore.Close()
 		}
@@ -212,7 +209,7 @@ func main() {
 	}
 
 	if *importNodelist != "" {
-		msgStore, err := messages.Open(cfg.Paths.DB)
+		msgStore, err := messages.Open(sqlDB)
 		if err != nil {
 			log.Fatalf("messages store: %v", err)
 		}
@@ -230,13 +227,13 @@ func main() {
 		return
 	}
 
-	msgStore, err := messages.Open(cfg.Paths.DB)
+	msgStore, err := messages.Open(sqlDB)
 	if err != nil {
 		log.Fatalf("messages store: %v", err)
 	}
 	defer msgStore.Close()
 
-	nodeStore, err := node.Open(db)
+	nodeStore, err := node.Open(sqlDB)
 	if err != nil {
 		log.Fatalf("node store: %v", err)
 	}
@@ -253,13 +250,13 @@ func main() {
 		log.Fatalf("callers log: %v", err)
 	}
 
-	fileStore, err := files.Open(cfg.Paths.DB, cfg.Paths.Files)
+	fileStore, err := files.Open(sqlDB, cfg.Paths.Files)
 	if err != nil {
 		log.Fatalf("files store: %v", err)
 	}
 	defer fileStore.Close()
 
-	confStore, err := conferences.Open(cfg.Paths.DB)
+	confStore, err := conferences.Open(sqlDB)
 	if err != nil {
 		log.Fatalf("conferences store: %v", err)
 	}

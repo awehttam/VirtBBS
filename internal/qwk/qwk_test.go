@@ -43,6 +43,7 @@ import (
 	"testing"
 
 	"github.com/virtbbs/virtbbs/internal/conferences"
+	"github.com/virtbbs/virtbbs/internal/db"
 	"github.com/virtbbs/virtbbs/internal/messages"
 	"github.com/virtbbs/virtbbs/internal/users"
 )
@@ -50,23 +51,23 @@ import (
 func openTestStores(t *testing.T) (*users.Store, *messages.Store, *conferences.Store) {
 	t.Helper()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	userStore, err := users.Open(dbPath)
+	sqlDB, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("db.Open: %v", err)
+	}
+	userStore, err := users.Open(sqlDB)
 	if err != nil {
 		t.Fatalf("users.Open: %v", err)
 	}
-	msgStore, err := messages.Open(dbPath)
+	msgStore, err := messages.Open(sqlDB)
 	if err != nil {
 		t.Fatalf("messages.Open: %v", err)
 	}
-	confStore, err := conferences.Open(dbPath)
+	confStore, err := conferences.Open(sqlDB)
 	if err != nil {
 		t.Fatalf("conferences.Open: %v", err)
 	}
-	t.Cleanup(func() {
-		userStore.Close()
-		msgStore.Close()
-		confStore.Close()
-	})
+	t.Cleanup(func() { sqlDB.Close() })
 	return userStore, msgStore, confStore
 }
 
