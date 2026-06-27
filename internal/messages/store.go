@@ -35,6 +35,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -58,6 +59,8 @@ type Message struct {
 
 	// FidoNet metadata. Empty/zero for locally-authored messages.
 	FidoMsgID      string // ^AMSGID kludge value, for dedupe/threading
+	FidoReply      string // parent MSGID from ^AREPLY kludge
+	FidoKludges    string // other ^A kludge lines (TZUTC, INTL, etc.)
 	FidoSeenBy     string // space-separated net/node tokens from SEEN-BY lines
 	FidoPath       string // space-separated net/node tokens from ^APATH kludge
 	FidoOrigin     string // originating zone:net/node if received via FidoNet toss
@@ -87,6 +90,8 @@ func Open(db *sql.DB) (*Store, error) {
 func (s *Store) migrate() error {
 	alters := []string{
 		`ALTER TABLE messages ADD COLUMN fido_msgid TEXT`,
+		`ALTER TABLE messages ADD COLUMN fido_reply TEXT`,
+		`ALTER TABLE messages ADD COLUMN fido_kludges TEXT`,
 		`ALTER TABLE messages ADD COLUMN fido_seenby TEXT`,
 		`ALTER TABLE messages ADD COLUMN fido_path TEXT`,
 		`ALTER TABLE messages ADD COLUMN fido_origin TEXT`,
@@ -104,6 +109,9 @@ func (s *Store) migrate() error {
 	// in schema.sql (which runs before migrate()) fails on a pre-existing
 	// database that doesn't have fido_msgid yet.
 	if _, err := s.db.Exec(`CREATE INDEX IF NOT EXISTS idx_messages_fido_msgid ON messages(fido_msgid)`); err != nil {
+		return err
+	}
+	if _, err := s.db.Exec(`CREATE INDEX IF NOT EXISTS idx_messages_fido_reply ON messages(fido_reply)`); err != nil {
 		return err
 	}
 	return nil
@@ -137,11 +145,12 @@ func (s *Store) PostWithNumber(m *Message) error {
 	res, err := s.db.Exec(`
 		INSERT OR IGNORE INTO messages
 		  (conference_id, msg_number, from_name, to_name, subject, date_posted, status, echo, body,
-		   fido_msgid, fido_seenby, fido_path, fido_origin)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		   fido_msgid, fido_reply, fido_kludges, fido_seenby, fido_path, fido_origin)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		m.ConferenceID, m.MsgNumber, m.FromName, m.ToName, m.Subject,
 		m.DatePosted.Format(time.RFC3339), m.Status, boolInt(m.Echo), m.Body,
-		nullable(m.FidoMsgID), nullable(m.FidoSeenBy), nullable(m.FidoPath), nullable(m.FidoOrigin),
+		nullable(m.FidoMsgID), nullable(m.FidoReply), nullable(m.FidoKludges),
+		nullable(m.FidoSeenBy), nullable(m.FidoPath), nullable(m.FidoOrigin),
 	)
 	if err != nil {
 		return err
@@ -163,11 +172,12 @@ func (s *Store) Post(m *Message) error {
 	}
 	res, err := s.db.Exec(`
 		INSERT INTO messages (conference_id, msg_number, from_name, to_name, subject, date_posted, status, echo, body,
-		                       fido_msgid, fido_seenby, fido_path, fido_origin)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		                       fido_msgid, fido_reply, fido_kludges, fido_seenby, fido_path, fido_origin)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		m.ConferenceID, m.MsgNumber, m.FromName, m.ToName, m.Subject,
 		m.DatePosted.Format(time.RFC3339), m.Status, boolInt(m.Echo), m.Body,
-		nullable(m.FidoMsgID), nullable(m.FidoSeenBy), nullable(m.FidoPath), nullable(m.FidoOrigin),
+		nullable(m.FidoMsgID), nullable(m.FidoReply), nullable(m.FidoKludges),
+		nullable(m.FidoSeenBy), nullable(m.FidoPath), nullable(m.FidoOrigin),
 	)
 	if err != nil {
 		return err
@@ -177,7 +187,7 @@ func (s *Store) Post(m *Message) error {
 }
 
 const messageCols = `id, conference_id, msg_number, from_name, to_name, subject, date_posted, status, echo, body,
-		fido_msgid, fido_seenby, fido_path, fido_origin, fido_exported_at`
+		fido_msgid, fido_reply, fido_kludges, fido_seenby, fido_path, fido_origin, fido_exported_at`
 
 // List returns messages in a conference, newest first.
 func (s *Store) List(conferenceID, limit, offset int) ([]*Message, error) {
@@ -200,6 +210,148 @@ func (s *Store) ListFrom(conferenceID, startNum, limit int) ([]*Message, error) 
 		FROM messages WHERE conference_id=? AND msg_number>=? AND status!='D'
 		ORDER BY msg_number ASC LIMIT ?`,
 		conferenceID, startNum, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanMessages(rows)
+}
+
+// netmailBaseSQL is the shared WHERE clause for inbound FidoNet netmail stored
+// in conference 0 (General) by the toss pipeline — echo=0 plus a Fido origin.
+const netmailBaseSQL = `conference_id=0 AND echo=0 AND status!='D'
+		AND fido_origin IS NOT NULL AND fido_origin != ''`
+
+// CountNetmail returns how many netmail messages are visible to forUser.
+// Sysops see all netmail; other users see mail addressed to them or "All".
+func (s *Store) CountNetmail(forUser string, sysop bool) (int, error) {
+	where, args := netmailRecipientFilter(forUser, sysop)
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM messages WHERE `+netmailBaseSQL+where, args...).Scan(&n)
+	return n, err
+}
+
+// ListNetmail returns inbound netmail for forUser, oldest first.
+func (s *Store) ListNetmail(forUser string, sysop bool, startNum, limit int) ([]*Message, error) {
+	where, args := netmailRecipientFilter(forUser, sysop)
+	args = append(args, startNum, limit)
+	rows, err := s.db.Query(`
+		SELECT `+messageCols+`
+		FROM messages WHERE `+netmailBaseSQL+where+`
+		AND msg_number>=? ORDER BY msg_number ASC LIMIT ?`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanMessages(rows)
+}
+
+func netmailRecipientFilter(forUser string, sysop bool) (clause string, args []any) {
+	if sysop {
+		return "", nil
+	}
+	return ` AND (lower(to_name)=lower(?) OR lower(to_name)='all')`, []any{forUser}
+}
+
+// GetByFidoMsgID fetches a message by its FidoNet MSGID within a conference.
+func (s *Store) GetByFidoMsgID(conferenceID int, msgID string) (*Message, error) {
+	if msgID == "" {
+		return nil, sql.ErrNoRows
+	}
+	row := s.db.QueryRow(`
+		SELECT `+messageCols+`
+		FROM messages WHERE conference_id=? AND fido_msgid=? AND status!='D'`,
+		conferenceID, msgID)
+	return scanMessage(row)
+}
+
+// CountReplies returns how many messages reply to the given parent MSGID.
+func (s *Store) CountReplies(conferenceID int, parentMsgID string) (int, error) {
+	if parentMsgID == "" {
+		return 0, nil
+	}
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM messages
+		WHERE conference_id=? AND fido_reply=? AND status!='D'`,
+		conferenceID, parentMsgID).Scan(&n)
+	return n, err
+}
+
+// FindThread returns all messages in the conversation thread containing
+// startMsgNumber, ordered oldest-first. Thread membership follows ^AREPLY
+// links via stored fido_reply / fido_msgid values.
+func (s *Store) FindThread(conferenceID, startMsgNumber int) ([]*Message, error) {
+	start, err := s.Get(conferenceID, startMsgNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	root := start
+	for root.FidoReply != "" {
+		parent, err := s.GetByFidoMsgID(conferenceID, root.FidoReply)
+		if err != nil {
+			break
+		}
+		root = parent
+	}
+
+	threadIDs := map[string]bool{}
+	if root.FidoMsgID != "" {
+		threadIDs[root.FidoMsgID] = true
+	}
+
+	for {
+		if len(threadIDs) == 0 {
+			break
+		}
+		placeholders := make([]string, 0, len(threadIDs))
+		args := []any{conferenceID}
+		for id := range threadIDs {
+			placeholders = append(placeholders, "?")
+			args = append(args, id)
+		}
+		query := fmt.Sprintf(`SELECT fido_msgid FROM messages
+			WHERE conference_id=? AND status!='D' AND fido_reply IN (%s)`,
+			strings.Join(placeholders, ","))
+		rows, err := s.db.Query(query, args...)
+		if err != nil {
+			return nil, err
+		}
+		added := false
+		for rows.Next() {
+			var childID sql.NullString
+			if err := rows.Scan(&childID); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			if childID.Valid && childID.String != "" && !threadIDs[childID.String] {
+				threadIDs[childID.String] = true
+				added = true
+			}
+		}
+		rows.Close()
+		if rows.Err() != nil {
+			return nil, rows.Err()
+		}
+		if !added {
+			break
+		}
+	}
+
+	if len(threadIDs) == 0 {
+		return []*Message{start}, nil
+	}
+
+	placeholders := make([]string, 0, len(threadIDs))
+	args := []any{conferenceID}
+	for id := range threadIDs {
+		placeholders = append(placeholders, "?")
+		args = append(args, id)
+	}
+	query := fmt.Sprintf(`SELECT `+messageCols+` FROM messages
+		WHERE conference_id=? AND status!='D' AND fido_msgid IN (%s)
+		ORDER BY msg_number ASC`, strings.Join(placeholders, ","))
+	rows, err := s.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -280,16 +432,18 @@ func scanMessage(sc scanner) (*Message, error) {
 	var m Message
 	var dateStr string
 	var echo int
-	var msgID, seenBy, path, origin, exportedAt sql.NullString
+	var msgID, reply, kludges, seenBy, path, origin, exportedAt sql.NullString
 	err := sc.Scan(&m.ID, &m.ConferenceID, &m.MsgNumber, &m.FromName, &m.ToName,
 		&m.Subject, &dateStr, &m.Status, &echo, &m.Body,
-		&msgID, &seenBy, &path, &origin, &exportedAt)
+		&msgID, &reply, &kludges, &seenBy, &path, &origin, &exportedAt)
 	if err != nil {
 		return nil, err
 	}
 	m.DatePosted, _ = time.Parse(time.RFC3339, dateStr)
 	m.Echo = echo != 0
 	m.FidoMsgID = msgID.String
+	m.FidoReply = reply.String
+	m.FidoKludges = kludges.String
 	m.FidoSeenBy = seenBy.String
 	m.FidoPath = path.String
 	m.FidoOrigin = origin.String

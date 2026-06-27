@@ -252,7 +252,7 @@ func appendEchoMessage(buckets map[string][]bucketEntry, destAddrs map[string]Ad
 	}
 	tagline := PickTagline(taglines)
 
-	body := buildEchoBody(areaTag, orig, bbsName, m.Body, tagline, inSeenBy, inPath)
+	body := buildEchoBody(areaTag, orig, bbsName, m.Body, tagline, m.FidoMsgID, m.FidoReply, m.FidoKludges, inSeenBy, inPath)
 	entry := bucketEntry{
 		pmsg: &Message{
 			OrigAddr: orig,
@@ -308,6 +308,7 @@ func appendEchoMessage(buckets map[string][]bucketEntry, destAddrs map[string]Ad
 //
 //	AREA:<tag>
 //	^AMSGID: <orig> <serial>
+//	^AREPLY: <parent-msgid>  (when replying)
 //	^ATZUTC: ±HHMM
 //	<message text>
 //	[blank line + tagline, if one is configured]
@@ -316,16 +317,30 @@ func appendEchoMessage(buckets map[string][]bucketEntry, destAddrs map[string]Ad
 //	SEEN-BY: <merged net/node list>
 //	^APATH: <merged net/node list>
 //
-// inSeenBy/inPath are the SEEN-BY/PATH tokens already present on the message
-// (non-nil only for messages received via FidoNet toss and now being
-// relayed onward); they are merged with this BBS's own address. For a
-// locally-authored message both are nil, producing a fresh single-entry list.
-func buildEchoBody(areaTag string, orig Addr, bbsName, body, tagline string, inSeenBy, inPath []string) string {
+// msgID/reply are taken from the stored message when present so exported
+// packets preserve threading. extraKludges holds other ^A lines (TZUTC, etc.).
+func buildEchoBody(areaTag string, orig Addr, bbsName, body, tagline, msgID, reply, extraKludges string, inSeenBy, inPath []string) string {
 	var sb strings.Builder
 
 	fmt.Fprintf(&sb, "AREA:%s\r", areaTag)
-	fmt.Fprintf(&sb, "\x01MSGID: %s %08X\r", orig.String(), time.Now().UnixNano()&0xFFFFFFFF)
-	fmt.Fprintf(&sb, "\x01TZUTC: %s\r", time.Now().Format("-0700"))
+	if msgID == "" {
+		msgID = FormatMSGID(orig, NewMSGIDSerial())
+	}
+	fmt.Fprintf(&sb, "\x01MSGID: %s\r", msgID)
+	if reply != "" {
+		fmt.Fprintf(&sb, "\x01REPLY: %s\r", reply)
+	}
+	if extraKludges != "" {
+		for _, line := range strings.Split(extraKludges, "\r") {
+			line = strings.TrimRight(line, "\n")
+			if line != "" {
+				sb.WriteString(line)
+				sb.WriteString("\r")
+			}
+		}
+	} else {
+		fmt.Fprintf(&sb, "\x01TZUTC: %s\r", time.Now().Format("-0700"))
+	}
 
 	sb.WriteString(body)
 	if !strings.HasSuffix(body, "\r") {

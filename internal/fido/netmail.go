@@ -67,6 +67,10 @@ type NetmailMsg struct {
 	Subject string
 	Body    string
 
+	// FidoNet threading (optional).
+	MsgID      string // ^AMSGID value; generated when blank
+	ReplyMsgID string // parent ^AMSGID for ^AREPLY kludge
+
 	// Crash = true: bypass routing, write PKT directly to dest outbound dir.
 	Crash bool
 
@@ -187,9 +191,14 @@ func WritePKT(origAddr, destAddr Addr, password, outDir string, msgs []*NetmailM
 func buildBody(m *NetmailMsg, from, to Addr, localZone int) string {
 	var sb strings.Builder
 
-	// MSGID kludge
-	msgID := fmt.Sprintf("\x01MSGID: %s %08X\r\n", m.FromAddr, time.Now().UnixNano()&0xFFFFFFFF)
-	sb.WriteString(msgID)
+	msgID := m.MsgID
+	if msgID == "" {
+		msgID = FormatMSGID(from, NewMSGIDSerial())
+	}
+	fmt.Fprintf(&sb, "\x01MSGID: %s\r\n", msgID)
+	if m.ReplyMsgID != "" {
+		fmt.Fprintf(&sb, "\x01REPLY: %s\r\n", m.ReplyMsgID)
+	}
 
 	// TZUTC kludge (FTS-4001): local UTC offset at composition time, e.g. "+0200".
 	sb.WriteString(fmt.Sprintf("\x01TZUTC: %s\r\n", time.Now().Format("-0700")))

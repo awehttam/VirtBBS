@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS messages (
     has_attachment  INTEGER NOT NULL DEFAULT 0,
     body            TEXT    NOT NULL DEFAULT '',
     fido_msgid      TEXT,    -- FidoNet ^AMSGID kludge value, for dedupe/threading
+    fido_reply      TEXT,    -- parent MSGID from ^AREPLY kludge
+    fido_kludges    TEXT,    -- other ^A kludge lines (TZUTC, INTL, etc.)
     fido_seenby     TEXT,    -- space-separated net/node tokens from SEEN-BY lines
     fido_path       TEXT,    -- space-separated net/node tokens from ^APATH kludge
     fido_origin     TEXT,    -- originating zone:net/node if received via FidoNet toss

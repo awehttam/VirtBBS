@@ -116,19 +116,21 @@ func (m *Message) CleanBody() string {
 type ParsedBody struct {
 	AreaTag string   // echomail area tag from "AREA:<tag>", "" for netmail
 	MSGID   string   // value of the ^AMSGID kludge, "" if absent
+	REPLY   string   // value of the ^AREPLY kludge (parent MSGID), "" if absent
 	SeenBy  []string // net/node tokens collected from all SEEN-BY: lines
 	Path    []string // net/node tokens collected from the ^APATH kludge
+	Kludges string   // remaining ^A kludge lines (TZUTC, INTL, etc.), joined with \r
 	Text    string   // reader-facing body (kludges/AREA/SEEN-BY stripped)
 }
 
-// Parse extracts the AREA: tag, MSGID/PATH FidoNet metadata, and SEEN-BY
+// Parse extracts the AREA: tag, MSGID/REPLY/PATH FidoNet metadata, and SEEN-BY
 // node list from the raw message body in a single pass, returning the
 // remaining reader-facing text separately. Kludge lines (^A-prefixed),
 // the AREA: line, and SEEN-BY: lines are removed from Text; the tear line
 // and Origin line are left in Text since real FidoNet readers show them.
 func (m *Message) Parse() ParsedBody {
 	var pb ParsedBody
-	var text []string
+	var text, kludges []string
 
 	for _, line := range strings.Split(m.Body, "\r") {
 		line = strings.TrimRight(line, "\n")
@@ -136,10 +138,12 @@ func (m *Message) Parse() ParsedBody {
 		switch {
 		case strings.HasPrefix(line, "\x01MSGID:"):
 			pb.MSGID = strings.TrimSpace(strings.TrimPrefix(line, "\x01MSGID:"))
+		case strings.HasPrefix(line, "\x01REPLY:"):
+			pb.REPLY = strings.TrimSpace(strings.TrimPrefix(line, "\x01REPLY:"))
 		case strings.HasPrefix(line, "\x01PATH:"):
 			pb.Path = append(pb.Path, strings.Fields(strings.TrimPrefix(line, "\x01PATH:"))...)
 		case strings.HasPrefix(line, "\x01"):
-			// Other kludges (INTL, FMPT, TOPT, TZUTC, etc.) — hidden from readers.
+			kludges = append(kludges, line)
 		case strings.HasPrefix(line, "AREA:"):
 			pb.AreaTag = strings.TrimSpace(strings.TrimPrefix(line, "AREA:"))
 		case strings.HasPrefix(line, "SEEN-BY:"):
@@ -149,6 +153,7 @@ func (m *Message) Parse() ParsedBody {
 		}
 	}
 
+	pb.Kludges = strings.Join(kludges, "\r")
 	pb.Text = strings.Join(text, "\r\n")
 	return pb
 }

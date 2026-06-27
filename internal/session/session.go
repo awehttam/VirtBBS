@@ -397,7 +397,7 @@ func (s *session) messagesMenu() {
 			s.readMessages(lastRead + 1)
 		case "K":
 			if fidoEnabled {
-				s.netmailCompose()
+				s.netmailMenu()
 			}
 		case "Q", "":
 			return
@@ -413,34 +413,69 @@ func (s *session) readMessages(startNum int) {
 	}
 	var lastReadNum int
 	for _, m := range msgs {
-		s.writeln("")
-		s.writeln(ansi.Color(ansi.BrightCyan) + strings.Repeat("─", 60) + ansi.Reset())
-		s.writeln(ansi.Color(ansi.BrightCyan) + fmt.Sprintf("Msg #%-5d", m.MsgNumber) +
-			ansi.Color(ansi.White) + fmt.Sprintf("  From: %-20s  To: %s", m.FromName, m.ToName) + ansi.Reset())
-		s.writeln(ansi.Color(ansi.Yellow) + "  Subj: " + m.Subject + ansi.Reset())
-		s.writeln(ansi.Color(ansi.White) + "  Date: " + m.DatePosted.Format("01-02-2006 15:04") + ansi.Reset())
-		s.writeln(ansi.Color(ansi.BrightCyan) + strings.Repeat("─", 60) + ansi.Reset())
+		s.displayMessageHeader(m)
 		s.writeln(m.Body)
 
 		lastReadNum = m.MsgNumber
 		s.statMsgsRead++
-		s.write(ansi.Prompt("[N]ext / [R]eply / [Q]uit: "))
+		s.write(ansi.Prompt("[N]ext / [R]eply / [T]hread / [Q]uit: "))
 		switch strings.ToUpper(strings.TrimSpace(s.readline())) {
 		case "Q":
-			// Save progress even on early quit.
 			if lastReadNum > 0 && s.user != nil {
 				_ = s.deps.Users.SetLastRead(s.user.ID, s.conference, lastReadNum)
 			}
 			return
 		case "R":
 			s.enterReply(m)
+		case "T":
+			s.showThread(m)
 		}
 	}
-	// Update last-read after finishing all messages.
 	if lastReadNum > 0 && s.user != nil {
 		_ = s.deps.Users.SetLastRead(s.user.ID, s.conference, lastReadNum)
 	}
 	s.writeln(ansi.Colorize(ansi.Yellow, "End of messages."))
+}
+
+func (s *session) displayMessageHeader(m *messages.Message) {
+	label := "Msg"
+	if m.ConferenceID == 0 && m.FidoOrigin != "" {
+		label = "NetMail"
+	}
+	s.writeln("")
+	s.writeln(ansi.Color(ansi.BrightCyan) + strings.Repeat("─", 60) + ansi.Reset())
+	s.writeln(ansi.Color(ansi.BrightCyan) + fmt.Sprintf("%s #%-5d", label, m.MsgNumber) +
+		ansi.Color(ansi.White) + fmt.Sprintf("  From: %-20s  To: %s", m.FromName, m.ToName) + ansi.Reset())
+	s.writeln(ansi.Color(ansi.Yellow) + "  Subj: " + m.Subject + ansi.Reset())
+	s.writeln(ansi.Color(ansi.White) + "  Date: " + m.DatePosted.Format("01-02-2006 15:04") + ansi.Reset())
+	if m.FidoReply != "" {
+		if parent, err := s.deps.Messages.GetByFidoMsgID(m.ConferenceID, m.FidoReply); err == nil && parent != nil {
+			s.writeln(ansi.Color(ansi.White) + fmt.Sprintf("  Reply to: msg #%d", parent.MsgNumber) + ansi.Reset())
+		}
+	}
+	if m.FidoMsgID != "" {
+		if n, _ := s.deps.Messages.CountReplies(m.ConferenceID, m.FidoMsgID); n > 0 {
+			repl := "replies"
+			if n == 1 {
+				repl = "reply"
+			}
+			s.writeln(ansi.Color(ansi.White) + fmt.Sprintf("  %d %s in thread", n, repl) + ansi.Reset())
+		}
+	}
+	s.writeln(ansi.Color(ansi.BrightCyan) + strings.Repeat("─", 60) + ansi.Reset())
+}
+
+func (s *session) showThread(m *messages.Message) {
+	thread, err := s.deps.Messages.FindThread(m.ConferenceID, m.MsgNumber)
+	if err != nil || len(thread) == 0 {
+		s.writeln(ansi.Colorize(ansi.Yellow, "Thread not available."))
+		return
+	}
+	s.writeln(ansi.Header(fmt.Sprintf("Thread (%d message(s))", len(thread))))
+	for _, tm := range thread {
+		s.displayMessageHeader(tm)
+		s.writeln(tm.Body)
+	}
 }
 
 func (s *session) enterMessage() {
@@ -466,6 +501,7 @@ func (s *session) enterMessage() {
 		Status:       "A",
 		Body:         result.Body,
 	}
+	s.applyFidoPostMeta(m, nil)
 	if err := s.deps.Messages.Post(m); err != nil {
 		s.writeln(ansi.Colorize(ansi.Red, "Error posting message: "+err.Error()))
 		return
@@ -501,11 +537,47 @@ func (s *session) enterReply(orig *messages.Message) {
 		Status:       "A",
 		Body:         result.Body,
 	}
+	s.applyFidoPostMeta(m, orig)
 	if err := s.deps.Messages.Post(m); err != nil {
 		s.writeln(ansi.Colorize(ansi.Red, "Error posting reply: "+err.Error()))
 		return
 	}
 	s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf("Reply #%d posted (%d lines).", m.MsgNumber, result.Lines)))
+}
+
+// applyFidoPostMeta assigns MSGID/REPLY kludges and echo flag for local posts.
+func (s *session) applyFidoPostMeta(m *messages.Message, replyTo *messages.Message) {
+	cfg := config.Get()
+	if !cfg.Fido.Enabled {
+		return
+	}
+
+	conf, err := s.deps.Conferences.Get(s.conference)
+	if err != nil || conf == nil {
+		return
+	}
+	if conf.Echo {
+		m.Echo = true
+	}
+
+	orig := cfg.Fido.NodeAddr()
+	if conf.Network != "" {
+		if nd := cfg.Fido.NetworkByName(conf.Network); nd != nil {
+			if a := nd.NodeAddr(); a != (fido.Addr{}) {
+				orig = a
+			}
+		}
+	}
+	if orig == (fido.Addr{}) {
+		return
+	}
+
+	m.FidoMsgID = fido.FormatMSGID(orig, fido.NewMSGIDSerial())
+	m.FidoKludges = fmt.Sprintf("\x01TZUTC: %s", time.Now().Format("-0700"))
+
+	if replyTo != nil && replyTo.FidoMsgID != "" {
+		m.FidoReply = replyTo.FidoMsgID
+	}
 }
 
 // runEditor invokes the user's preferred editor and returns the result.
@@ -1917,6 +1989,115 @@ func (s *session) fidoPoll() {
 			s.writeln(ansi.Colorize(ansi.Red, "  Toss error: "+e))
 		}
 	}
+}
+
+// netmailMenu lists, reads, or sends FidoNet netmail.
+func (s *session) netmailMenu() {
+	for {
+		count, _ := s.deps.Messages.CountNetmail(s.user.Name, s.user.Sysop)
+		s.writeln(ansi.Header("FidoNet NetMail"))
+		if count > 0 {
+			s.writeln(ansi.Color(ansi.BrightWhite) +
+				fmt.Sprintf("  %d message(s) waiting", count) + ansi.Reset())
+		}
+		s.writeln(ansi.Color(ansi.BrightWhite) +
+			"  [R]ead   [S]end   [Q]uit" + ansi.Reset())
+		s.write(ansi.Prompt("NetMail command: "))
+		switch strings.ToUpper(strings.TrimSpace(s.readline())) {
+		case "R":
+			s.write(ansi.Prompt("Start at message # (Enter=oldest): "))
+			startStr := strings.TrimSpace(s.readline())
+			start := 1
+			if n, err := strconv.Atoi(startStr); err == nil {
+				start = n
+			}
+			s.netmailRead(start)
+		case "S":
+			s.netmailCompose()
+		case "Q", "":
+			return
+		}
+	}
+}
+
+func (s *session) netmailRead(startNum int) {
+	msgs, err := s.deps.Messages.ListNetmail(s.user.Name, s.user.Sysop, startNum, 20)
+	if err != nil || len(msgs) == 0 {
+		s.writeln(ansi.Colorize(ansi.Yellow, "No netmail."))
+		return
+	}
+	for _, m := range msgs {
+		s.displayMessageHeader(m)
+		if m.FidoOrigin != "" {
+			s.writeln(ansi.Color(ansi.White) + "  Addr: " + m.FidoOrigin + ansi.Reset())
+		}
+		s.writeln(m.Body)
+
+		s.statMsgsRead++
+		s.write(ansi.Prompt("[N]ext / [R]eply / [T]hread / [Q]uit: "))
+		switch strings.ToUpper(strings.TrimSpace(s.readline())) {
+		case "Q":
+			return
+		case "R":
+			s.netmailReply(m)
+		case "T":
+			s.showThread(m)
+		}
+	}
+	s.writeln(ansi.Colorize(ansi.Yellow, "End of netmail."))
+}
+
+// netmailReply composes an outbound FidoNet netmail in reply to a received message.
+func (s *session) netmailReply(orig *messages.Message) {
+	cfg := config.Get()
+	if orig.FidoOrigin == "" {
+		s.writeln(ansi.Colorize(ansi.Yellow, "Cannot reply — no FidoNet origin address."))
+		return
+	}
+
+	subj := orig.Subject
+	if !strings.HasPrefix(strings.ToUpper(subj), "RE:") {
+		subj = "RE: " + subj
+	}
+
+	quoted := ""
+	for _, line := range strings.Split(strings.ReplaceAll(orig.Body, "\r\n", "\n"), "\n") {
+		quoted += "> " + line + "\r\n"
+	}
+	quoted += "\r\n"
+
+	result := s.runEditor(subj, quoted)
+	if result.Aborted || result.Body == "" {
+		s.writeln(ansi.Colorize(ansi.Yellow, "Reply aborted."))
+		return
+	}
+
+	msg := &fido.NetmailMsg{
+		FromName:   s.user.Name,
+		FromAddr:   cfg.Fido.Address,
+		ToName:     orig.FromName,
+		ToAddr:     orig.FidoOrigin,
+		Subject:    subj,
+		Body:       result.Body,
+		ReplyMsgID: orig.FidoMsgID,
+	}
+
+	nd := cfg.Fido.AllNetworks()[0]
+	nextHop, err := fido.RouteAddr(s.deps.Messages.DB(), msg, &nd)
+	if err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Routing error: "+err.Error()))
+		return
+	}
+	outDir := fido.OutboundDir(nd.OutboundDir, nextHop, nd.UplinkAddr(), false)
+	origAddr, _ := fido.ParseAddr(cfg.Fido.Address)
+
+	pktPath, err := fido.WritePKT(origAddr, nextHop, nd.Password, outDir, []*fido.NetmailMsg{msg})
+	if err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Error writing PKT: "+err.Error()))
+		return
+	}
+	s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf(
+		"NetMail reply queued → %s (next hop: %s)", pktPath, nextHop.String())))
 }
 
 // netmailCompose lets the user write a FidoNet netmail.

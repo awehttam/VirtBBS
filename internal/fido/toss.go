@@ -255,6 +255,8 @@ func tossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Stor
 			Echo:         area != "",
 			Body:         pb.Text,
 			FidoMsgID:    pb.MSGID,
+			FidoReply:    pb.REPLY,
+			FidoKludges:  pb.Kludges,
 			FidoSeenBy:   strings.Join(pb.SeenBy, " "),
 			FidoPath:     strings.Join(pb.Path, " "),
 			FidoOrigin:   pm.OrigAddr.String(),
