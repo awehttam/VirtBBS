@@ -5,6 +5,47 @@
 - macOS 12+, Linux (kernel 4.x+), or Windows 10+
 - The `virtbbs` server ships as a self-contained binary — no additional runtime required
 - The sysop GUI (`VirtBBS.GUI`) requires the [.NET 8 runtime](https://dotnet.microsoft.com/download/dotnet/8.0) on whichever machine runs it
+- **[Graphviz](https://graphviz.org/)** (optional) — required on the **server** host if you run VirtNet nodelist day-rollover and want `VirtDiag.zip` to include PNG network diagrams. Without the `dot` binary on PATH, rollover still publishes the nodelist and change log; diagram generation is skipped with a warning in the server log.
+
+### Installing Graphviz
+
+VirtBBS shells out to Graphviz's `dot` command to render nodelist topology diagrams during VirtNet day-rollover. Install Graphviz on the machine that runs `virtbbs`, then verify:
+
+```bash
+which dot    # macOS/Linux
+dot -V
+```
+
+On Windows (PowerShell):
+
+```powershell
+where.exe dot
+dot -V
+```
+
+**macOS (Homebrew):**
+
+```bash
+brew install graphviz
+```
+
+Intel Macs usually install `dot` to `/usr/local/bin`; Apple Silicon Macs use `/opt/homebrew/bin`.
+
+**Linux:**
+
+| Distro | Command |
+|---|---|
+| Debian / Ubuntu | `sudo apt install graphviz` |
+| Fedora / RHEL | `sudo dnf install graphviz` |
+| Arch | `sudo pacman -S graphviz` |
+
+**Windows:**
+
+- [Graphviz installer](https://graphviz.org/download/) — check "Add Graphviz to the system PATH" during setup, or
+- `winget install graphviz`, or
+- `choco install graphviz`
+
+After installing, **restart `virtbbs`** so the server process picks up the updated PATH. If you run VirtBBS as a system service (launchd, systemd) and diagrams are still skipped, ensure the service environment includes the directory containing `dot` (e.g. `/usr/local/bin` or `/opt/homebrew/bin` on macOS).
 
 ---
 
