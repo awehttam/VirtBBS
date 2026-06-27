@@ -330,7 +330,7 @@ func main() {
 	// Start the automatic FidoNet poll/toss scheduler (one goroutine per
 	// enabled network with a configured uplink — see internal/scheduler).
 	if cfg.Fido.Enabled {
-		scheduler.Start(msgStore, confStore)
+		scheduler.Start(msgStore, confStore, fileStore)
 
 		// Start the BinkP server so other systems (our uplink, or our own
 		// downlinks) can poll THIS BBS instead of only the reverse.

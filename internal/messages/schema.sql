@@ -121,3 +121,93 @@ CREATE TABLE IF NOT EXISTS fido_nodelist_versions (
     imported_at TEXT    NOT NULL,
     node_count  INTEGER NOT NULL DEFAULT 0
 );
+
+-- VirtNet hub support: pending applications to join a network this BBS
+-- hosts (Uplink == ""). See internal/fido/members.go.
+CREATE TABLE IF NOT EXISTS fido_join_requests (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    network              TEXT    NOT NULL,
+    requested_by_user_id INTEGER NOT NULL,
+    bbs_name             TEXT    NOT NULL,
+    sysop_name           TEXT    NOT NULL,
+    location             TEXT    NOT NULL DEFAULT '',
+    contact              TEXT    NOT NULL DEFAULT '',
+    requested_net        INTEGER,                          -- NULL = sysop's choice
+    binkp_host           TEXT    NOT NULL DEFAULT '',       -- optional host:port
+    status               TEXT    NOT NULL DEFAULT 'pending', -- pending/approved/denied
+    created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+    decided_at           TEXT,
+    decided_by           TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_join_requests_status ON fido_join_requests(network, status);
+
+-- VirtNet hub support: approved members of a network this BBS hosts.
+-- This is both the routing table (binkp_host/password) and the source of
+-- truth for nodelist generation (internal/fido/nodelistgen.go).
+CREATE TABLE IF NOT EXISTS fido_members (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    network      TEXT    NOT NULL,
+    zone         INTEGER NOT NULL,
+    net          INTEGER NOT NULL,
+    node_num     INTEGER NOT NULL,
+    point        INTEGER NOT NULL DEFAULT 0,
+    bbs_name     TEXT    NOT NULL,
+    sysop_name   TEXT    NOT NULL,
+    location     TEXT    NOT NULL DEFAULT '',
+    contact      TEXT    NOT NULL DEFAULT '',
+    binkp_host   TEXT    NOT NULL DEFAULT '',  -- host:port — the routing table itself
+    password     TEXT    NOT NULL DEFAULT '',  -- mirrors fido.Downlink.Password
+    is_host      INTEGER NOT NULL DEFAULT 0,   -- net Host flag for nodelist generation
+    is_active    INTEGER NOT NULL DEFAULT 1,
+    is_delegated INTEGER NOT NULL DEFAULT 0,   -- 1 = arrived via inbound NodeAnnounce
+                                                -- netmail, not locally approved here
+    joined_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(network, zone, net, node_num, point)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fido_members_net ON fido_members(network, net);
+
+-- Arriving "<NetworkName> Nodelists" echomail (see internal/fido/
+-- nodelistecho.go) is queued here at toss time rather than processed
+-- inline, since the file-area work it needs (writing the file, registering
+-- it, calling ImportFile) requires internal/files, which internal/fido
+-- cannot import (import cycle — see ensure.go). A periodic drain step in
+-- the caller (which already imports both) processes and clears this queue.
+-- One line per new/changed VirtNet node, written by
+-- internal/fido.LogNodeChange (called from ApplyNodeAnnounceInfo). The
+-- full table contents are dumped into NodeChgs.txt and re-zipped on every
+-- day-rollover regeneration (internal/fido.BuildNodeChgsText).
+CREATE TABLE IF NOT EXISTS fido_node_change_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    network    TEXT    NOT NULL,
+    line       TEXT    NOT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS fido_nodelist_echo_pending (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    network    TEXT    NOT NULL,
+    subject    TEXT    NOT NULL,
+    body       TEXT    NOT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- One row per network per calendar day a nodelist was generated — the
+-- "yesterday" snapshot GenerateNodelistDiff compares today's fido_members
+-- against, to produce the daily diff file.
+CREATE TABLE IF NOT EXISTS fido_members_snapshot (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    network     TEXT    NOT NULL,
+    year        INTEGER NOT NULL,
+    day_of_year INTEGER NOT NULL,
+    zone        INTEGER NOT NULL,
+    net         INTEGER NOT NULL,
+    node_num    INTEGER NOT NULL,
+    point       INTEGER NOT NULL DEFAULT 0,
+    bbs_name    TEXT    NOT NULL,
+    sysop_name  TEXT    NOT NULL,
+    location    TEXT    NOT NULL DEFAULT '',
+    flags       TEXT    NOT NULL DEFAULT '',
+    UNIQUE(network, year, day_of_year, zone, net, node_num, point)
+);

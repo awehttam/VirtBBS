@@ -42,6 +42,7 @@ import (
 	"github.com/virtbbs/virtbbs/internal/conferences"
 	"github.com/virtbbs/virtbbs/internal/config"
 	"github.com/virtbbs/virtbbs/internal/fido"
+	"github.com/virtbbs/virtbbs/internal/files"
 	"github.com/virtbbs/virtbbs/internal/messages"
 )
 
@@ -59,7 +60,13 @@ import (
 // next tick without a restart.
 //
 // Returns a stop function that halts all scheduler goroutines.
-func Start(store *messages.Store, confStore *conferences.Store) (stop func()) {
+//
+// VirtNet: networks this BBS hosts (NetworkDef.IsHub(), no uplink) get a
+// daily fido.RunDayRollover ticker (full nodelist + diff generation,
+// distribution, change log, diagrams) instead of the fetch-based nodelist
+// scheduler below, which only makes sense for networks pulling someone
+// else's nodelist.
+func Start(store *messages.Store, confStore *conferences.Store, fileStore *files.Store) (stop func()) {
 	cfg := config.Get()
 	stopCh := make(chan struct{})
 	var stopped bool
@@ -71,14 +78,64 @@ func Start(store *messages.Store, confStore *conferences.Store) (stop func()) {
 		name := nd.Name
 		if nd.Uplink != "" {
 			go runNetwork(name, store, confStore, stopCh)
+			go runNodelistFetch(name, store, stopCh)
+		} else {
+			go runDayRollover(name, store, confStore, fileStore, stopCh)
 		}
-		go runNodelistFetch(name, store, stopCh)
 	}
 
 	return func() {
 		if !stopped {
 			stopped = true
 			close(stopCh)
+		}
+	}
+}
+
+// runDayRollover regenerates a hub network's VirtNet nodelist/diff/change-
+// log/diagrams once every 24h (and once immediately at startup), and
+// drains any pending inbound nodelist echoes (fido.ProcessPendingNodelistEchoes)
+// once per minute — fast enough that a freshly-tossed echo is applied
+// locally well within the same session a sysop might check it in.
+func runDayRollover(networkName string, store *messages.Store, confStore *conferences.Store, fileStore *files.Store, stop <-chan struct{}) {
+	nd := config.Get().Fido.NetworkByName(networkName)
+	if nd == nil {
+		return
+	}
+	log.Printf("virtnet scheduler: %s — day-rollover nodelist generation, daily", networkName)
+
+	runRollover := func() {
+		cfg := config.Get()
+		nd := cfg.Fido.NetworkByName(networkName)
+		if nd == nil || !nd.Enabled || !nd.IsHub() {
+			return
+		}
+		warnings := fido.RunDayRollover(nd, store.DB(), confStore, store, fileStore, cfg.BBS.Name, cfg.Sysop.Name)
+		for _, w := range warnings {
+			log.Printf("virtnet scheduler: %s rollover warning: %s", networkName, w)
+		}
+	}
+	runRollover() // once at startup, so a freshly-configured hub has a nodelist immediately
+
+	dayTicker := time.NewTicker(24 * time.Hour)
+	defer dayTicker.Stop()
+	echoTicker := time.NewTicker(1 * time.Minute)
+	defer echoTicker.Stop()
+
+	for {
+		select {
+		case <-stop:
+			return
+		case <-dayTicker.C:
+			runRollover()
+		case <-echoTicker.C:
+			nd := config.Get().Fido.NetworkByName(networkName)
+			if nd == nil || !nd.Enabled || !nd.IsHub() {
+				continue
+			}
+			for _, w := range fido.ProcessPendingNodelistEchoes(store.DB(), fileStore) {
+				log.Printf("virtnet scheduler: %s nodelist echo: %s", networkName, w)
+			}
 		}
 	}
 }

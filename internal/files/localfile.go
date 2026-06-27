@@ -111,6 +111,74 @@ func formatSLDIRDate(uploadDate string) string {
 	return t.Format("1-02-2006")
 }
 
+// WriteZipWithDiz builds a zip at path containing one payload file plus a
+// FILE_ID.DIZ description file — the same shape writeLocalFileZip below
+// builds for LOCALFIL.ZIP, generalized for any single-payload zip (used by
+// internal/fido's VirtNet nodelist-change/diagram zips).
+func WriteZipWithDiz(path, payloadName string, payload []byte, diz string) error {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+
+	pf, err := zw.Create(payloadName)
+	if err != nil {
+		return err
+	}
+	if _, err := pf.Write(payload); err != nil {
+		return err
+	}
+
+	dizf, err := zw.Create(localFileDizName)
+	if err != nil {
+		return err
+	}
+	if _, err := dizf.Write([]byte(diz)); err != nil {
+		return err
+	}
+
+	if err := zw.Close(); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, buf.Bytes(), 0644)
+}
+
+// WriteMultiZipWithDiz is WriteZipWithDiz for more than one payload file
+// (e.g. several diagram PNGs) plus a single shared FILE_ID.DIZ.
+func WriteMultiZipWithDiz(path string, payloads map[string][]byte, diz string) error {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+
+	for name, data := range payloads {
+		pf, err := zw.Create(name)
+		if err != nil {
+			return err
+		}
+		if _, err := pf.Write(data); err != nil {
+			return err
+		}
+	}
+
+	dizf, err := zw.Create(localFileDizName)
+	if err != nil {
+		return err
+	}
+	if _, err := dizf.Write([]byte(diz)); err != nil {
+		return err
+	}
+
+	if err := zw.Close(); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, buf.Bytes(), 0644)
+}
+
 func writeLocalFileZip(path, listing, diz string) error {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)

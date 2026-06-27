@@ -164,6 +164,36 @@
 //                        process pegging the CPU and requiring a manual
 //                        kill -9 (observed directly: ~200-250% CPU,
 //                        unresponsive to plain SIGTERM).
+//   v0.13.0 2026-06-27  VirtNet: this BBS can now be the authoritative hub
+//                        of a FidoNet-compatible network (zone:net/node,
+//                        no uplink configured), not just a leaf polling an
+//                        uplink. New: self-service "apply to join" (profile
+//                        menu) and sysop approval with net/node allocation
+//                        (internal/fido/members.go, fido_join_requests/
+//                        fido_members); a nodelist generator — the missing
+//                        encoder half of nodelist.go, which only ever
+//                        imported — producing a daily full
+//                        (VirtNode.Z045) + diff (VirtNode.D045) nodelist
+//                        from fido_members; a BinkleyTerm-style plain-text
+//                        routing-table import/export alongside the
+//                        DB-backed one; delegated sub-nets (a downstream
+//                        member running its own VirtBBS as a sub-hub
+//                        auto-announces nodes it registers to SysOp@hub via
+//                        a new NODE ANNOUNCE netmail convention, mirroring
+//                        AreaFix/Ping/Trace's existing dispatch patterns);
+//                        auto-created "<Network> Nodelists" (echo) and
+//                        "<Network> Sysops" conferences plus a "<Network>
+//                        Nodelist Files" file area (first auto-creation of
+//                        either anywhere in this codebase); downstream
+//                        nodelist distribution reuses the existing
+//                        downlink echomail fan-out unmodified, with
+//                        auto-processing on arrival (writes the file,
+//                        registers it, re-imports via the existing
+//                        unmodified fido.ImportFile); a NodeChgs.txt change
+//                        log and Graphviz-rendered network diagrams
+//                        (full/hubs-only/per-hub — a Go rewrite of
+//                        github.com/ftoledo's node2dot.py gist), all zipped
+//                        with a FILE_ID.DIZ into the Nodelist Files area.
 // ============================================================================
 
 // Package version holds the VirtBBS version number.
@@ -174,4 +204,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "0.12.0"
+const Version = "0.13.0"

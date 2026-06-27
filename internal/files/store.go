@@ -124,6 +124,68 @@ func (s *Store) GetDir(id int64) (*Dir, error) {
 	return d, nil
 }
 
+// GetDirByName finds an active directory by its exact name, or nil if none
+// exists. See EnsureDir for the find-or-create wrapper around this.
+func (s *Store) GetDirByName(name string) (*Dir, error) {
+	row := s.db.QueryRow(`SELECT id, name, description, path, sort_type, read_sec, upload_sec, active FROM file_dirs WHERE name=? AND active=1`, name)
+	d := &Dir{}
+	var active int
+	if err := row.Scan(&d.ID, &d.Name, &d.Description, &d.Path, &d.SortType, &d.ReadSec, &d.UploadSec, &active); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	d.Active = active != 0
+	return d, nil
+}
+
+// CreateDir adds a new file directory. path is relative to the files root
+// (see EnsureDirPath to create the on-disk directory afterward).
+func (s *Store) CreateDir(name, description, path string, readSec, uploadSec int) (*Dir, error) {
+	res, err := s.db.Exec(`INSERT INTO file_dirs (name, description, path, sort_type, read_sec, upload_sec, active)
+		VALUES (?,?,?,0,?,?,1)`, name, description, path, readSec, uploadSec)
+	if err != nil {
+		return nil, fmt.Errorf("create file dir %q: %w", name, err)
+	}
+	id, _ := res.LastInsertId()
+	return &Dir{ID: id, Name: name, Description: description, Path: path, ReadSec: readSec, UploadSec: uploadSec, Active: true}, nil
+}
+
+// EnsureDir finds a file area literally named name, creating it (and its
+// on-disk directory) with sane defaults if it doesn't exist yet. Returns
+// its ID and the absolute on-disk path callers can write payload files
+// into directly before RegisterUpload.
+func (s *Store) EnsureDir(name, description string) (dirID int64, dirPath string, err error) {
+	d, err := s.GetDirByName(name)
+	if err != nil {
+		return 0, "", err
+	}
+	if d == nil {
+		d, err = s.CreateDir(name, description, sanitizeDirPath(name), 0, 0)
+		if err != nil {
+			return 0, "", err
+		}
+	}
+	if err := s.EnsureDirPath(d.ID); err != nil {
+		return 0, "", err
+	}
+	return d.ID, filepath.Join(s.filesRoot, s.dirPath(d.ID)), nil
+}
+
+func sanitizeDirPath(name string) string {
+	out := make([]rune, 0, len(name))
+	for _, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			out = append(out, r)
+		default:
+			out = append(out, '_')
+		}
+	}
+	return string(out)
+}
+
 // ListFiles returns files in a directory, sorted per the dir's SortType.
 func (s *Store) ListFiles(dirID int64) ([]*File, error) {
 	rows, err := s.db.Query(`SELECT id, dir_id, filename, size, description, uploader, upload_date, downloads FROM files WHERE dir_id=? ORDER BY filename`, dirID)

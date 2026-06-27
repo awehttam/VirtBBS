@@ -36,6 +36,8 @@
 package session
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -974,7 +976,7 @@ func (s *session) sysopFidoMenu() {
 		s.writeln(ansi.Color(ansi.BrightYellow) +
 			"  [T]oss inbound   [S]can outbound   [N]odelist   [L]oad nodelist now   [E]cho flags   [P]oll uplink" + ansi.Reset())
 		s.writeln(ansi.Color(ansi.BrightYellow) +
-			"  [I]Ping a node   [X]Trace a node   [A]reaFix   [F]ileFix   [Q]uit" + ansi.Reset())
+			"  [I]Ping a node   [X]Trace a node   [A]reaFix   [F]ileFix   [J]oin reqs   [R]outing   [Q]uit" + ansi.Reset())
 		s.write(ansi.Prompt("FidoNet command: "))
 		cmd := strings.ToUpper(strings.TrimSpace(s.readline()))
 		switch cmd {
@@ -1015,10 +1017,320 @@ func (s *session) sysopFidoMenu() {
 			s.fidoAreaFixMenu()
 		case "F":
 			s.fidoFileFixMenu()
+		case "J":
+			s.fidoJoinRequestsMenu()
+		case "R":
+			s.fidoRoutingTableMenu()
 		case "Q", "":
 			return
 		}
 	}
+}
+
+// fidoJoinRequestsMenu reviews pending applications to join a network this
+// BBS hosts (NetworkDef.IsHub()) and approves/denies them — see
+// internal/fido/members.go. Approving allocates a net/node address,
+// authorizes BinkP via the same Downlink mechanism AreaFix already uses,
+// and immediately regenerates the nodelist.
+func (s *session) fidoJoinRequestsMenu() {
+	target := s.pickHubNetwork("administer join requests for")
+	if target == nil {
+		return
+	}
+	mdb := fido.OpenMembersDB(s.deps.Messages.DB())
+	for {
+		pending, err := mdb.ListPending(target.Name)
+		if err != nil {
+			s.writeln(ansi.Colorize(ansi.Red, "Error: "+err.Error()))
+			return
+		}
+		s.writeln(ansi.Header("Join Requests — " + target.Name))
+		if len(pending) == 0 {
+			s.writeln(ansi.Color(ansi.Yellow) + "  No pending requests." + ansi.Reset())
+		} else {
+			for _, r := range pending {
+				netStr := "sysop's choice"
+				if r.RequestedNet != nil {
+					netStr = fmt.Sprintf("net %d", *r.RequestedNet)
+				}
+				s.writeln(fmt.Sprintf("  #%d  %-20s  %-20s  %s", r.ID, r.BBSName, r.SysopName, netStr))
+			}
+		}
+		s.writeln("")
+		s.writeln(ansi.Color(ansi.BrightYellow) + "  [A]pprove   [D]eny   [Q]uit" + ansi.Reset())
+		s.write(ansi.Prompt("Command: "))
+		cmd := strings.ToUpper(strings.TrimSpace(s.readline()))
+		switch cmd {
+		case "A":
+			s.fidoApproveJoinRequest(target, mdb)
+		case "D":
+			s.write(ansi.Prompt("Request # to deny: "))
+			if id, err := strconv.ParseInt(strings.TrimSpace(s.readline()), 10, 64); err == nil {
+				_ = mdb.Deny(id, s.user.Name)
+			}
+		case "Q", "":
+			return
+		}
+	}
+}
+
+func (s *session) fidoApproveJoinRequest(target *fido.NetworkDef, mdb *fido.MembersDB) {
+	s.write(ansi.Prompt("Request # to approve: "))
+	id, err := strconv.ParseInt(strings.TrimSpace(s.readline()), 10, 64)
+	if err != nil {
+		return
+	}
+	req, err := mdb.GetJoinRequest(id)
+	if err != nil || req == nil || req.Status != "pending" {
+		s.writeln(ansi.Colorize(ansi.Red, "Request not found or already decided."))
+		return
+	}
+
+	net := 1
+	if req.RequestedNet != nil {
+		net = *req.RequestedNet
+	}
+	s.write(ansi.Prompt(fmt.Sprintf("Net number (Enter=%d): ", net)))
+	if numStr := strings.TrimSpace(s.readline()); numStr != "" {
+		if n, err := strconv.Atoi(numStr); err == nil {
+			net = n
+		}
+	}
+
+	hasMembers, err := mdb.NetHasMembers(target.Name, net)
+	if err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Error: "+err.Error()))
+		return
+	}
+	isHost := false
+	node := 0
+	if !hasMembers {
+		s.write(ansi.Prompt(fmt.Sprintf("Net %d has no members yet — make this the net's Host (node 0)? [y/N]: ", net)))
+		isHost = strings.EqualFold(strings.TrimSpace(s.readline()), "y")
+	}
+	if !isHost {
+		node, err = mdb.NextNodeNum(target.Name, net)
+		if err != nil {
+			s.writeln(ansi.Colorize(ansi.Red, "Error: "+err.Error()))
+			return
+		}
+		s.write(ansi.Prompt(fmt.Sprintf("Node number (Enter=%d): ", node)))
+		if numStr := strings.TrimSpace(s.readline()); numStr != "" {
+			if n, err := strconv.Atoi(numStr); err == nil {
+				node = n
+			}
+		}
+	}
+
+	password := randomPassword()
+	saveDownlink := func(networkName string, dl fido.Downlink) error {
+		return s.updateNetworkDownlinks(networkName, func(cur []fido.Downlink) []fido.Downlink {
+			return append(append([]fido.Downlink{}, cur...), dl)
+		})
+	}
+
+	m, err := mdb.ApproveJoinRequest(target, req, net, node, isHost, password, saveDownlink)
+	if err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Error: "+err.Error()))
+		return
+	}
+
+	cfg := config.Get()
+	if err := fido.ApplyNodeAnnounceInfo(target, s.deps.Messages.DB(), s.deps.Conferences, s.deps.Messages,
+		&fido.Member{Network: m.Network, Zone: m.Zone, Net: m.Net, NodeNum: m.NodeNum, Point: m.Point,
+			BBSName: m.BBSName, SysopName: m.SysopName, Location: m.Location, Contact: m.Contact,
+			BinkpHost: m.BinkpHost, IsActive: true}, "NEW"); err != nil {
+		s.writeln(ansi.Colorize(ansi.Yellow, "Member approved but welcome announcement failed: "+err.Error()))
+	}
+	if _, _, err := fido.GenerateNodelist(s.deps.Messages.DB(), target, cfg.BBS.Name, cfg.Sysop.Name); err != nil {
+		s.writeln(ansi.Colorize(ansi.Yellow, "Member approved but nodelist regeneration failed: "+err.Error()))
+	}
+
+	s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf(
+		"Approved as %s. Password: %s (shown once — give this to the applicant).", m.Addr4D(), password)))
+
+	if req.RequestedByUserID > 0 {
+		_ = s.deps.Messages.Post(&messages.Message{
+			ConferenceID: 0,
+			FromName:     "SysOp",
+			ToName:       req.SysopName,
+			Subject:      fmt.Sprintf("VirtNet application approved: %s", m.Addr4D()),
+			Status:       "A",
+			Body: fmt.Sprintf("Your application to join %s was approved.\r\n\r\nYour address: %s\r\nYour password: %s\r\n",
+				target.Name, m.Addr4D(), password),
+		})
+	}
+}
+
+// fidoRoutingTableMenu lists every approved member (the routing table) and
+// offers BinkleyTerm-style plain-text export/import — see
+// internal/fido/routingtable.go.
+func (s *session) fidoRoutingTableMenu() {
+	target := s.pickHubNetwork("view the routing table for")
+	if target == nil {
+		return
+	}
+	mdb := fido.OpenMembersDB(s.deps.Messages.DB())
+	for {
+		members, err := mdb.ListMembers(target.Name)
+		if err != nil {
+			s.writeln(ansi.Colorize(ansi.Red, "Error: "+err.Error()))
+			return
+		}
+		s.writeln(ansi.Header("Routing Table — " + target.Name))
+		s.writeln(ansi.Color(ansi.BrightCyan) +
+			fmt.Sprintf("  %-16s %-24s %-30s %s", "Address", "BBS", "Host:Port", "Active") + ansi.Reset())
+		for _, m := range members {
+			active := "Yes"
+			if !m.IsActive {
+				active = "No"
+			}
+			s.writeln(fmt.Sprintf("  %-16s %-24s %-30s %s", m.Addr4D(), m.BBSName, m.BinkpHost, active))
+		}
+		s.writeln("")
+		s.writeln(ansi.Color(ansi.BrightYellow) + "  [X]port   [I]mport   [E]dit member   [Q]uit" + ansi.Reset())
+		s.write(ansi.Prompt("Command: "))
+		cmd := strings.ToUpper(strings.TrimSpace(s.readline()))
+		switch cmd {
+		case "X":
+			s.write(ansi.Prompt("Export to path: "))
+			path := strings.TrimSpace(s.readline())
+			if path == "" {
+				continue
+			}
+			data, err := fido.ExportRoutingTable(s.deps.Messages.DB(), target.Name)
+			if err != nil {
+				s.writeln(ansi.Colorize(ansi.Red, "Error: "+err.Error()))
+				continue
+			}
+			if err := os.WriteFile(path, data, 0644); err != nil {
+				s.writeln(ansi.Colorize(ansi.Red, "Error writing file: "+err.Error()))
+				continue
+			}
+			s.writeln(ansi.Colorize(ansi.BrightGreen, "Exported to "+path))
+		case "I":
+			s.write(ansi.Prompt("Import from path: "))
+			path := strings.TrimSpace(s.readline())
+			if path == "" {
+				continue
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				s.writeln(ansi.Colorize(ansi.Red, "Error reading file: "+err.Error()))
+				continue
+			}
+			result, err := fido.ImportRoutingTable(s.deps.Messages.DB(), target.Name, data)
+			if err != nil {
+				s.writeln(ansi.Colorize(ansi.Red, "Error: "+err.Error()))
+				continue
+			}
+			s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf("Updated %d. Unknown: %d.", result.Updated, len(result.Unknown))))
+			for _, u := range result.Unknown {
+				s.writeln(ansi.Colorize(ansi.Yellow, "  Unknown address: "+u))
+			}
+			for _, e := range result.Errors {
+				s.writeln(ansi.Colorize(ansi.Red, "  "+e))
+			}
+			cfg := config.Get()
+			if _, _, err := fido.GenerateNodelist(s.deps.Messages.DB(), target, cfg.BBS.Name, cfg.Sysop.Name); err != nil {
+				s.writeln(ansi.Colorize(ansi.Yellow, "Nodelist regeneration failed: "+err.Error()))
+			}
+		case "E":
+			s.fidoEditMemberInfo(target, mdb)
+		case "Q", "":
+			return
+		}
+	}
+}
+
+// fidoEditMemberInfo lets the sysop edit an existing member's contact/
+// location/binkp-host info — the same "edit my node info" flow described
+// for a sub-hub's own sysop, since this is the only such UI in the system
+// and a sub-hub is just a VirtBBS instance running this same code against
+// its own net. On save it goes through ApplyNodeAnnounceInfo exactly like
+// approval/inbound announcements do, and (if target.Uplink != "", i.e.
+// this instance is itself a delegated sub-hub, not the real top-level hub)
+// also sends a CHANGE NodeAnnounce upstream.
+func (s *session) fidoEditMemberInfo(target *fido.NetworkDef, mdb *fido.MembersDB) {
+	s.write(ansi.Prompt("Address to edit (zone:net/node): "))
+	addrStr := strings.TrimSpace(s.readline())
+	addr, err := fido.ParseAddr(addrStr)
+	if err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Invalid address: "+err.Error()))
+		return
+	}
+	m, err := mdb.GetMemberByAddr(target.Name, addr)
+	if err != nil || m == nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Member not found."))
+		return
+	}
+
+	s.write(ansi.Prompt(fmt.Sprintf("Location (Enter=%q): ", m.Location)))
+	if v := strings.TrimSpace(s.readline()); v != "" {
+		m.Location = v
+	}
+	s.write(ansi.Prompt(fmt.Sprintf("Contact (Enter=%q): ", m.Contact)))
+	if v := strings.TrimSpace(s.readline()); v != "" {
+		m.Contact = v
+	}
+	s.write(ansi.Prompt(fmt.Sprintf("BinkP host:port (Enter=%q): ", m.BinkpHost)))
+	if v := strings.TrimSpace(s.readline()); v != "" {
+		m.BinkpHost = v
+	}
+
+	if err := fido.ApplyNodeAnnounceInfo(target, s.deps.Messages.DB(), s.deps.Conferences, s.deps.Messages, m, "CHANGE"); err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Error: "+err.Error()))
+		return
+	}
+	if target.Uplink != "" {
+		if err := fido.SendNodeAnnounce(target, m, "CHANGE"); err != nil {
+			s.writeln(ansi.Colorize(ansi.Yellow, "Saved locally, but failed to announce upstream: "+err.Error()))
+			return
+		}
+	}
+	cfg := config.Get()
+	if _, _, err := fido.GenerateNodelist(s.deps.Messages.DB(), target, cfg.BBS.Name, cfg.Sysop.Name); err != nil {
+		s.writeln(ansi.Colorize(ansi.Yellow, "Nodelist regeneration failed: "+err.Error()))
+	}
+	s.writeln(ansi.Colorize(ansi.BrightGreen, "Member info updated."))
+}
+
+// pickHubNetwork is pickFidoNetwork, restricted to networks this BBS hosts
+// (NetworkDef.IsHub()) — the only ones with join requests/a routing table.
+func (s *session) pickHubNetwork(verb string) *fido.NetworkDef {
+	cfg := config.Get()
+	var hubs []fido.NetworkDef
+	for _, nd := range cfg.Fido.AllNetworks() {
+		if nd.Enabled && nd.IsHub() {
+			hubs = append(hubs, nd)
+		}
+	}
+	if len(hubs) == 0 {
+		s.writeln(ansi.Colorize(ansi.Yellow, "This BBS doesn't host any network."))
+		return nil
+	}
+	target := hubs[0]
+	if len(hubs) > 1 {
+		for i, n := range hubs {
+			s.writeln(fmt.Sprintf("  %d. %s (%s)", i+1, n.Name, n.Address))
+		}
+		s.write(ansi.Prompt(fmt.Sprintf("Network # to %s (Enter=1): ", verb)))
+		if num, err := strconv.Atoi(strings.TrimSpace(s.readline())); err == nil && num >= 1 && num <= len(hubs) {
+			target = hubs[num-1]
+		}
+	}
+	return &target
+}
+
+// randomPassword generates a short random hex password for a newly
+// approved VirtNet member, mirroring the codebase's existing
+// crypto/rand-based token-generation idiom (users.Store.CreateAPIToken).
+func randomPassword() string {
+	buf := make([]byte, 6)
+	if _, err := rand.Read(buf); err != nil {
+		return "changeme"
+	}
+	return hex.EncodeToString(buf)
 }
 
 // fidoAreaFixMenu manages AreaFix downlinks (systems that subscribe to
@@ -1822,7 +2134,7 @@ func (s *session) profileMenu() {
 		s.writeln(fmt.Sprintf("  %sExpert mode%s: %s", ansi.Color(ansi.BrightCyan), ansi.Reset(), yesNo(s.user.ExpertMode)))
 		s.writeln("")
 		s.writeln(ansi.Color(ansi.BrightWhite) +
-			"  [C]ity   [P]assword   [A]NSI   [M]sg editor   [L]ines/page   [X]fer   [E]xpert   [T]okens   [Q]uit" +
+			"  [C]ity   [P]assword   [A]NSI   [M]sg editor   [L]ines/page   [X]fer   [E]xpert   [T]okens   [J]oin network   [Q]uit" +
 			ansi.Reset())
 		s.write(ansi.Prompt("Profile: "))
 		cmd := strings.ToUpper(strings.TrimSpace(s.readline()))
@@ -1884,10 +2196,86 @@ func (s *session) profileMenu() {
 			s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf("Expert mode is now %s.", yesNo(s.user.ExpertMode))))
 		case "T":
 			s.manageAPITokens()
+		case "J":
+			s.applyToJoinNetwork()
 		case "Q", "":
 			return
 		}
 	}
+}
+
+// applyToJoinNetwork lets any logged-in caller apply to join a FidoNet-
+// compatible network this BBS itself hosts (NetworkDef.IsHub() — a blank
+// Uplink, e.g. VirtNet). Submits a fido_join_requests row for the sysop to
+// review/approve via fidoJoinRequestsMenu — see internal/fido/members.go.
+func (s *session) applyToJoinNetwork() {
+	cfg := config.Get()
+	var hubs []fido.NetworkDef
+	for _, nd := range cfg.Fido.AllNetworks() {
+		if nd.Enabled && nd.IsHub() {
+			hubs = append(hubs, nd)
+		}
+	}
+	if len(hubs) == 0 {
+		s.writeln(ansi.Colorize(ansi.Yellow, "This BBS doesn't host any network you can apply to join."))
+		return
+	}
+
+	target := hubs[0]
+	if len(hubs) > 1 {
+		s.writeln(ansi.Header("Apply to Join a Network"))
+		for i, n := range hubs {
+			s.writeln(fmt.Sprintf("  %d. %s (%s)", i+1, n.Name, n.Address))
+		}
+		s.write(ansi.Prompt("Network # (Enter=1): "))
+		if num, err := strconv.Atoi(strings.TrimSpace(s.readline())); err == nil && num >= 1 && num <= len(hubs) {
+			target = hubs[num-1]
+		}
+	}
+
+	s.writeln(ansi.Header("Apply to Join " + target.Name))
+	s.write(ansi.Prompt("Your BBS/system name: "))
+	bbsName := strings.TrimSpace(s.readline())
+	if bbsName == "" {
+		s.writeln(ansi.Colorize(ansi.Yellow, "Cancelled."))
+		return
+	}
+	s.write(ansi.Prompt("Sysop name (Enter=your username): "))
+	sysopName := strings.TrimSpace(s.readline())
+	if sysopName == "" {
+		sysopName = s.user.Name
+	}
+	s.write(ansi.Prompt("Location (city, state/country): "))
+	location := strings.TrimSpace(s.readline())
+	s.write(ansi.Prompt("Contact (email or phone): "))
+	contact := strings.TrimSpace(s.readline())
+	s.write(ansi.Prompt("Preferred net number (Enter=sysop's choice): "))
+	var netPtr *int
+	if numStr := strings.TrimSpace(s.readline()); numStr != "" {
+		if num, err := strconv.Atoi(numStr); err == nil {
+			netPtr = &num
+		}
+	}
+	s.write(ansi.Prompt("BinkP host:port, if you already run mailer software (Enter=skip): "))
+	binkpHost := strings.TrimSpace(s.readline())
+
+	mdb := fido.OpenMembersDB(s.deps.Messages.DB())
+	id, err := mdb.SubmitJoinRequest(&fido.JoinRequest{
+		Network:           target.Name,
+		RequestedByUserID: int(s.user.ID),
+		BBSName:           bbsName,
+		SysopName:         sysopName,
+		Location:          location,
+		Contact:           contact,
+		RequestedNet:      netPtr,
+		BinkpHost:         binkpHost,
+	})
+	if err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Error submitting application: "+err.Error()))
+		return
+	}
+	s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf(
+		"Application #%d submitted. The sysop will review it and assign your node address.", id)))
 }
 
 // manageAPITokens lets a user generate or revoke their own API tokens, used

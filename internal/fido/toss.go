@@ -198,11 +198,33 @@ func tossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Stor
 					errs = append(errs, fmt.Sprintf("filefix: %v", err))
 				}
 			}
+
+			// VirtNet: a delegated sub-hub announcing a node it registered
+			// under its own net. Only meaningful at the real central hub
+			// (Uplink==""); a sub-hub receiving this would have nowhere
+			// further to apply it, so it's a no-op there.
+			if IsNodeAnnounceRequest(pm.Subject) && nd.IsHub() {
+				if err := ProcessNodeAnnounce(nd, store.DB(), confStore, store, pm); err != nil {
+					errs = append(errs, fmt.Sprintf("node announce: %v", err))
+				}
+			}
 		} else {
 			confID = nd.ConferenceForArea(area)
 			if confID < 0 {
 				skipped++
 				continue // unknown area
+			}
+
+			// VirtNet: this network's own generated nodelist, distributed
+			// as ordinary echomail (see EnsureEchoConference/scan.go's
+			// existing downlink fan-out — no new transport code needed for
+			// distribution). Queue it for ProcessPendingNodelistEchoes
+			// rather than processing inline, since applying it needs
+			// internal/files, which internal/fido cannot import.
+			if strings.EqualFold(area, nd.EffectiveNodelistEchoTag()) {
+				if err := QueueNodelistEcho(store.DB(), nd.Name, pm.Subject, pb.Text); err != nil {
+					errs = append(errs, fmt.Sprintf("queue nodelist echo: %v", err))
+				}
 			}
 		}
 

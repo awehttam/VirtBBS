@@ -472,7 +472,45 @@ func binkpOutboundFilesFor(nd *NetworkDef, dl *Downlink, peerAddr Addr) []string
 			}
 		}
 	}
+
+	// VirtNet: for networks this BBS hosts (no uplink), unconditionally
+	// offer the latest generated nodelist alongside whatever's tagged for
+	// this peer — every member gets the current nodelist on every poll,
+	// not just via the echomail distribution path (nodelistecho.go).
+	if nd.IsHub() {
+		if latest := latestNodelistFile(nd.NodelistDir, "VirtNode.Z"); latest != "" {
+			out = append(out, latest)
+		}
+		if latest := latestNodelistFile(nd.NodelistDir, "VirtNode.D"); latest != "" {
+			out = append(out, latest)
+		}
+	}
 	return out
+}
+
+// latestNodelistFile finds the most recently modified file in dir whose
+// name starts with prefix (e.g. "VirtNode.Z" or "VirtNode.D").
+func latestNodelistFile(dir, prefix string) string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	var best string
+	var bestTime int64
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasPrefix(e.Name(), prefix) {
+			continue
+		}
+		fi, err := e.Info()
+		if err != nil {
+			continue
+		}
+		if fi.ModTime().UnixNano() > bestTime {
+			bestTime = fi.ModTime().UnixNano()
+			best = filepath.Join(dir, e.Name())
+		}
+	}
+	return best
 }
 
 // ─── Internal BinkP connection ─────────────────────────────────────────────────

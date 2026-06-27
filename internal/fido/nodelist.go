@@ -329,6 +329,16 @@ func nlDecode(s string) string {
 	return strings.ReplaceAll(strings.TrimSpace(s), "_", " ")
 }
 
+// nlEncode replaces spaces with underscores — the inverse of nlDecode, used
+// by the nodelist generator (nodelistgen.go) to write a name/location/sysop
+// field back out in FTS-0005 form.
+func nlEncode(s string) string {
+	if s == "" {
+		return "-"
+	}
+	return strings.ReplaceAll(strings.TrimSpace(s), " ", "_")
+}
+
 // ─── Query ────────────────────────────────────────────────────────────────────
 
 // SearchResult holds a page of node entries plus total count.

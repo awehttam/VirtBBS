@@ -142,6 +142,12 @@ type NetworkDef struct {
 	FileFixPassword             string         `toml:"filefix_password" json:"filefix_password"`
 	NodelistURL                 string         `toml:"nodelist_url" json:"nodelist_url"`
 	NodelistUpdateIntervalHours int            `toml:"nodelist_update_interval_hours" json:"nodelist_update_interval_hours"`
+
+	// NodelistEchoTag is the echo area tag this network's own generated
+	// nodelist (when this BBS is the network's hub, Uplink=="") is
+	// distributed under — see internal/fido/nodelistecho.go. Defaults to
+	// DefaultNodelistEchoTag if unset.
+	NodelistEchoTag string `toml:"nodelist_echo_tag" json:"nodelist_echo_tag"`
 }
 
 // DefaultConfig returns a Config with sensible disabled defaults.
@@ -360,6 +366,24 @@ func (n *NetworkDef) EffectiveNodelistURL() string {
 		return n.NodelistURL
 	}
 	return DefaultNodelistDiscoveryURL
+}
+
+// DefaultNodelistEchoTag is used when NodelistEchoTag is left blank.
+const DefaultNodelistEchoTag = "VNET.NODELIST"
+
+// EffectiveNodelistEchoTag returns NodelistEchoTag if configured, otherwise
+// DefaultNodelistEchoTag.
+func (n *NetworkDef) EffectiveNodelistEchoTag() string {
+	if n.NodelistEchoTag != "" {
+		return n.NodelistEchoTag
+	}
+	return DefaultNodelistEchoTag
+}
+
+// IsHub reports whether this BBS is the authoritative hub of this network
+// (no uplink configured) rather than a leaf/downlink polling an uplink.
+func (n *NetworkDef) IsHub() bool {
+	return n.Uplink == ""
 }
 
 // DownlinkByAddr finds a configured Downlink by address (ignoring point),

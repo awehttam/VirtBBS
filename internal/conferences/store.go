@@ -178,6 +178,18 @@ func (s *Store) Get(id int) (*Conference, error) {
 	return scanConf(row)
 }
 
+// GetByName finds a conference by its exact name, or nil if none exists.
+// Used by fido.EnsureConference to find-or-create a conference by name
+// rather than by echo tag.
+func (s *Store) GetByName(name string) (*Conference, error) {
+	row := s.db.QueryRow(`SELECT `+confCols+` FROM conferences WHERE name=?`, name)
+	c, err := scanConf(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return c, err
+}
+
 // GetByTag finds an echomail conference by its AREA: tag and network.
 func (s *Store) GetByTag(tag, network string) (*Conference, error) {
 	row := s.db.QueryRow(`SELECT `+confCols+` FROM conferences WHERE echo_tag=? AND network=? AND echo=1`, tag, network)
