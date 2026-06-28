@@ -64,29 +64,58 @@
   <div class="row g-4">
     <div class="col-12 col-lg-4">
       <h3 class="h6 section-head">{{t .Locale "stats.chart_calls"}}</h3>
-      <div class="stats-chart-wrap"><canvas id="chart-calls" aria-label="{{t .Locale "stats.chart_calls"}}"></canvas></div>
+      <div class="stats-chart-wrap">
+        {{if .Charts.HasCallsData}}
+        <canvas id="chart-calls" aria-label="{{t .Locale "stats.chart_calls"}}"></canvas>
+        {{else}}
+        <div class="stats-chart-empty" role="status">
+          <p class="stats-chart-empty-title">{{t .Locale "stats.chart_calls"}}</p>
+          <p class="stats-chart-empty-note">{{t .Locale "stats.chart_insufficient"}}</p>
+        </div>
+        {{end}}
+      </div>
     </div>
     <div class="col-12 col-lg-4">
       <h3 class="h6 section-head">{{t .Locale "stats.chart_messages"}}</h3>
-      <div class="stats-chart-wrap"><canvas id="chart-messages" aria-label="{{t .Locale "stats.chart_messages"}}"></canvas></div>
+      <div class="stats-chart-wrap">
+        {{if .Charts.HasMessagesData}}
+        <canvas id="chart-messages" aria-label="{{t .Locale "stats.chart_messages"}}"></canvas>
+        {{else}}
+        <div class="stats-chart-empty" role="status">
+          <p class="stats-chart-empty-title">{{t .Locale "stats.chart_messages"}}</p>
+          <p class="stats-chart-empty-note">{{t .Locale "stats.chart_insufficient"}}</p>
+        </div>
+        {{end}}
+      </div>
     </div>
     <div class="col-12 col-lg-4">
       <h3 class="h6 section-head">{{t .Locale "stats.chart_files"}}</h3>
-      <div class="stats-chart-wrap"><canvas id="chart-files" aria-label="{{t .Locale "stats.chart_files"}}"></canvas></div>
+      <div class="stats-chart-wrap">
+        {{if .Charts.HasFilesData}}
+        <canvas id="chart-files" aria-label="{{t .Locale "stats.chart_files"}}"></canvas>
+        {{else}}
+        <div class="stats-chart-empty" role="status">
+          <p class="stats-chart-empty-title">{{t .Locale "stats.chart_files"}}</p>
+          <p class="stats-chart-empty-note">{{t .Locale "stats.chart_insufficient"}}</p>
+        </div>
+        {{end}}
+      </div>
     </div>
   </div>
   </div>
 </div>
 
+{{if or .Charts.HasCallsData .Charts.HasMessagesData .Charts.HasFilesData}}
 <script src="/static/chart.umd.min.js"></script>
 <script>
 (function () {
+  if (typeof Chart === 'undefined') return;
   var data = {{chartData .Charts}};
   var gridColor = 'rgba(255,255,255,0.08)';
   var tickColor = 'rgba(255,255,255,0.65)';
   function lineChart(id, values, color) {
     var el = document.getElementById(id);
-    if (!el || typeof Chart === 'undefined') return;
+    if (!el) return;
     new Chart(el, {
       type: 'line',
       data: {
@@ -112,10 +141,11 @@
       }
     });
   }
-  lineChart('chart-calls', data.datasets.calls, 'rgba(99, 179, 237, 1)');
-  lineChart('chart-messages', data.datasets.messages, 'rgba(129, 230, 217, 1)');
-  lineChart('chart-files', data.datasets.fileUploads, 'rgba(246, 173, 85, 1)');
+  {{if .Charts.HasCallsData}}lineChart('chart-calls', data.datasets.calls, 'rgba(99, 179, 237, 1)');{{end}}
+  {{if .Charts.HasMessagesData}}lineChart('chart-messages', data.datasets.messages, 'rgba(129, 230, 217, 1)');{{end}}
+  {{if .Charts.HasFilesData}}lineChart('chart-files', data.datasets.fileUploads, 'rgba(246, 173, 85, 1)');{{end}}
 })();
 </script>
+{{end}}
 {{template "footer" .}}
 {{end}}

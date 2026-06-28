@@ -55,6 +55,23 @@ func (s *Server) gatherStatsCharts() StatsCharts {
 	return charts
 }
 
+func sumInts(v []int) int {
+	n := 0
+	for _, x := range v {
+		n += x
+	}
+	return n
+}
+
+// HasCallsData reports whether the calls series has any recorded activity.
+func (c StatsCharts) HasCallsData() bool { return sumInts(c.Calls) > 0 }
+
+// HasMessagesData reports whether the messages series has any recorded activity.
+func (c StatsCharts) HasMessagesData() bool { return sumInts(c.Messages) > 0 }
+
+// HasFilesData reports whether the file upload series has any recorded activity.
+func (c StatsCharts) HasFilesData() bool { return sumInts(c.FileUploads) > 0 }
+
 // ChartJSON returns labels and datasets as JSON for embedding in stats.html.
 func (c StatsCharts) ChartJSON() string {
 	payload := map[string]any{

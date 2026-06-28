@@ -45,17 +45,54 @@
 <div class="card mb-3">
   <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "menu.bbs_statistics"}}</h2></div>
   <div class="card-body">
-  <div class="row row-cols-2 row-cols-md-4 g-2">
-    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.OnlineNodes}}</span><span class="stat-label">{{t .Locale "menu.stat.online_now"}}</span></div></div></div>
-    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.BBSCallsToday}}</span><span class="stat-label">{{t .Locale "menu.stat.calls_today"}}</span></div></div></div>
-    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.BBSUniqueToday}}</span><span class="stat-label">{{t .Locale "menu.stat.unique_today"}}</span></div></div></div>
-    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.BBSMsgTotal}}</span><span class="stat-label">{{t .Locale "menu.stat.total_messages"}}</span></div></div></div>
-    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.BBSConfCount}}</span><span class="stat-label">{{t .Locale "menu.stat.conferences"}}</span></div></div></div>
-    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.BBSFileTotal}}</span><span class="stat-label">{{t .Locale "menu.stat.files"}}</span></div></div></div>
-    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.BBSFileToday}}</span><span class="stat-label">{{t .Locale "menu.stat.files_today"}}</span></div></div></div>
-    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.NewMsgsTotal}}</span><span class="stat-label">{{t .Locale "menu.stat.your_new_mail"}}</span></div></div></div>
+  <div class="row g-4 dashboard-stats">
+    <div class="col-md-4">
+      <h3 class="dashboard-stat-group-title">{{t .Locale "menu.stat_group.activity"}}</h3>
+      <div class="dashboard-stat-item">
+        <span class="dashboard-stat-label">{{t .Locale "menu.stat.online_now"}}</span>
+        <span class="dashboard-stat-value">{{.Stats.OnlineNodes}}</span>
+      </div>
+      <div class="dashboard-stat-item">
+        <span class="dashboard-stat-label">{{t .Locale "menu.stat.calls_today"}}</span>
+        <span class="dashboard-stat-value">{{.Stats.BBSCallsToday}}</span>
+      </div>
+      <div class="dashboard-stat-item">
+        <span class="dashboard-stat-label">{{t .Locale "menu.stat.unique_today"}}</span>
+        <span class="dashboard-stat-value">{{.Stats.BBSUniqueToday}}</span>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <h3 class="dashboard-stat-group-title">{{t .Locale "menu.stat_group.messages"}}</h3>
+      <div class="dashboard-stat-item">
+        <span class="dashboard-stat-label">{{t .Locale "menu.stat.total_messages"}}</span>
+        <span class="dashboard-stat-value">{{.Stats.BBSMsgTotal}}</span>
+      </div>
+      <div class="dashboard-stat-item">
+        <span class="dashboard-stat-label">{{t .Locale "menu.stat.conferences"}}</span>
+        <span class="dashboard-stat-value">{{.Stats.BBSConfCount}}</span>
+      </div>
+      <div class="dashboard-stat-item">
+        <span class="dashboard-stat-label">{{t .Locale "menu.stat.your_new_mail"}}</span>
+        <span class="dashboard-stat-value">{{.Stats.NewMsgsTotal}}</span>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <h3 class="dashboard-stat-group-title">{{t .Locale "menu.stat_group.files"}}</h3>
+      <div class="dashboard-stat-item">
+        <span class="dashboard-stat-label">{{t .Locale "menu.stat.files"}}</span>
+        <span class="dashboard-stat-value">{{.Stats.BBSFileTotal}}</span>
+      </div>
+      <div class="dashboard-stat-item">
+        <span class="dashboard-stat-label">{{t .Locale "menu.stat.files_today"}}</span>
+        <span class="dashboard-stat-value">{{.Stats.BBSFileToday}}</span>
+      </div>
+      <div class="dashboard-stat-item">
+        <span class="dashboard-stat-label">{{t .Locale "menu.stat.files_month"}}</span>
+        <span class="dashboard-stat-value">{{.Stats.BBSFileMonth}}</span>
+      </div>
+    </div>
   </div>
-  <p class="meta"><a href="/stats">{{t .Locale "menu.full_stats"}}</a> · <a href="/online">{{t .Locale "menu.whos_online"}}</a></p>
+  <p class="meta mb-0"><a href="/stats">{{t .Locale "menu.full_stats"}}</a> · <a href="/online">{{t .Locale "menu.whos_online"}}</a></p>
   </div>
 </div>
 

@@ -34,17 +34,14 @@
         <li class="nav-item"><a class="nav-link" href="/online" data-nav="/online">{{t .Locale "nav.online"}}</a></li>
         {{if .NavNetworks}}
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-nav="/networks">{{t .Locale "nav.networks"}}</a>
+          <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown" data-nav="/networks" aria-expanded="false">{{t .Locale "nav.networks"}}</button>
           <ul class="dropdown-menu">
-            {{range .NavNetworks}}
-            <li class="dropend">
-              <a class="dropdown-item dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{.Name}}</a>
-              <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="/networks/about?network={{.Name | urlquery}}">{{t $.Locale "networks.nav.about"}}</a></li>
-                <li><a class="dropdown-item" href="/nodelist?network={{.Name | urlquery}}">{{t $.Locale "networks.nav.nodelist"}}</a></li>
-                {{if .IsHub}}<li><a class="dropdown-item" href="/networks/map?network={{.Name | urlquery}}">{{t $.Locale "networks.nav.map"}}</a></li>{{end}}
-              </ul>
-            </li>
+            {{range $i, $net := .NavNetworks}}
+            <li><h6 class="dropdown-header">{{$net.Name}}</h6></li>
+            <li><a class="dropdown-item" href="/networks/about?network={{$net.Name | urlquery}}">{{t $.Locale "networks.nav.about"}}</a></li>
+            <li><a class="dropdown-item" href="/nodelist?network={{$net.Name | urlquery}}">{{t $.Locale "networks.nav.nodelist"}}</a></li>
+            {{if $net.IsHub}}<li><a class="dropdown-item" href="/networks/map?network={{$net.Name | urlquery}}">{{t $.Locale "networks.nav.map"}}</a></li>{{end}}
+            {{if lt (add $i 1) (len $.NavNetworks)}}<li><hr class="dropdown-divider"></li>{{end}}
             {{end}}
           </ul>
         </li>

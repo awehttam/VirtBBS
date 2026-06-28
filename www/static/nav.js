@@ -14,7 +14,7 @@
 
   function highlightActiveNav() {
     var path = window.location.pathname;
-    $('#mainNav .nav-link[data-nav]').each(function () {
+    $('#mainNav [data-nav]').each(function () {
       var href = $(this).attr('data-nav');
       if (!href) {
         return;
@@ -33,7 +33,7 @@
       $(this).closest('form').trigger('submit');
     });
 
-    $('#mainNav .nav-link[data-nav]').on('click', function () {
+    $('#mainNav .nav-link[data-nav], #mainNav .dropdown-toggle').on('click', function () {
       if (window.matchMedia('(max-width: 991.98px)').matches) {
         collapseNavOnMobile();
       }

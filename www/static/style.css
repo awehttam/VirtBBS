@@ -138,6 +138,34 @@ body.virtbbs-body {
   height: 220px;
 }
 
+.stats-chart-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  min-height: 220px;
+  padding: 1rem;
+  text-align: center;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 0.375rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.stats-chart-empty-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--virtbbs-accent-dim);
+}
+
+.stats-chart-empty-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--bs-secondary-color);
+  max-width: 18rem;
+}
+
 .stat-grid {
   display: grid;
   gap: 0.35rem 1.5rem;
@@ -159,16 +187,56 @@ body.virtbbs-body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.stat-label {
+.stat-grid .stat-label {
   color: var(--bs-secondary-color);
   font-size: 0.9rem;
   flex: 1 1 auto;
 }
 
-.stat-value {
+.stat-grid .stat-value {
   font-size: 0.95rem;
   text-align: right;
   flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.dashboard-stats {
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-stat-group-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--virtbbs-accent-dim);
+}
+
+.dashboard-stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dashboard-stat-item:last-child {
+  border-bottom: none;
+}
+
+.dashboard-stat-label {
+  color: var(--bs-secondary-color);
+  font-size: 0.9rem;
+}
+
+.dashboard-stat-value {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: right;
   white-space: nowrap;
 }
 
