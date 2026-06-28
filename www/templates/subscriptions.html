@@ -1,11 +1,14 @@
 {{define "subscriptions.html"}}
 {{template "header" .}}
-<div class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "subscriptions.title"}}</h2></div><div class="card-body">
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "subscriptions.title"}}</h2></div>
+  <div class="card-body">
   <p>{{t .Locale "subscriptions.intro"}}</p>
   {{if not .Rows}}
   <p class="meta">{{t .Locale "subscriptions.empty"}}</p>
   {{else}}
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.area"}}</th><th>{{t .Locale "subscriptions.col.tag"}}</th><th>{{t .Locale "subscriptions.col.network"}}</th><th>{{t .Locale "subscriptions.col.new"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Rows}}
@@ -18,14 +21,16 @@
           <form method="post" action="/subscriptions" style="display:inline">
             <input type="hidden" name="conf" value="{{.Conference.ID}}">
             <input type="hidden" name="subscribe" value="{{if .Subscribed}}0{{else}}1{{end}}">
-            <button type="submit" class="btn btn-primary btn-sm">{{if .Subscribed}}{{t $.Locale "common.unsubscribe"}}{{else}}{{t $.Locale "common.subscribe"}}{{end}}</button>
+            <button type="submit" class="btn btn-sm">{{if .Subscribed}}{{t $.Locale "common.unsubscribe"}}{{else}}{{t $.Locale "common.subscribe"}}{{end}}</button>
           </form>
         </td>
       </tr>
     {{end}}
     </tbody>
-  </table></div>
+  </table>
+  </div>
   {{end}}
-</div></div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

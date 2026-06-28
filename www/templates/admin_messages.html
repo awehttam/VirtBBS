@@ -1,17 +1,20 @@
 {{define "admin_messages.html"}}
 {{template "header" .}}
-<div class="card mb-3 sysop-panel"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_messages.title"}}</h2></div><div class="card-body">
+<div class="card mb-3 sysop-panel">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_messages.title"}}</h2></div>
+  <div class="card-body">
   <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
   <form method="get" action="/admin/messages" class="inline-form">
-    <div class="mb-3"><label class="form-label">{{t .Locale "admin_messages.conference"}}
-      <select name="conf" onchange="this.form.submit()" class="form-select">
+    <label>{{t .Locale "admin_messages.conference"}}
+      <select class="form-select" name="conf" onchange="this.form.submit()">
         <option value="">{{t .Locale "common.select"}}</option>
         {{range .Conferences}}<option value="{{.ID}}" {{if eq $.ConfID .ID}}selected{{end}}>{{.ID}}: {{.Name}}</option>{{end}}
       </select>
     </label>
   </form>
   {{if gt .ConfID 0}}
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "messages_list.col.num"}}</th><th>{{t .Locale "common.from"}}</th><th>{{t .Locale "common.subject"}}</th><th>{{t .Locale "common.date"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Messages}}
@@ -33,8 +36,10 @@
     <tr><td colspan="5">{{t .Locale "admin_messages.empty"}}</td></tr>
     {{end}}
     </tbody>
-  </table></div>
+  </table>
+  </div>
   {{end}}
-</div></div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

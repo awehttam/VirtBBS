@@ -137,9 +137,9 @@ func (s *Server) handleSubscriptions(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err == nil {
-			confID, _ := strconv.Atoi(r.FormValue("conf"))
-			sub := r.FormValue("subscribe") == "1"
-			if confID > 0 {
+			if _, ok := r.PostForm["conf"]; ok {
+				confID, _ := strconv.Atoi(r.FormValue("conf"))
+				sub := r.FormValue("subscribe") == "1"
 				_ = s.Deps.Users.SetRegistered(u.ID, confID, sub)
 			}
 		}

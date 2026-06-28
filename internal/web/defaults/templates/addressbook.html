@@ -1,23 +1,31 @@
 {{define "addressbook.html"}}
 {{template "header" .}}
-<div class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "addressbook.title"}}</h2></div><div class="card-body">
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "addressbook.title"}}</h2></div>
+  <div class="card-body">
   <form method="get" action="/addressbook" class="search-form d-flex flex-wrap gap-2 align-items-center mb-3">
-    <input type="search" name="q" value="{{.Query}}" placeholder="{{t .Locale "addressbook.placeholder"}}" class="form-control">
+    <input class="form-control" type="search" name="q" value="{{.Query}}" placeholder="{{t .Locale "addressbook.placeholder"}}">
     <button type="submit" class="btn btn-primary">{{t .Locale "common.search"}}</button>
   </form>
+  </div>
 </div>
-<div class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "addressbook.add_section"}}</h2></div><div class="card-body">
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "addressbook.add_section"}}</h2></div>
+  <div class="card-body">
   <form method="post" action="/addressbook">
     <input type="hidden" name="action" value="add">
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.name"}}</label><input type="text" name="name" required class="form-control">
-    <div class="mb-3"><label class="form-label">{{t .Locale "addressbook.label.fido"}}</label><input type="text" name="fido_addr" placeholder="{{t .Locale "netmail.app.addr_placeholder"}}" class="form-control">
-    <div class="mb-3"><label class="form-label">{{t .Locale "addressbook.label.email"}}</label><input type="email" name="email" class="form-control">
-    <div class="mb-3"><label class="form-label">{{t .Locale "addressbook.label.notes"}}</label><textarea name="notes" rows="2" class="form-control"></textarea>
+    <label>{{t .Locale "common.name"}}</label><input class="form-control" type="text" name="name" required>
+    <label>{{t .Locale "addressbook.label.fido"}}</label><input class="form-control" type="text" name="fido_addr" placeholder="{{t .Locale "netmail.app.addr_placeholder"}}">
+    <label>{{t .Locale "addressbook.label.email"}}</label><input class="form-control" type="email" name="email">
+    <label>{{t .Locale "addressbook.label.notes"}}</label><textarea class="form-control" name="notes" rows="2"></textarea>
     <button type="submit" class="btn btn-primary">{{t .Locale "common.add"}}</button>
   </form>
+  </div>
 </div>
-<div class="card mb-3"><div class="card-body">
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+<div class="card mb-3">
+  <div class="card-body">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.name"}}</th><th>{{t .Locale "addressbook.col.fido"}}</th><th>{{t .Locale "addressbook.col.email"}}</th><th>{{t .Locale "addressbook.col.notes"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Entries}}
@@ -38,7 +46,9 @@
     <tr><td colspan="5">{{t .Locale "addressbook.empty"}}</td></tr>
     {{end}}
     </tbody>
-  </table></div>
-</div></div>
+  </table>
+  </div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

@@ -1,29 +1,34 @@
 {{define "admin_binkp.html"}}
 {{template "header" .}}
-<div class="card mb-3 sysop-panel"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_binkp.title"}}</h2></div><div class="card-body">
-  {{if .Flash}}<div class="alert alert-success py-2">{{.Flash}}</div>{{end}}
-  {{if .Error}}<div class="alert alert-danger py-2">{{.Error}}</div>{{end}}
+<div class="card mb-3 sysop-panel">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_binkp.title"}}</h2></div>
+  <div class="card-body">
+  {{if .Flash}}<p class="alert alert-success">{{.Flash}}</p>{{end}}
+  {{if .Error}}<p class="alert alert-danger">{{.Error}}</p>{{end}}
   <form method="post" action="/admin/binkp">
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.network"}}</label>
-    <select name="network" class="form-select">
+    <label>{{t .Locale "common.network"}}</label>
+    <select class="form-select" name="network">
     {{range .Networks}}<option value="{{.}}">{{.}}</option>{{end}}
     </select>
     <button type="submit" class="btn btn-primary">{{t .Locale "admin_binkp.poll"}}</button>
   </form>
   {{if .Stats}}
   <h3>{{t .Locale "admin_binkp.stats_today"}}</h3>
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.network"}}</th><th>{{t .Locale "admin_binkp.col.up"}}</th><th>{{t .Locale "admin_binkp.col.down"}}</th></tr></thead>
     <tbody>
     {{range .Stats.Networks}}
     <tr><td>{{.Network}}</td><td>{{.PollClientFilesSent}} / {{.PollServerUplinkSent}}</td><td>{{.PollClientFilesRecv}} / {{.PollServerDownlinkRecv}}</td></tr>
     {{end}}
     </tbody>
-  </table></div>
+  </table>
+  </div>
   {{end}}
   <h3>{{tf .Locale "admin_binkp.recent_log" .LogPath}}</h3>
   <pre class="log-tail">{{range .LogLines}}{{.}}
 {{end}}</pre>
-</div></div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

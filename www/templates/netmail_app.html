@@ -1,21 +1,24 @@
 {{define "netmail_app.html"}}
 {{template "header" .}}
-<div class="card mb-3 netmail-app"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "netmail.app.title"}}</h2></div><div class="card-body">
-  <div id="netmail-app" class="row g-3 netmail-layout">
-    <aside id="netmail-list" class="col-12 col-md-4 col-lg-3 col-12 col-md-4 col-lg-3"><p class="meta">{{t .Locale "common.loading"}}</p></aside>
-    <section id="netmail-pane" class="col-12 col-md-8 col-lg-9 col-12 col-md-8 col-lg-9"><p class="meta">{{t .Locale "netmail.app.select"}}</p></section>
+<div class="card mb-3 netmail-app">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "netmail.app.title"}}</h2></div>
+  <div class="card-body">
+  <div id="netmail-app" class="row g-3">
+    <aside id="netmail-list" class="col-12 col-md-4 col-lg-3"><p class="meta">{{t .Locale "common.loading"}}</p></aside>
+    <section id="netmail-pane" class="col-12 col-md-8 col-lg-9"><p class="meta">{{t .Locale "netmail.app.select"}}</p></section>
   </div>
   <details class="compose-panel">
     <summary>{{t .Locale "netmail.app.compose"}}</summary>
     <form id="netmail-compose">
-      <div class="mb-3"><label class="form-label">{{t .Locale "netmail.app.to_name"}}</label><input type="text" id="nm-to-name" required class="form-control">
-      <div class="mb-3"><label class="form-label">{{t .Locale "netmail.app.to_addr"}}</label><input type="text" id="nm-to-addr" placeholder="{{t .Locale "netmail.app.addr_placeholder"}}" required class="form-control">
-      <div class="mb-3"><label class="form-label">{{t .Locale "common.subject"}}</label><input type="text" id="nm-subject" required class="form-control">
-      <div class="mb-3"><label class="form-label">{{t .Locale "common.message"}}</label><textarea id="nm-body" rows="6" required class="form-control"></textarea>
+      <div class="mb-3"><label class="form-label">{{t .Locale "netmail.app.to_name"}}</label><input class="form-control" type="text" id="nm-to-name" required></div>
+      <div class="mb-3"><label class="form-label">{{t .Locale "netmail.app.to_addr"}}</label><input class="form-control" type="text" id="nm-to-addr" placeholder="{{t .Locale "netmail.app.addr_placeholder"}}" required></div>
+      <div class="mb-3"><label class="form-label">{{t .Locale "common.subject"}}</label><input class="form-control" type="text" id="nm-subject" required></div>
+      <div class="mb-3"><label class="form-label">{{t .Locale "common.message"}}</label><textarea class="form-control" id="nm-body" rows="6" required></textarea></div>
       <button type="submit" class="btn btn-primary">{{t .Locale "common.send"}}</button>
       <span id="nm-compose-status" class="meta"></span>
     </form>
   </details>
+  </div>
 </div>
 <script type="application/json" id="netmail-i18n">{"empty":{{printf "%q" (t .Locale "netmail.empty")}},"from":{{printf "%q" (t .Locale "netmail.app.from")}},"queued":{{printf "%q" (t .Locale "netmail.app.queued")}},"sendFailed":{{printf "%q" (t .Locale "netmail.app.send_failed")}}}</script>
 <script src="/static/netmail.js"></script>

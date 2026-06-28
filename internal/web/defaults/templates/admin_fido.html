@@ -1,17 +1,19 @@
 {{define "admin_fido.html"}}
 {{template "header" .}}
-<div class="card mb-3 sysop-panel"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_fido.title"}}</h2></div><div class="card-body">
+<div class="card mb-3 sysop-panel">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_fido.title"}}</h2></div>
+  <div class="card-body">
   <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
   <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
-    <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/fido/ops">{{t .Locale "admin_fido.ops"}}</a><p>{{t .Locale "admin_fido.ops_desc"}}</p></div>
-    <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/fido/networks">{{t .Locale "admin_fido.networks"}}</a><p>{{t .Locale "admin_fido.networks_desc"}}</p></div>
-    <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/fido/routing">{{t .Locale "admin_fido.routing"}}</a><p>{{t .Locale "admin_fido.routing_desc"}}</p></div>
-    <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/fido/join">{{t .Locale "admin_fido.join"}}</a><p>{{t .Locale "admin_fido.join_desc"}}</p></div>
-    <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/fido/tools">{{t .Locale "admin_fido.tools"}}</a><p>{{t .Locale "admin_fido.tools_desc"}}</p></div>
-    <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/binkp">{{t .Locale "admin.binkp"}}</a><p>{{t .Locale "admin.binkp_desc"}}</p></div>
-    <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/nodelist">{{t .Locale "admin_fido.nodelist_search"}}</a><p>{{t .Locale "admin_fido.nodelist_search_desc"}}</p></div>
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+  </div></div></div>
   </div>
-  </div></div>
-</div></div>
+</div>
 {{template "footer" .}}
 {{end}}

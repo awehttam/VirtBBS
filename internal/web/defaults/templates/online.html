@@ -1,10 +1,12 @@
 {{define "online.html"}}
 {{template "header" .}}
-<div class="card mb-3"><div class="card-body">
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "online.title"}}</h2></div>
+  <div class="card-body">
   <p><a href="/menu">{{t .Locale "common.dashboard_back"}}</a></p>
-  <h2>{{t .Locale "online.title"}}</h2>
   {{if .Nodes}}
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.node"}}</th><th>{{t .Locale "common.status"}}</th><th>{{t .Locale "common.user"}}</th><th>{{t .Locale "common.city"}}</th><th>{{t .Locale "common.activity"}}</th></tr></thead>
     <tbody>
     {{range .Nodes}}
@@ -17,10 +19,12 @@
     </tr>
     {{end}}
     </tbody>
-  </table></div>
+  </table>
+  </div>
   {{else}}
   <p class="meta">{{t .Locale "online.empty"}}</p>
   {{end}}
-</div></div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

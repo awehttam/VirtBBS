@@ -19,6 +19,10 @@ go build ./cmd/virtbbs
 
 Browser-based BBS UI and sysop admin served by `internal/web`. Templates and static assets live under `paths.www` (default `www/`). See `www/README.md` for routes and feature checklist.
 
+- **Bootstrap 5** + **jQuery** for responsive layout (collapsible nav on mobile)
+- Locales: English, Spanish, Afrikaans (`internal/web/locales/*.json`)
+- Design inspiration: [BinktermPHP](https://lovelybits.org/binktermphp)
+
 Default URL: **http://localhost:8081/**
 
 Sysop administration: log in as sysop and use **Admin** in the nav bar (`/admin/*`).

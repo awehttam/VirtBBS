@@ -272,6 +272,8 @@
 //                        i18n; ^ALANG kludge and user locale; real name and echo From-name
 //                        policy; profile editing; sysop Fido raw-source view for netmail/echo.
 //   v1.3.0  2026-06-28  Bootstrap 5 + jQuery responsive web UI (collapsible nav, cards, grids).
+//   v1.4.0  2026-06-28  Documentation overhaul (README, guides, BinktermPHP ack); fix
+//                        entering conference 0 (General) on web messages; template cleanup.
 // ============================================================================
 
 // Package version holds the VirtBBS version number.
@@ -282,4 +284,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "1.3.0"
+const Version = "1.4.0"

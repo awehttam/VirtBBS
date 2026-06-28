@@ -1,15 +1,21 @@
 {{define "search.html"}}
 {{template "header" .}}
-<div class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "search.title"}}</h2></div><div class="card-body">
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "search.title"}}</h2></div>
+  <div class="card-body">
   <form method="get" action="/search" class="search-form d-flex flex-wrap gap-2 align-items-center mb-3">
-    <input type="search" name="q" value="{{.Query}}" placeholder="{{t .Locale "search.placeholder"}}" autofocus class="form-control">
+    <input class="form-control" type="search" name="q" value="{{.Query}}" placeholder="{{t .Locale "search.placeholder"}}" autofocus>
     <button type="submit" class="btn btn-primary">{{t .Locale "common.search"}}</button>
   </form>
+  </div>
 </div>
 {{if .Query}}
-<div class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">{{tf .Locale "search.messages_heading" (len .Messages)}}</h2></div><div class="card-body">
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{tf .Locale "search.messages_heading" (len .Messages)}}</h2></div>
+  <div class="card-body">
   {{if not .Messages}}<p class="meta">{{t .Locale "search.no_messages"}}</p>{{else}}
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.area"}}</th><th>{{t .Locale "common.from"}}</th><th>{{t .Locale "common.subject"}}</th><th>{{t .Locale "common.date"}}</th></tr></thead>
     <tbody>
     {{range .Messages}}
@@ -21,12 +27,17 @@
       </tr>
     {{end}}
     </tbody>
-  </table></div>
+  </table>
+  </div>
   {{end}}
+  </div>
 </div>
-<div class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">{{tf .Locale "search.files_heading" (len .Files)}}</h2></div><div class="card-body">
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{tf .Locale "search.files_heading" (len .Files)}}</h2></div>
+  <div class="card-body">
   {{if not .Files}}<p class="meta">{{t .Locale "search.no_files"}}</p>{{else}}
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.file"}}</th><th>{{t .Locale "common.description"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Files}}
@@ -37,8 +48,10 @@
       </tr>
     {{end}}
     </tbody>
-  </table></div>
+  </table>
+  </div>
   {{end}}
+  </div>
 </div>
 {{end}}
 {{template "footer" .}}

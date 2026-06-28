@@ -1,5 +1,11 @@
 # VirtBBS — Go Rewrite of PCBoard 15.3
 
+> **Note:** This document is a historical planning artifact from the initial rewrite.
+> The original plan called for a separate Fyne sysop GUI (`virtbbs-gui`); that was
+> superseded by the built-in web admin (`internal/web`, `/admin/*`) in v1.1–v1.3.
+> User access is via Telnet/SSH, the web UI, and the VirtAnd Android client — not
+> a dedicated desktop terminal app.
+
 ## Context
 
 PCBoard 15.3 is a classic DOS BBS (~568k lines, Borland C/C++, 1993–1996). The user wants a clean from-scratch rewrite in Go named **VirtBBS**, treating PCBoard as a reference implementation. All modem I/O is replaced by built-in Telnet and SSH servers. Two executables: a headless BBS server and a remote-capable sysop/admin GUI (Fyne, pure Go).

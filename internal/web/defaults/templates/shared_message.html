@@ -1,14 +1,16 @@
 {{define "shared_message.html"}}
 {{template "header" .}}
-<div class="card mb-3"><div class="card-body">
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{.Message.Subject}}</h2></div>
+  <div class="card-body">
   <p class="meta">{{t .Locale "shared.expires"}} {{.Expires.Format "2006-01-02 15:04"}}</p>
-  <h2>{{.Message.Subject}}</h2>
   <p class="meta">
     {{t .Locale "common.from"}} <strong>{{.Message.FromName}}</strong> {{t .Locale "shared.in"}} {{.Conference.Name}}
     · {{.Message.DatePosted.Format "2006-01-02 15:04"}}
   </p>
   <div class="msg-body">{{.Message.Body}}</div>
   <p><a href="/login">{{t .Locale "common.log_in_reply"}}</a></p>
-</div></div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

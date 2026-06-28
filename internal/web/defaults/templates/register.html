@@ -1,55 +1,43 @@
 {{define "register.html"}}
-<!DOCTYPE html>
-<html lang="{{.Locale}}" data-bs-theme="dark">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{.BBSName}} — {{t .Locale "register.title"}}</title>
-  <link rel="stylesheet" href="/static/bootstrap.min.css">
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body class="virtbbs-body auth-page">
-<div class="auth-card auth-card-wide card shadow">
-  <div class="card-body p-4">
-    <h1 class="h4 card-title mb-2">{{t .Locale "register.title"}} — {{.BBSName}}</h1>
-    <p class="meta">{{t .Locale "register.help"}}</p>
-    {{if .Error}}<div class="alert alert-danger py-2">{{.Error}}</div>{{end}}
-    <form method="post" action="/register">
-      <div class="hp-field" aria-hidden="true">
-        <div class="mb-3">
-          <label for="website" class="form-label">{{t .Locale "register.honeypot"}}</label>
-        <input class="form-control" type="text" id="website" name="website" tabindex="-1" autocomplete="off">
-        </div>
-      </div>
+{{template "header" .}}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "register.title"}} — {{.BBSName}}</h2></div>
+  <div class="card-body">
+  <p class="meta">{{t .Locale "register.help"}}</p>
+  {{if .Error}}<p class="alert alert-danger">{{.Error}}</p>{{end}}
+  <form method="post" action="/register">
+    <div class="hp-field" aria-hidden="true">
       <div class="mb-3">
-        <label class="form-label" for="name">{{t .Locale "register.full_name"}}</label>
-        <input type="text" class="form-control" id="name" name="name" value="{{.Name}}" maxlength="25" required autofocus autocomplete="username">
-        <div class="form-text meta">{{t .Locale "register.handle_hint"}}</div>
+        <label for="website" class="form-label">{{t .Locale "register.honeypot"}}</label>
+      <input class="form-control" type="text" id="website" name="website" tabindex="-1" autocomplete="off">
       </div>
-      <div class="mb-3">
-        <label class="form-label" for="real_name">{{t .Locale "register.real_name"}}</label>
-        <input type="text" class="form-control" id="real_name" name="real_name" value="{{.RealName}}" maxlength="36" required autocomplete="name">
-        <div class="form-text meta">{{t .Locale "register.real_name_help"}}</div>
-      </div>
-      <div class="mb-3">
-        <label class="form-label" for="city">{{t .Locale "register.city"}}</label>
-        <input type="text" class="form-control" id="city" name="city" value="{{.City}}" autocomplete="address-level2">
-      </div>
-      <div class="mb-3">
-        <label class="form-label" for="password">{{t .Locale "register.password"}}</label>
-        <input type="password" class="form-control" id="password" name="password" required autocomplete="new-password">
-      </div>
-      <div class="mb-3">
-        <label class="form-label" for="password_confirm">{{t .Locale "register.password_confirm"}}</label>
-        <input type="password" class="form-control" id="password_confirm" name="password_confirm" required autocomplete="new-password">
-      </div>
-      <button type="submit" class="btn btn-primary w-100">{{t .Locale "register.submit"}}</button>
-    </form>
-    <p class="meta text-center mt-3 mb-0">{{t .Locale "register.have_account"}} <a href="/login">{{t .Locale "register.log_in"}}</a></p>
+    </div>
+    <div class="mb-3">
+      <label for="name" class="form-label">{{t .Locale "register.full_name"}}</label>
+    <input class="form-control" type="text" id="name" name="name" value="{{.Name}}" maxlength="25" required autofocus autocomplete="username">
+    </div>
+    <p class="meta">{{t .Locale "register.handle_hint"}}</p>
+    <div class="mb-3">
+      <label for="real_name" class="form-label">{{t .Locale "register.real_name"}}</label>
+    <input class="form-control" type="text" id="real_name" name="real_name" value="{{.RealName}}" maxlength="36" required autocomplete="name">
+    </div>
+    <p class="meta">{{t .Locale "register.real_name_help"}}</p>
+    <div class="mb-3">
+      <label for="city" class="form-label">{{t .Locale "register.city"}}</label>
+    <input class="form-control" type="text" id="city" name="city" value="{{.City}}" autocomplete="address-level2">
+    </div>
+    <div class="mb-3">
+      <label for="password" class="form-label">{{t .Locale "register.password"}}</label>
+    <input class="form-control" type="password" id="password" name="password" required autocomplete="new-password">
+    </div>
+    <div class="mb-3">
+      <label for="password_confirm" class="form-label">{{t .Locale "register.password_confirm"}}</label>
+    <input class="form-control" type="password" id="password_confirm" name="password_confirm" required autocomplete="new-password">
+    </div>
+    <button class="btn btn-primary" type="submit">{{t .Locale "register.submit"}}</button>
+  </form>
+  <p class="meta" style="margin-top:1.5rem">{{t .Locale "register.have_account"}} <a href="/login">{{t .Locale "register.log_in"}}</a></p>
   </div>
 </div>
-<script src="/static/jquery.min.js"></script>
-<script src="/static/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+{{template "footer" .}}
 {{end}}

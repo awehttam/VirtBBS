@@ -21,8 +21,10 @@ go build ./cmd/virtbbs
 
 - **Telnet**: `telnet localhost 2323`  (or SyncTerm, NetRunner, etc.)
 - **SSH**: `ssh -p 3232 username@localhost`
-- **Web UI**: open `http://localhost:8081/` in a browser (login with your BBS username/password)
+- **Web UI**: open `http://localhost:8081/` in a browser (login with your BBS username/password). Responsive Bootstrap 5 layout — works on desktop, tablet, and mobile.
 - **Sysop admin**: log in as sysop on the web UI and open **Admin** in the navigation bar (users, nodes, config, FidoNet, and more)
+
+Web UI design draws inspiration from [BinktermPHP](https://lovelybits.org/binktermphp); see the main README acknowledgements.
 
 ## Importing from PCBoard 15.3
 

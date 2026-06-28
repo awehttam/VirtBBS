@@ -5,6 +5,11 @@ static assets live in the install directory under `paths.www` (default `www/`),
 relative to where you launch `virtbbs` — the same pattern as `display/` for
 terminal screens.
 
+The web UI uses **Bootstrap 5** and **jQuery** for a responsive layout (desktop,
+tablet, mobile). Design inspiration for the web-first BBS experience came from
+[BinktermPHP](https://lovelybits.org/binktermphp) — see the main README
+acknowledgements.
+
 ## Configuration
 
 In `VirtBBS.DAT`:
@@ -34,6 +39,21 @@ will be re-seeded from the new defaults.
 
 To customise the UI, edit files in your install `www/templates/` and
 `www/static/` directly.
+
+Static assets include vendored `bootstrap.min.css`, `bootstrap.bundle.min.js`,
+and `jquery.min.js`, plus `style.css` (dark theme overrides) and `nav.js`
+(mobile menu behaviour).
+
+### UI stack
+
+| Layer | Technology |
+|-------|------------|
+| Templates | Go `html/template` |
+| Layout | Bootstrap 5 (responsive grid, navbar, cards, forms) |
+| Navigation | jQuery + Bootstrap collapse (mobile hamburger menu) |
+| Theming | Custom dark CSS on Bootstrap variables |
+| i18n | JSON locale files (`en`, `es`, `af`) embedded in the binary |
+| PWA | `manifest.webmanifest`, service worker, SSE notify badges |
 
 ### User routes
 
@@ -101,8 +121,12 @@ Legend: `[x]` done · `[ ]` not yet implemented
 - [x] Address book (`/addressbook`)
 - [x] Netmail SPA (`/netmail/app`)
 - [x] BinkP admin (`/admin/binkp`)
-- [x] Full sysop admin web panel (replaces former VirtBBS.GUI)
-- [x] i18n — English + Spanish
+- [x] Full sysop admin web panel
+- [x] i18n — English, Spanish, Afrikaans
+- [x] Bootstrap 5 responsive layout (desktop / tablet / mobile)
+- [x] Sysop Fido raw-source view for netmail and echomail
+- [x] User profile editing (real name, city, password)
+- [x] Nodelist search and export (`/nodelist`)
 
 ### Former GUI parity (web admin)
 

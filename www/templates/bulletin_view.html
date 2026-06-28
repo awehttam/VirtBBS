@@ -1,9 +1,11 @@
 {{define "bulletin_view.html"}}
 {{template "header" .}}
-<div class="card mb-3"><div class="card-body">
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{.Title}}</h2></div>
+  <div class="card-body">
   <p><a href="/bulletins">{{t .Locale "common.bulletins_back"}}</a></p>
-  <h2>{{.Title}}</h2>
   <div class="ansi-screen">{{safeHTML .HTML}}</div>
-</div></div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

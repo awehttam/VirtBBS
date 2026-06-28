@@ -3,7 +3,7 @@
 This guide covers every FidoNet setting in `VirtBBS.DAT`, how echomail/netmail
 routing works, the BinkP server, how to add additional FidoNet-compatible
 networks, AreaFix, FileFix, the PING/TRACE test utilities, and automatic
-nodelist updates. It covers VirtBBS **1.3.0**.
+nodelist updates. It covers VirtBBS **1.4.0**.
 
 ---
 
@@ -182,6 +182,7 @@ Ways to trigger a scan:
 
 What gets added to each outgoing message automatically:
 - `AREA:<tag>`, `^AMSGID`, `^ATZUTC` (your local UTC offset, e.g. `+0200`)
+- `^ALANG: <code>` — experimental VirtBBS kludge with the author's UI language (`en`, `es`, `af`, …) on locally originated mail
 - A random line from `taglines_file`, if configured
 - A standard tear line (`--- VirtBBS <version>`) and Origin line (`* Origin: <BBS name> (<your address>)`)
 - `SEEN-BY:` and `^APATH:` lines — merged with whatever was already present if the message arrived via toss and is being relayed onward, or starting fresh (just your own address) for locally-authored posts

@@ -1,8 +1,11 @@
 {{define "admin_files.html"}}
 {{template "header" .}}
-<div class="card mb-3 sysop-panel"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_files.title"}}</h2></div><div class="card-body">
+<div class="card mb-3 sysop-panel">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_files.title"}}</h2></div>
+  <div class="card-body">
   <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.id"}}</th><th>{{t .Locale "common.name"}}</th><th>{{t .Locale "common.path"}}</th><th>{{t .Locale "common.sec_ru"}}</th><th>{{t .Locale "common.active"}}</th></tr></thead>
     <tbody>
     {{range .Dirs}}
@@ -15,29 +18,31 @@
     </tr>
     {{end}}
     </tbody>
-  </table></div>
+  </table>
+  </div>
   <h3>{{t .Locale "admin_files.create_section"}}</h3>
   <form method="post" action="/admin/files" class="admin-form">
     <input type="hidden" name="action" value="create">
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.name"}} <input class="form-control" name="name" required></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.description"}} <input class="form-control" name="description"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.path"}} <input class="form-control" name="path" placeholder="{{t .Locale "admin_files.path_placeholder"}}"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.read_sec"}} <input type="number" name="read_sec" value="10" class="form-control"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.upload_sec"}} <input type="number" name="upload_sec" value="10" class="form-control"></label>
-    <button type="submit" class="btn btn-primary">{{t .Locale "common.create"}}</button>
+    <label>{{t .Locale "common.name"}} <input class="form-control" name="name" required></label>
+    <label>{{t .Locale "common.description"}} <input class="form-control" name="description"></label>
+    <label>{{t .Locale "common.path"}} <input class="form-control" name="path" placeholder="{{t .Locale "admin_files.path_placeholder"}}"></label>
+    <label>{{t .Locale "common.read_sec"}} <input class="form-control" type="number" name="read_sec" value="10"></label>
+    <label>{{t .Locale "common.upload_sec"}} <input class="form-control" type="number" name="upload_sec" value="10"></label>
+    <button class="btn btn-primary" type="submit">{{t .Locale "common.create"}}</button>
   </form>
   <h3>{{t .Locale "admin_files.update_section"}}</h3>
   <form method="post" action="/admin/files" class="admin-form">
     <input type="hidden" name="action" value="update">
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.id"}} <input type="number" name="id" required class="form-control"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.name"}} <input class="form-control" name="name"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.description"}} <input class="form-control" name="description"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.path"}} <input class="form-control" name="path"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.read_sec"}} <input type="number" name="read_sec" class="form-control"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.upload_sec"}} <input type="number" name="upload_sec" class="form-control"></label>
-    <div class="mb-3"><label class="form-label"><input type="checkbox" name="active" value="1" checked> {{t .Locale "common.active"}}</label>
-    <button type="submit" class="btn btn-primary">{{t .Locale "common.update"}}</button>
+    <label>{{t .Locale "common.id"}} <input class="form-control" type="number" name="id" required></label>
+    <label>{{t .Locale "common.name"}} <input class="form-control" name="name"></label>
+    <label>{{t .Locale "common.description"}} <input class="form-control" name="description"></label>
+    <label>{{t .Locale "common.path"}} <input class="form-control" name="path"></label>
+    <label>{{t .Locale "common.read_sec"}} <input class="form-control" type="number" name="read_sec"></label>
+    <label>{{t .Locale "common.upload_sec"}} <input class="form-control" type="number" name="upload_sec"></label>
+    <label><input type="checkbox" name="active" value="1" checked> {{t .Locale "common.active"}}</label>
+    <button class="btn btn-primary" type="submit">{{t .Locale "common.update"}}</button>
   </form>
-</div></div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

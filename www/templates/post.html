@@ -1,18 +1,26 @@
 {{define "post.html"}}
 {{template "header" .}}
-<div class="card mb-3"><div class="card-body">
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "post.title"}}</h2></div>
+  <div class="card-body">
   <p><a href="/messages?conf={{.Conference.ID}}">← {{.Conference.Name}}</a></p>
-  <h2>{{t .Locale "post.title"}}</h2>
-  {{if .Error}}<div class="alert alert-danger py-2">{{.Error}}</div>{{end}}
+  {{if .Error}}<p class="alert alert-danger">{{.Error}}</p>{{end}}
   <form method="post" action="/messages/post?conf={{.Conference.ID}}{{if .ReplyNum}}&amp;reply={{.ReplyNum}}{{end}}">
-    <div class="mb-3"><label class="form-label" for="to">{{t .Locale "common.to"}}</label>
-    <input type="text" id="to" name="to" value="{{.ToName}}" class="form-control">
-    <div class="mb-3"><label class="form-label" for="subject">{{t .Locale "common.subject"}}</label>
-    <input type="text" id="subject" name="subject" value="{{.Subject}}" required class="form-control">
-    <div class="mb-3"><label class="form-label" for="body">{{t .Locale "common.message"}}</label>
-    <textarea id="body" name="body" required class="form-control">{{.Body}}</textarea>
-    <button type="submit" class="btn btn-primary">{{t .Locale "post.submit"}}</button>
+    <div class="mb-3">
+      <label for="to" class="form-label">{{t .Locale "common.to"}}</label>
+    <input class="form-control" type="text" id="to" name="to" value="{{.ToName}}">
+    </div>
+    <div class="mb-3">
+      <label for="subject" class="form-label">{{t .Locale "common.subject"}}</label>
+    <input class="form-control" type="text" id="subject" name="subject" value="{{.Subject}}" required>
+    </div>
+    <div class="mb-3">
+      <label for="body" class="form-label">{{t .Locale "common.message"}}</label>
+    <textarea class="form-control" id="body" name="body" required>{{.Body}}</textarea>
+    </div>
+    <button class="btn btn-primary" type="submit">{{t .Locale "post.submit"}}</button>
   </form>
-</div></div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

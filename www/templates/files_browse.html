@@ -1,9 +1,12 @@
 {{define "files_browse.html"}}
 {{template "header" .}}
-<div class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">{{.Dir.Name}}</h2></div><div class="card-body">
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{.Dir.Name}}</h2></div>
+  <div class="card-body">
   <p class="meta">{{.Dir.Description}}</p>
   <p><a href="/files">{{t .Locale "common.all_files_back"}}</a></p>
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.file"}}</th><th>{{t .Locale "common.size"}}</th><th>{{t .Locale "common.description"}}</th><th>{{t .Locale "files_browse.col.downloads"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Files}}
@@ -25,18 +28,24 @@
     <tr><td colspan="5">{{t .Locale "files_browse.empty"}}</td></tr>
     {{end}}
     </tbody>
-  </table></div>
+  </table>
+  </div>
   {{if .CanUpload}}
   <h2 style="margin-top:1.5rem">{{t .Locale "common.upload"}}</h2>
   <form method="post" action="/files/upload" enctype="multipart/form-data">
     <input type="hidden" name="dir" value="{{.Dir.ID}}">
-    <div class="mb-3"><label class="form-label" for="file">{{t .Locale "common.file"}}</label>
+    <div class="mb-3">
+      <label for="file" class="form-label">{{t .Locale "common.file"}}</label>
     <input type="file" id="file" name="file" required>
-    <div class="mb-3"><label class="form-label" for="description">{{t .Locale "common.description"}}</label>
-    <input type="text" id="description" name="description" class="form-control">
-    <button type="submit" class="btn btn-primary">{{t .Locale "common.upload"}}</button>
+    </div>
+    <div class="mb-3">
+      <label for="description" class="form-label">{{t .Locale "common.description"}}</label>
+    <input class="form-control" type="text" id="description" name="description">
+    </div>
+    <button class="btn btn-primary" type="submit">{{t .Locale "common.upload"}}</button>
   </form>
   {{end}}
-</div></div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

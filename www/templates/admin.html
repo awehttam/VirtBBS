@@ -1,27 +1,24 @@
 {{define "admin.html"}}
 {{template "header" .}}
 <div class="card mb-3 sysop-panel">
-  <div class="card-body">
   <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin.title"}}</h2></div>
   <div class="card-body">
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/users" class="stretched-link fw-medium">{{t .Locale "admin.users"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "admin.users_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/nodes" class="stretched-link fw-medium">{{t .Locale "admin.nodes"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "admin.nodes_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/conferences" class="stretched-link fw-medium">{{t .Locale "admin.conferences"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "admin.conferences_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/messages" class="stretched-link fw-medium">{{t .Locale "admin.messages"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "admin.messages_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/files" class="stretched-link fw-medium">{{t .Locale "admin.files"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "admin.files_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/callers" class="stretched-link fw-medium">{{t .Locale "admin.callers"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "admin.callers_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/config" class="stretched-link fw-medium">{{t .Locale "admin.config"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "admin.config_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/tokens" class="stretched-link fw-medium">{{t .Locale "admin.tokens"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "admin.tokens_desc"}}</p></div></div></div>
-      {{if .FidoEnabled}}
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/fido" class="stretched-link fw-medium">{{t .Locale "admin.fido"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "admin.fido_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/admin/binkp" class="stretched-link fw-medium">{{t .Locale "admin.binkp"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "admin.binkp_desc"}}</p></div></div></div>
-      {{end}}
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/nodelist" class="stretched-link fw-medium">{{t .Locale "nav.nodelist"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "admin.nodelist_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/stats" class="stretched-link fw-medium">{{t .Locale "admin.stats"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "admin.stats_desc"}}</p></div></div></div>
-    </div>
-    </div></div>
-  </div>
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    {{if .FidoEnabled}}
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    {{end}}
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+  </div></div></div>
   </div>
 </div>
 {{template "footer" .}}

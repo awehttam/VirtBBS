@@ -1,64 +1,63 @@
 {{define "profile.html"}}
 {{template "header" .}}
 <div class="card mb-3">
-  <div class="card-header"><h3 class="h5 mb-0 section-head">{{t .Locale "profile.account"}}</h3></div>
-  <div class="card-body">
   <div class="card-header"><h2 class="h5 mb-0">{{tf .Locale "profile.title" .Profile.Name}}</h2></div>
   <div class="card-body">
-    {{if .Flash}}<div class="alert alert-success py-2">{{.Flash}}</div>{{end}}
-    {{if .Error}}<div class="alert alert-danger py-2">{{.Error}}</div>{{end}}
+  {{if .Flash}}<p class="alert alert-success">{{.Flash}}</p>{{end}}
+  {{if .Error}}<p class="alert alert-danger">{{.Error}}</p>{{end}}
 
-    <form method="post" action="/profile" class="profile-form">
-      <div class="mb-3">
-        <label class="form-label" for="name">{{t .Locale "register.full_name"}}</label>
-        <input type="text" class="form-control" id="name" value="{{.Profile.Name}}" readonly autocomplete="username">
-      </div>
-      <div class="mb-3">
-        <label class="form-label" for="real_name">{{t .Locale "profile.real_name"}}</label>
-        <input type="text" class="form-control" id="real_name" name="real_name" value="{{.Profile.RealName}}" maxlength="36" required autocomplete="name">
-        <div class="form-text meta">{{t .Locale "profile.real_name_help"}}</div>
-      </div>
-      <div class="mb-3">
-        <label class="form-label" for="city">{{t .Locale "register.city"}}</label>
-        <input type="text" class="form-control" id="city" name="city" value="{{.Profile.City}}" autocomplete="address-level2">
-      </div>
+  <h3 class="section-head">{{t .Locale "profile.account"}}</h3>
+  <form method="post" action="/profile" class="profile-form">
+    <div class="mb-3">
+      <label for="name" class="form-label">{{t .Locale "register.full_name"}}</label>
+    <input class="form-control" type="text" id="name" value="{{.Profile.Name}}" readonly autocomplete="username">
+    </div>
 
-      <h3 class="section-head">{{t .Locale "profile.change_password"}}</h3>
-      <p class="meta">{{t .Locale "profile.change_password_help"}}</p>
-      <div class="mb-3">
-        <label class="form-label" for="current_password">{{t .Locale "profile.current_password"}}</label>
-        <input type="password" class="form-control" id="current_password" name="current_password" autocomplete="current-password">
-      </div>
-      <div class="mb-3">
-        <label class="form-label" for="new_password">{{t .Locale "register.password"}}</label>
-        <input type="password" class="form-control" id="new_password" name="new_password" autocomplete="new-password">
-      </div>
-      <div class="mb-3">
-        <label class="form-label" for="password_confirm">{{t .Locale "register.password_confirm"}}</label>
-        <input type="password" class="form-control" id="password_confirm" name="password_confirm" autocomplete="new-password">
-      </div>
-      <button type="submit" class="btn btn-primary">{{t .Locale "profile.save"}}</button>
-    </form>
-  </div>
+    <div class="mb-3">
+      <label for="real_name" class="form-label">{{t .Locale "profile.real_name"}}</label>
+    <input class="form-control" type="text" id="real_name" name="real_name" value="{{.Profile.RealName}}" maxlength="36" required autocomplete="name">
+    </div>
+    <p class="meta">{{t .Locale "profile.real_name_help"}}</p>
+
+    <div class="mb-3">
+      <label for="city" class="form-label">{{t .Locale "register.city"}}</label>
+    <input class="form-control" type="text" id="city" name="city" value="{{.Profile.City}}" autocomplete="address-level2">
+    </div>
+
+    <h3 class="section-head">{{t .Locale "profile.change_password"}}</h3>
+    <p class="meta">{{t .Locale "profile.change_password_help"}}</p>
+    <div class="mb-3">
+      <label for="current_password" class="form-label">{{t .Locale "profile.current_password"}}</label>
+    <input class="form-control" type="password" id="current_password" name="current_password" autocomplete="current-password">
+    </div>
+    <div class="mb-3">
+      <label for="new_password" class="form-label">{{t .Locale "register.password"}}</label>
+    <input class="form-control" type="password" id="new_password" name="new_password" autocomplete="new-password">
+    </div>
+    <div class="mb-3">
+      <label for="password_confirm" class="form-label">{{t .Locale "register.password_confirm"}}</label>
+    <input class="form-control" type="password" id="password_confirm" name="password_confirm" autocomplete="new-password">
+    </div>
+
+    <p><button type="submit" class="btn btn-primary">{{t .Locale "profile.save"}}</button></p>
+  </form>
   </div>
 </div>
 
 <div class="card mb-3">
+  <div class="card-header"><h3 class="h5 mb-0 section-head">{{t .Locale "profile.stats"}}</h3></div>
   <div class="card-body">
-  <div class="card-header"><h3 class="h6 mb-0">{{t .Locale "profile.stats"}}</h3></div>
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-dark table-striped table-hover align-middle mb-0">
-        <tr><th>{{t .Locale "profile.security_level"}}</th><td>{{.Profile.SecurityLevel}}</td></tr>
-        <tr><th>{{t .Locale "profile.times_online"}}</th><td>{{.Profile.TimesOnline}}</td></tr>
-        <tr><th>{{t .Locale "stats.uploads"}}</th><td>{{.Profile.Uploads}}</td></tr>
-        <tr><th>{{t .Locale "stats.downloads"}}</th><td>{{.Profile.Downloads}}</td></tr>
-        <tr><th>{{t .Locale "stats.last_login"}}</th><td>{{.Profile.LastLoginDate}} {{.Profile.LastLoginTime}}</td></tr>
-        {{if .Profile.Comment1}}
-        <tr><th>{{t .Locale "profile.comment"}}</th><td>{{.Profile.Comment1}}</td></tr>
-        {{end}}
-      </table>
-    </div>
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
+    <tr><th>{{t .Locale "profile.security_level"}}</th><td>{{.Profile.SecurityLevel}}</td></tr>
+    <tr><th>{{t .Locale "profile.times_online"}}</th><td>{{.Profile.TimesOnline}}</td></tr>
+    <tr><th>{{t .Locale "stats.uploads"}}</th><td>{{.Profile.Uploads}}</td></tr>
+    <tr><th>{{t .Locale "stats.downloads"}}</th><td>{{.Profile.Downloads}}</td></tr>
+    <tr><th>{{t .Locale "stats.last_login"}}</th><td>{{.Profile.LastLoginDate}} {{.Profile.LastLoginTime}}</td></tr>
+    {{if .Profile.Comment1}}
+    <tr><th>{{t .Locale "profile.comment"}}</th><td>{{.Profile.Comment1}}</td></tr>
+    {{end}}
+  </table>
   </div>
   </div>
 </div>

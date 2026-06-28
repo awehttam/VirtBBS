@@ -1,8 +1,11 @@
 {{define "admin_users.html"}}
 {{template "header" .}}
-<div class="card mb-3 sysop-panel"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_users.title"}}</h2></div><div class="card-body">
+<div class="card mb-3 sysop-panel">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_users.title"}}</h2></div>
+  <div class="card-body">
   <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "admin_users.col.name"}}</th><th>{{t .Locale "admin_users.col.city"}}</th><th>{{t .Locale "admin_users.col.sec"}}</th><th>{{t .Locale "admin_users.col.calls"}}</th><th>{{t .Locale "common.edit"}}</th><th>{{t .Locale "admin_users.col.reset"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Users}}
@@ -16,7 +19,7 @@
         <form method="post" action="/admin/users" class="inline-form">
           <input type="hidden" name="action" value="password">
           <input type="hidden" name="id" value="{{.ID}}">
-          <input type="password" name="password" placeholder="{{t $.Locale "admin_users.password_placeholder"}}" required class="form-control">
+          <input class="form-control" type="password" name="password" placeholder="{{t $.Locale "admin_users.password_placeholder"}}" required>
           <button type="submit" class="btn btn-primary btn-sm">{{t $.Locale "common.set"}}</button>
         </form>
       </td>
@@ -32,7 +35,9 @@
     </tr>
     {{end}}
     </tbody>
-  </table></div>
-</div></div>
+  </table>
+  </div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

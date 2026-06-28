@@ -62,7 +62,7 @@ Example: /opt/virtbbs      (Linux)
 
 ### 2. Copy the release files
 
-From the `releases/0.5.0/` package, copy the following into your installation directory:
+From the `releases/` package for your version, copy the following into your installation directory:
 
 ```
 <install-dir>/
@@ -145,10 +145,12 @@ bin/virtbbs
 The server will log startup messages:
 
 ```
-2026/06/25 12:00:00 VirtBBS 0.5.0 starting
-2026/06/24 12:00:00 Telnet listening on :2323
-2026/06/24 12:00:00 SSH listening on :3232
-2026/06/24 12:00:00 Management API listening on 0.0.0.0:9999
+2026/06/25 12:00:00 VirtBBS 1.4.0 starting
+2026/06/25 12:00:00 Telnet listening on :2323
+2026/06/25 12:00:00 SSH listening on :3232
+2026/06/25 12:00:00 Management API listening on 0.0.0.0:9999
+2026/06/25 12:00:00 User API listening on 0.0.0.0:9998
+2026/06/25 12:00:00 Web UI listening on 0.0.0.0:8081 (www: www)
 ```
 
 ### 6. Test a Telnet connection
@@ -169,17 +171,25 @@ ssh -p 3232 YourSysopName@localhost
 
 Accept the host key fingerprint on first connection. SSH does not require any special terminal mode configuration.
 
-### 8. Open the Sysop Admin (Web)
+### 8. Open the Web UI
 
-The built-in web UI includes a full sysop administration panel. Log in with your sysop account and open **Admin** in the navigation bar, or go directly to:
+The built-in web UI is the recommended way to use VirtBBS day-to-day. Open:
+
+```
+http://localhost:8081/
+```
+
+Log in with your BBS username and password. The interface is responsive (Bootstrap 5) and works on desktop, tablet, and mobile. Language can be switched from the navigation bar (English, Spanish, Afrikaans).
+
+**Sysop administration:** log in as sysop and open **Admin** in the navigation bar, or go directly to:
 
 ```
 http://localhost:8081/admin
 ```
 
-From there you can manage users, online nodes, BBS configuration, conferences, file areas, callers log, FidoNet settings, and VirtAnd API tokens. See `www/README.md` for the complete route list.
+From there you can manage users, online nodes, BBS configuration, conferences, file areas, callers log, FidoNet settings, BinkP, and VirtAnd API tokens. See `www/README.md` for the complete route list.
 
-The JSON/TCP management API (port 9999) remains available for scripts and automation; the web admin calls the same underlying server functions directly.
+The JSON/TCP management API (port 9999) remains available for scripts and automation; the web admin uses Go handlers directly rather than calling that API.
 
 ---
 
@@ -195,6 +205,9 @@ The JSON/TCP management API (port 9999) remains available for scripts and automa
 ├── files/                # File transfer area (subdirs created per file directory)
 ├── logs/
 │   └── callers.log       # Callers log
+├── www/                  # Web UI templates and static assets (auto-seeded on first start)
+│   ├── templates/
+│   └── static/
 ├── ppe/
 │   ├── hello.pps
 │   └── userinfo.pps
@@ -341,4 +354,4 @@ make sure you've fully stopped the old process before starting the new one.
 
 ## Version
 
-This guide covers VirtBBS **1.3.0**.
+This guide covers VirtBBS **1.4.0**.

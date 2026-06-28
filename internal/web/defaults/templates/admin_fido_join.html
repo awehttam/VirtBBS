@@ -1,14 +1,17 @@
 {{define "admin_fido_join.html"}}
 {{template "header" .}}
-<div class="card mb-3 sysop-panel"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_fido_join.title"}}</h2></div><div class="card-body">
+<div class="card mb-3 sysop-panel">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_fido_join.title"}}</h2></div>
+  <div class="card-body">
   <p><a href="/admin/fido">{{t .Locale "common.fido_back"}}</a></p>
-  {{if .Flash}}<div class="alert alert-success py-2">{{.Flash}}</div>{{end}}
-  {{if .ApprovedPassword}}<div class="alert alert-success py-2">{{tf .Locale "admin_fido_join.password_flash" .ApprovedPassword}}</div>{{end}}
-  {{if .Error}}<div class="alert alert-danger py-2">{{.Error}}</div>{{end}}
+  {{if .Flash}}<p class="alert alert-success">{{.Flash}}</p>{{end}}
+  {{if .ApprovedPassword}}<p class="alert alert-success">{{tf .Locale "admin_fido_join.password_flash" .ApprovedPassword}}</p>{{end}}
+  {{if .Error}}<p class="alert alert-danger">{{.Error}}</p>{{end}}
   <form method="get" class="inline-form">
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.network"}} <select name="network" onchange="this.form.submit()" class="form-select">{{range .Networks}}<option {{if eq $.Network .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+    <label>{{t .Locale "common.network"}} <select class="form-select" name="network" onchange="this.form.submit()">{{range .Networks}}<option {{if eq $.Network .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
   </form>
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.id"}}</th><th>{{t .Locale "common.bbs"}}</th><th>{{t .Locale "nodelist.col.sysop"}}</th><th>{{t .Locale "common.requested"}}</th><th>{{t .Locale "common.status"}}</th><th>{{t .Locale "admin_fido_join.col.approve"}}</th></tr></thead>
     <tbody>
     {{range .Pending}}
@@ -23,11 +26,11 @@
           <input type="hidden" name="network" value="{{$.Network}}">
           <input type="hidden" name="action" value="approve">
           <input type="hidden" name="id" value="{{.ID}}">
-          <input type="number" name="net" placeholder="{{t $.Locale "admin_fido_join.placeholder.net"}}" style="width:4rem" class="form-control">
-          <input type="number" name="node" placeholder="{{t $.Locale "admin_fido_join.placeholder.node"}}" style="width:4rem" class="form-control">
-          <div class="mb-3"><label class="form-label"><input type="checkbox" name="is_host" value="1"> {{t $.Locale "common.host"}}</label>
+          <input class="form-control" type="number" name="net" placeholder="{{t $.Locale "admin_fido_join.placeholder.net"}}" style="width:4rem">
+          <input class="form-control" type="number" name="node" placeholder="{{t $.Locale "admin_fido_join.placeholder.node"}}" style="width:4rem">
+          <label><input type="checkbox" name="is_host" value="1"> {{t $.Locale "common.host"}}</label>
           <input class="form-control" name="password" placeholder="{{t $.Locale "admin_fido_join.placeholder.password"}}" style="width:8rem">
-          <button type="submit" class="btn btn-primary">{{t $.Locale "common.approve"}}</button>
+          <button class="btn btn-primary" type="submit">{{t $.Locale "common.approve"}}</button>
         </form>
         <form method="post" style="display:inline">
           <input type="hidden" name="network" value="{{$.Network}}">
@@ -41,7 +44,9 @@
     <tr><td colspan="6">{{t .Locale "admin_fido_join.empty"}}</td></tr>
     {{end}}
     </tbody>
-  </table></div>
-</div></div>
+  </table>
+  </div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

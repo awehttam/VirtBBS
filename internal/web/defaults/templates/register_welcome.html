@@ -1,11 +1,14 @@
 {{define "register_welcome.html"}}
 {{template "header" .}}
-<div class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "register_welcome.title"}}</h2></div><div class="card-body">
-  <div class="alert alert-success py-2">{{tf .Locale "register_welcome.welcome" .User.Name}}</p>
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "register_welcome.title"}}</h2></div>
+  <div class="card-body">
+  <p class="alert alert-success">{{tf .Locale "register_welcome.welcome" .User.Name}}</p>
   {{if .WelcomeHTML}}
   <div class="ansi-screen">{{.WelcomeHTML | safeHTML}}</div>
   {{end}}
   <p><a class="btn" href="/menu">{{t .Locale "register_welcome.continue"}}</a></p>
-</div></div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

@@ -134,10 +134,10 @@ func (s *Server) handleAdminMessages(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin/messages?conf="+confID, http.StatusSeeOther)
 		return
 	}
-	confID, _ := strconv.Atoi(r.URL.Query().Get("conf"))
+	confID, confSelected := queryConfSelected(r)
 	allConfs, _ := s.Deps.Conferences.List()
 	var msgs []*messages.Message
-	if confID > 0 {
+	if confSelected {
 		msgs, _ = s.Deps.Messages.List(confID, 50, 0)
 	}
 	data := struct {

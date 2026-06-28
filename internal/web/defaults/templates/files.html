@@ -1,7 +1,10 @@
 {{define "files.html"}}
 {{template "header" .}}
-<div class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "files.title"}}</h2></div><div class="card-body">
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "files.title"}}</h2></div>
+  <div class="card-body">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.area"}}</th><th>{{t .Locale "common.description"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Dirs}}
@@ -14,7 +17,9 @@
     <tr><td colspan="3">{{t .Locale "files.empty"}}</td></tr>
     {{end}}
     </tbody>
-  </table></div>
-</div></div>
+  </table>
+  </div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

@@ -1,14 +1,17 @@
 {{define "admin_fido_routing.html"}}
 {{template "header" .}}
-<div class="card mb-3 sysop-panel"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_fido_routing.title"}}</h2></div><div class="card-body">
+<div class="card mb-3 sysop-panel">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_fido_routing.title"}}</h2></div>
+  <div class="card-body">
   <p><a href="/admin/fido">{{t .Locale "common.fido_back"}}</a></p>
-  {{if .Flash}}<div class="alert alert-success py-2">{{.Flash}}</div>{{end}}
-  {{if .Error}}<div class="alert alert-danger py-2">{{.Error}}</div>{{end}}
+  {{if .Flash}}<p class="alert alert-success">{{.Flash}}</p>{{end}}
+  {{if .Error}}<p class="alert alert-danger">{{.Error}}</p>{{end}}
   <form method="get" class="inline-form">
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.network"}} <select name="network" onchange="this.form.submit()" class="form-select">{{range .Networks}}<option {{if eq $.Network .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+    <label>{{t .Locale "common.network"}} <select class="form-select" name="network" onchange="this.form.submit()">{{range .Networks}}<option {{if eq $.Network .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
   </form>
   <h3>{{tf .Locale "admin_fido_routing.routes_heading" (len .Routes)}}</h3>
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.pattern"}}</th><th>{{t .Locale "admin_fido_routing.col.route_to"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Routes}}
@@ -26,16 +29,18 @@
     </tr>
     {{end}}
     </tbody>
-  </table></div>
+  </table>
+  </div>
   <form method="post" class="inline-form">
     <input type="hidden" name="network" value="{{.Network}}">
     <input type="hidden" name="action" value="add_route">
     <input class="form-control" name="pattern" placeholder="{{t .Locale "common.pattern"}}" required>
     <input class="form-control" name="route_to" placeholder="{{t .Locale "admin_fido_routing.placeholder.route_to"}}" required>
-    <button type="submit" class="btn btn-primary">{{t .Locale "admin_fido_routing.add_route"}}</button>
+    <button class="btn btn-primary" type="submit">{{t .Locale "admin_fido_routing.add_route"}}</button>
   </form>
   <h3>{{tf .Locale "admin_fido_routing.members_heading" (len .Members)}}</h3>
-  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "nodelist.col.address"}}</th><th>{{t .Locale "common.bbs"}}</th><th>{{t .Locale "nodelist.col.sysop"}}</th><th>{{t .Locale "admin_fido_routing.col.binkp"}}</th></tr></thead>
     <tbody>
     {{range .Members}}
@@ -47,38 +52,40 @@
     </tr>
     {{end}}
     </tbody>
-  </table></div>
+  </table>
+  </div>
   <h3>{{t .Locale "admin_fido_routing.update_member"}}</h3>
   <form method="post" class="admin-form">
     <input type="hidden" name="network" value="{{.Network}}">
     <input type="hidden" name="action" value="update_member">
-    <div class="mb-3"><label class="form-label">{{t .Locale "admin_fido_routing.member_id"}} <input type="number" name="member_id" required class="form-control"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "admin_fido_routing.bbs_name"}} <input class="form-control" name="bbs_name"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "admin_fido_routing.sysop_name"}} <input class="form-control" name="sysop_name"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.location"}} <input class="form-control" name="location"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.contact"}} <input class="form-control" name="contact"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.binkp_host"}} <input class="form-control" name="binkp_host"></label>
-    <div class="mb-3"><label class="form-label">{{t .Locale "common.password"}} <input class="form-control" name="password"></label>
-    <button type="submit" class="btn btn-primary">{{t .Locale "admin_fido_routing.update_member_btn"}}</button>
+    <label>{{t .Locale "admin_fido_routing.member_id"}} <input class="form-control" type="number" name="member_id" required></label>
+    <label>{{t .Locale "admin_fido_routing.bbs_name"}} <input class="form-control" name="bbs_name"></label>
+    <label>{{t .Locale "admin_fido_routing.sysop_name"}} <input class="form-control" name="sysop_name"></label>
+    <label>{{t .Locale "common.location"}} <input class="form-control" name="location"></label>
+    <label>{{t .Locale "common.contact"}} <input class="form-control" name="contact"></label>
+    <label>{{t .Locale "common.binkp_host"}} <input class="form-control" name="binkp_host"></label>
+    <label>{{t .Locale "common.password"}} <input class="form-control" name="password"></label>
+    <button class="btn btn-primary" type="submit">{{t .Locale "admin_fido_routing.update_member_btn"}}</button>
   </form>
   <h3>{{t .Locale "admin_fido_routing.routes_bbs"}}</h3>
   <form method="post">
     <input type="hidden" name="network" value="{{.Network}}">
-    <textarea name="routes_text" rows="6" placeholder="{{t .Locale "admin_fido_routing.placeholder.routes_bbs"}}" class="form-control">{{.RoutesExport}}</textarea>
+    <textarea class="form-control" name="routes_text" rows="6" placeholder="{{t .Locale "admin_fido_routing.placeholder.routes_bbs"}}">{{.RoutesExport}}</textarea>
     <div class="btn-row">
-      <button type="submit" class="btn btn-primary" name="action" value="import_routes">{{t .Locale "admin_fido_routing.import_routes"}}</button>
-      <button type="submit" class="btn btn-primary" name="action" value="export_routes">{{t .Locale "admin_fido_routing.export_routes"}}</button>
+      <button class="btn btn-primary" type="submit" name="action" value="import_routes">{{t .Locale "admin_fido_routing.import_routes"}}</button>
+      <button class="btn btn-primary" type="submit" name="action" value="export_routes">{{t .Locale "admin_fido_routing.export_routes"}}</button>
     </div>
   </form>
   <h3>{{t .Locale "admin_fido_routing.routing_table"}}</h3>
   <form method="post">
     <input type="hidden" name="network" value="{{.Network}}">
-    <textarea name="routing_text" rows="6" placeholder="{{t .Locale "admin_fido_routing.placeholder.routing"}}" class="form-control">{{.RoutingExport}}</textarea>
+    <textarea class="form-control" name="routing_text" rows="6" placeholder="{{t .Locale "admin_fido_routing.placeholder.routing"}}">{{.RoutingExport}}</textarea>
     <div class="btn-row">
-      <button type="submit" class="btn btn-primary" name="action" value="import_routing">{{t .Locale "admin_fido_routing.import_routing"}}</button>
-      <button type="submit" class="btn btn-primary" name="action" value="export_routing">{{t .Locale "admin_fido_routing.export_routing"}}</button>
+      <button class="btn btn-primary" type="submit" name="action" value="import_routing">{{t .Locale "admin_fido_routing.import_routing"}}</button>
+      <button class="btn btn-primary" type="submit" name="action" value="export_routing">{{t .Locale "admin_fido_routing.export_routing"}}</button>
     </div>
   </form>
-</div></div>
+  </div>
+</div>
 {{template "footer" .}}
 {{end}}

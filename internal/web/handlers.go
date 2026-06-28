@@ -20,6 +20,17 @@ import (
 	"github.com/virtbbs/virtbbs/internal/postname"
 )
 
+// queryConfSelected parses ?conf= from the URL. The second return is false when the
+// parameter is absent (show conference list). conf=0 is valid — General is ID 0.
+func queryConfSelected(r *http.Request) (confID int, selected bool) {
+	v := r.URL.Query().Get("conf")
+	if v == "" {
+		return 0, false
+	}
+	confID, _ = strconv.Atoi(v)
+	return confID, true
+}
+
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if u, ok := s.currentUser(r); ok && r.Method == http.MethodGet {
 		_ = u
@@ -175,7 +186,7 @@ func (s *Server) handleMessages(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	confID, _ := strconv.Atoi(r.URL.Query().Get("conf"))
+	confID, confSelected := queryConfSelected(r)
 	all, err := s.Deps.Conferences.List()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -187,7 +198,7 @@ func (s *Server) handleMessages(w http.ResponseWriter, r *http.Request) {
 			visible = append(visible, c)
 		}
 	}
-	if confID == 0 {
+	if !confSelected {
 		data := struct {
 			pageData
 			Conferences []*conferences.Conference

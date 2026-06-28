@@ -1,30 +1,26 @@
 {{define "menu.html"}}
 {{template "header" .}}
 <div class="card mb-3 welcome-panel">
-  <div class="card-body">
   <div class="card-header"><h2 class="h5 mb-0">{{tf .Locale "menu.welcome" .User.Name}}</h2></div>
   <div class="card-body">
-    <p class="meta mb-0">
-      {{t .Locale "menu.security_level"}} {{.User.SecurityLevel}}{{if .User.Sysop}} · <span class="sysop-badge">{{t .Locale "menu.sysop"}}</span>{{end}}
-      · {{t .Locale "menu.last_login"}} {{.User.LastLoginDate}} {{.User.LastLoginTime}}
-      · {{t .Locale "menu.times_on"}} {{.User.TimesOnline}}
-    </p>
-  </div>
+  <p class="meta">
+    {{t .Locale "menu.security_level"}} {{.User.SecurityLevel}}{{if .User.Sysop}} · <span class="sysop-badge">{{t .Locale "menu.sysop"}}</span>{{end}}
+    · {{t .Locale "menu.last_login"}} {{.User.LastLoginDate}} {{.User.LastLoginTime}}
+    · {{t .Locale "menu.times_on"}} {{.User.TimesOnline}}
+  </p>
   </div>
 </div>
 
 {{if gt .Stats.NewMsgsTotal 0}}
 <div class="card mb-3 alert-panel">
-  <div class="card-body">
   <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "menu.new_messages"}}</h2></div>
   <div class="card-body">
-    <p><strong>{{tf .Locale "menu.new_waiting" .Stats.NewMsgsTotal}}</strong></p>
-    <ul class="compact-list mb-0">
-    {{range .NewMessages}}
-      <li><a href="/messages?conf={{.ConferenceID}}">{{.Name}}</a> — {{tf $.Locale "menu.new_in_area" .Count}}</li>
-    {{end}}
-    </ul>
-  </div>
+  <p><strong>{{tf .Locale "menu.new_waiting" .Stats.NewMsgsTotal}}</strong></p>
+  <ul class="compact-list">
+  {{range .NewMessages}}
+    <li><a href="/messages?conf={{.ConferenceID}}">{{.Name}}</a> — {{tf $.Locale "menu.new_in_area" .Count}}</li>
+  {{end}}
+  </ul>
   </div>
 </div>
 {{end}}
@@ -32,95 +28,106 @@
 {{if gt .NetmailCount 0}}
 <div class="card mb-3 alert-panel">
   <div class="card-body">
-  <div class="card-body">
-    <p class="mb-0"><a href="/netmail"><strong>{{tf .Locale "menu.netmail_waiting" .NetmailCount}}</strong></a></p>
-  </div>
+  <p><a href="/netmail"><strong>{{tf .Locale "menu.netmail_waiting" .NetmailCount}}</strong></a></p>
   </div>
 </div>
 {{end}}
 
 {{if .LogonHTML}}
 <div class="card mb-3">
-  <div class="card-body">
   <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "menu.logon_message"}}</h2></div>
   <div class="card-body">
-    <div class="ansi-screen">{{safeHTML .LogonHTML}}</div>
-  </div>
+  <div class="ansi-screen">{{safeHTML .LogonHTML}}</div>
   </div>
 </div>
 {{end}}
 
 <div class="card mb-3">
-  <div class="card-body">
   <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "menu.bbs_statistics"}}</h2></div>
   <div class="card-body">
-    <div class="row row-cols-2 row-cols-md-4 g-2 mb-3">
-      <div class="col"><div class="card text-center h-100"><div class="card-body py-2"><span class="stat-value d-block fs-4 fw-semibold text-info">{{.Stats.OnlineNodes}}</span><span class="stat-label d-block small text-secondary">{{t .Locale "menu.stat.online_now"}}</span></div></div></div></div></div>
-      <div class="col"><div class="card text-center h-100"><div class="card-body py-2"><span class="stat-value d-block fs-4 fw-semibold text-info">{{.Stats.BBSCallsToday}}</span><span class="stat-label d-block small text-secondary">{{t .Locale "menu.stat.calls_today"}}</span></div></div></div>
-      <div class="col"><div class="card text-center h-100"><div class="card-body py-2"><span class="stat-value d-block fs-4 fw-semibold text-info">{{.Stats.BBSUniqueToday}}</span><span class="stat-label d-block small text-secondary">{{t .Locale "menu.stat.unique_today"}}</span></div></div></div>
-      <div class="col"><div class="card text-center h-100"><div class="card-body py-2"><span class="stat-value d-block fs-4 fw-semibold text-info">{{.Stats.BBSMsgTotal}}</span><span class="stat-label d-block small text-secondary">{{t .Locale "menu.stat.total_messages"}}</span></div></div></div>
-      <div class="col"><div class="card text-center h-100"><div class="card-body py-2"><span class="stat-value d-block fs-4 fw-semibold text-info">{{.Stats.BBSConfCount}}</span><span class="stat-label d-block small text-secondary">{{t .Locale "menu.stat.conferences"}}</span></div></div></div>
-      <div class="col"><div class="card text-center h-100"><div class="card-body py-2"><span class="stat-value d-block fs-4 fw-semibold text-info">{{.Stats.BBSFileTotal}}</span><span class="stat-label d-block small text-secondary">{{t .Locale "menu.stat.files"}}</span></div></div></div>
-      <div class="col"><div class="card text-center h-100"><div class="card-body py-2"><span class="stat-value d-block fs-4 fw-semibold text-info">{{.Stats.BBSFileToday}}</span><span class="stat-label d-block small text-secondary">{{t .Locale "menu.stat.files_today"}}</span></div></div></div>
-      <div class="col"><div class="card text-center h-100"><div class="card-body py-2"><span class="stat-value d-block fs-4 fw-semibold text-info">{{.Stats.NewMsgsTotal}}</span><span class="stat-label d-block small text-secondary">{{t .Locale "menu.stat.your_new_mail"}}</span></div></div></div>
-    </div>
-    <p class="meta mb-0"><a href="/stats">{{t .Locale "menu.full_stats"}}</a> · <a href="/online">{{t .Locale "menu.whos_online"}}</a></p>
+  <div class="row row-cols-2 row-cols-md-4 g-2">
+    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.OnlineNodes}}</span><span class="stat-label">{{t .Locale "menu.stat.online_now"}}</span></div></div></div>
+    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.BBSCallsToday}}</span><span class="stat-label">{{t .Locale "menu.stat.calls_today"}}</span></div></div></div>
+    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.BBSUniqueToday}}</span><span class="stat-label">{{t .Locale "menu.stat.unique_today"}}</span></div></div></div>
+    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.BBSMsgTotal}}</span><span class="stat-label">{{t .Locale "menu.stat.total_messages"}}</span></div></div></div>
+    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.BBSConfCount}}</span><span class="stat-label">{{t .Locale "menu.stat.conferences"}}</span></div></div></div>
+    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.BBSFileTotal}}</span><span class="stat-label">{{t .Locale "menu.stat.files"}}</span></div></div></div>
+    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.BBSFileToday}}</span><span class="stat-label">{{t .Locale "menu.stat.files_today"}}</span></div></div></div>
+    <div class="col"><div class="card text-center"><div class="card-body py-2"><span class="stat-value">{{.Stats.NewMsgsTotal}}</span><span class="stat-label">{{t .Locale "menu.stat.your_new_mail"}}</span></div></div></div>
   </div>
+  <p class="meta"><a href="/stats">{{t .Locale "menu.full_stats"}}</a> · <a href="/online">{{t .Locale "menu.whos_online"}}</a></p>
   </div>
 </div>
 
 {{if .Bulletins}}
 <div class="card mb-3">
-  <div class="card-body">
   <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "menu.bulletins"}}</h2></div>
   <div class="card-body">
-    <ul class="compact-list">
-    {{range .Bulletins}}
-      {{if ne .Name "LOGON"}}
-      <li><a href="/bulletins/view?name={{.Name}}">{{.Title}}</a></li>
-      {{end}}
+  <ul class="compact-list">
+  {{range .Bulletins}}
+    {{if ne .Name "LOGON"}}
+    <li><a href="/bulletins/view?name={{.Name}}">{{.Title}}</a></li>
     {{end}}
-    </ul>
-    <p class="meta mb-0"><a href="/bulletins">{{t .Locale "menu.all_bulletins"}}</a></p>
-  </div>
+  {{end}}
+  </ul>
+  <p class="meta"><a href="/bulletins">{{t .Locale "menu.all_bulletins"}}</a></p>
   </div>
 </div>
 {{end}}
 
 {{if .User.Sysop}}
 <div class="card mb-3 sysop-panel">
-  <div class="card-body">
   <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "menu.sysop_panel"}}</h2></div>
   <div class="card-body">
-    <p class="meta">{{t .Locale "menu.sysop_help"}}</p>
-    <ul class="compact-list mb-0">
-      <li><a href="/admin">{{t .Locale "nav.admin"}}</a></li>
-      <li><a href="/online">{{t .Locale "menu.sysop.online"}}</a></li>
-      <li><a href="/stats">{{t .Locale "menu.sysop.stats"}}</a></li>
-      <li><a href="/messages">{{t .Locale "menu.sysop.messages"}}</a></li>
-      <li><a href="/files">{{t .Locale "menu.sysop.files"}}</a></li>
-      <li><a href="/nodelist">{{t .Locale "menu.sysop.nodelist"}}</a></li>
-    </ul>
-  </div>
+  <p class="meta">{{t .Locale "menu.sysop_help"}}</p>
+  <ul class="compact-list">
+    <li><a href="/admin">{{t .Locale "nav.admin"}}</a></li>
+    <li><a href="/online">{{t .Locale "menu.sysop.online"}}</a></li>
+    <li><a href="/stats">{{t .Locale "menu.sysop.stats"}}</a></li>
+    <li><a href="/messages">{{t .Locale "menu.sysop.messages"}}</a></li>
+    <li><a href="/files">{{t .Locale "menu.sysop.files"}}</a></li>
+    <li><a href="/nodelist">{{t .Locale "menu.sysop.nodelist"}}</a></li>
+  </ul>
   </div>
 </div>
 {{end}}
 
 <div class="card mb-3">
-  <div class="card-body">
   <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "menu.main"}}</h2></div>
   <div class="card-body">
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/messages" class="stretched-link fw-medium">{{t .Locale "menu.card.messages"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "menu.card.messages_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/netmail" class="stretched-link fw-medium">{{t .Locale "menu.card.netmail"}}{{if gt .NetmailCount 0}} <span class="badge bg-primary">{{.NetmailCount}}</span>{{end}}</a><p class="meta small mt-2 mb-0">{{t .Locale "menu.card.netmail_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/files" class="stretched-link fw-medium">{{t .Locale "menu.card.files"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "menu.card.files_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/search" class="stretched-link fw-medium">{{t .Locale "menu.card.search"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "menu.card.search_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/qwk" class="stretched-link fw-medium">{{t .Locale "menu.card.qwk"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "menu.card.qwk_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/subscriptions" class="stretched-link fw-medium">{{t .Locale "menu.card.echo"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "menu.card.echo_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/nodelist" class="stretched-link fw-medium">{{t .Locale "menu.card.nodelist"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "menu.card.nodelist_desc"}}</p></div></div></div>
-      <div class="col"><div class="card h-100 text-center"><div class="card-body"><a href="/profile" class="stretched-link fw-medium">{{t .Locale "menu.card.profile"}}</a><p class="meta small mt-2 mb-0">{{t .Locale "menu.card.profile_desc"}}</p></div></div></div>
-    </div>
-    </div></div>
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+      <a href="/messages">{{t .Locale "menu.card.messages"}}</a>
+      <p>{{t .Locale "menu.card.messages_desc"}}</p>
+    </div></div></div>
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+      <a href="/netmail">{{t .Locale "menu.card.netmail"}}{{if gt .NetmailCount 0}}<span class="badge bg-primary">{{.NetmailCount}}</span>{{end}}</a>
+      <p>{{t .Locale "menu.card.netmail_desc"}}</p>
+    </div></div></div>
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+      <a href="/files">{{t .Locale "menu.card.files"}}</a>
+      <p>{{t .Locale "menu.card.files_desc"}}</p>
+    </div></div></div>
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+      <a href="/search">{{t .Locale "menu.card.search"}}</a>
+      <p>{{t .Locale "menu.card.search_desc"}}</p>
+    </div></div></div>
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+      <a href="/qwk">{{t .Locale "menu.card.qwk"}}</a>
+      <p>{{t .Locale "menu.card.qwk_desc"}}</p>
+    </div></div></div>
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+      <a href="/subscriptions">{{t .Locale "menu.card.echo"}}</a>
+      <p>{{t .Locale "menu.card.echo_desc"}}</p>
+    </div></div></div>
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+      <a href="/nodelist">{{t .Locale "menu.card.nodelist"}}</a>
+      <p>{{t .Locale "menu.card.nodelist_desc"}}</p>
+    </div></div></div>
+    <div class="col"><div class="card h-100 text-center"><div class="card-body">
+      <a href="/profile">{{t .Locale "menu.card.profile"}}</a>
+      <p>{{t .Locale "menu.card.profile_desc"}}</p>
+    </div></div></div>
   </div>
   </div>
 </div>
