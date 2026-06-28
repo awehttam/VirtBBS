@@ -1,10 +1,9 @@
 {{define "qwk.html"}}
 {{template "header" .}}
-<div class="panel">
-  <h2>{{t .Locale "qwk.title"}}</h2>
+<div class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "qwk.title"}}</h2></div><div class="card-body">
   <p>{{t .Locale "qwk.intro"}}</p>
-  {{if .Flash}}<p class="flash">{{.Flash}}</p>{{end}}
-  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  {{if .Flash}}<div class="alert alert-success py-2">{{.Flash}}</div>{{end}}
+  {{if .Error}}<div class="alert alert-danger py-2">{{.Error}}</div>{{end}}
 
   <h3>{{t .Locale "qwk.download"}}</h3>
   <form method="post" action="/qwk">
@@ -12,18 +11,18 @@
     <p>{{t .Locale "qwk.download_help"}}</p>
     <ul class="check-list">
     {{range .Conferences}}
-      <li><label><input type="checkbox" name="conf_{{.ID}}"> {{.Name}}{{if .Echo}} <span class="tag">{{t $.Locale "common.echo_label"}}</span>{{end}}</label></li>
+      <li><div class="mb-3"><label class="form-label"><input type="checkbox" name="conf_{{.ID}}"> {{.Name}}{{if .Echo}} <span class="tag">{{t $.Locale "common.echo_label"}}</span>{{end}}</label></li>
     {{end}}
     </ul>
-    <p><button type="submit" class="btn">{{t .Locale "qwk.download_btn"}}</button></p>
+    <p><button type="submit" class="btn btn-primary">{{t .Locale "qwk.download_btn"}}</button></p>
   </form>
 
   <h3>{{t .Locale "qwk.upload"}}</h3>
   <form method="post" action="/qwk" enctype="multipart/form-data">
     <input type="hidden" name="action" value="upload">
     <p><input type="file" name="rep" accept=".rep,.REP" required></p>
-    <p><button type="submit" class="btn">{{t .Locale "qwk.upload_btn"}}</button></p>
+    <p><button type="submit" class="btn btn-primary">{{t .Locale "qwk.upload_btn"}}</button></p>
   </form>
-</div>
+</div></div>
 {{template "footer" .}}
 {{end}}

@@ -1,12 +1,11 @@
 {{define "subscriptions.html"}}
 {{template "header" .}}
-<div class="panel">
-  <h2>{{t .Locale "subscriptions.title"}}</h2>
+<div class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "subscriptions.title"}}</h2></div><div class="card-body">
   <p>{{t .Locale "subscriptions.intro"}}</p>
   {{if not .Rows}}
   <p class="meta">{{t .Locale "subscriptions.empty"}}</p>
   {{else}}
-  <table>
+  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.area"}}</th><th>{{t .Locale "subscriptions.col.tag"}}</th><th>{{t .Locale "subscriptions.col.network"}}</th><th>{{t .Locale "subscriptions.col.new"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Rows}}
@@ -14,19 +13,19 @@
         <td><a href="/messages?conf={{.Conference.ID}}">{{.Conference.Name}}</a></td>
         <td>{{.Conference.EchoTag}}</td>
         <td>{{if .Conference.Network}}{{.Conference.Network}}{{else}}—{{end}}</td>
-        <td>{{if .NewCount}}<span class="badge">{{.NewCount}}</span>{{else}}—{{end}}</td>
+        <td>{{if .NewCount}}<span class="badge bg-primary">{{.NewCount}}</span>{{else}}—{{end}}</td>
         <td>
           <form method="post" action="/subscriptions" style="display:inline">
             <input type="hidden" name="conf" value="{{.Conference.ID}}">
             <input type="hidden" name="subscribe" value="{{if .Subscribed}}0{{else}}1{{end}}">
-            <button type="submit" class="btn btn-sm">{{if .Subscribed}}{{t $.Locale "common.unsubscribe"}}{{else}}{{t $.Locale "common.subscribe"}}{{end}}</button>
+            <button type="submit" class="btn btn-primary btn-sm">{{if .Subscribed}}{{t $.Locale "common.unsubscribe"}}{{else}}{{t $.Locale "common.subscribe"}}{{end}}</button>
           </form>
         </td>
       </tr>
     {{end}}
     </tbody>
-  </table>
+  </table></div>
   {{end}}
-</div>
+</div></div>
 {{template "footer" .}}
 {{end}}

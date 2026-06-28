@@ -1,19 +1,18 @@
 {{define "netmail_app.html"}}
 {{template "header" .}}
-<div class="panel netmail-app">
-  <h2>{{t .Locale "netmail.app.title"}}</h2>
-  <div id="netmail-app" class="netmail-layout">
-    <aside id="netmail-list"><p class="meta">{{t .Locale "common.loading"}}</p></aside>
-    <section id="netmail-pane"><p class="meta">{{t .Locale "netmail.app.select"}}</p></section>
+<div class="card mb-3 netmail-app"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "netmail.app.title"}}</h2></div><div class="card-body">
+  <div id="netmail-app" class="row g-3 netmail-layout">
+    <aside id="netmail-list" class="col-12 col-md-4 col-lg-3 col-12 col-md-4 col-lg-3"><p class="meta">{{t .Locale "common.loading"}}</p></aside>
+    <section id="netmail-pane" class="col-12 col-md-8 col-lg-9 col-12 col-md-8 col-lg-9"><p class="meta">{{t .Locale "netmail.app.select"}}</p></section>
   </div>
   <details class="compose-panel">
     <summary>{{t .Locale "netmail.app.compose"}}</summary>
     <form id="netmail-compose">
-      <label>{{t .Locale "netmail.app.to_name"}}</label><input type="text" id="nm-to-name" required>
-      <label>{{t .Locale "netmail.app.to_addr"}}</label><input type="text" id="nm-to-addr" placeholder="{{t .Locale "netmail.app.addr_placeholder"}}" required>
-      <label>{{t .Locale "common.subject"}}</label><input type="text" id="nm-subject" required>
-      <label>{{t .Locale "common.message"}}</label><textarea id="nm-body" rows="6" required></textarea>
-      <button type="submit" class="btn">{{t .Locale "common.send"}}</button>
+      <div class="mb-3"><label class="form-label">{{t .Locale "netmail.app.to_name"}}</label><input type="text" id="nm-to-name" required class="form-control">
+      <div class="mb-3"><label class="form-label">{{t .Locale "netmail.app.to_addr"}}</label><input type="text" id="nm-to-addr" placeholder="{{t .Locale "netmail.app.addr_placeholder"}}" required class="form-control">
+      <div class="mb-3"><label class="form-label">{{t .Locale "common.subject"}}</label><input type="text" id="nm-subject" required class="form-control">
+      <div class="mb-3"><label class="form-label">{{t .Locale "common.message"}}</label><textarea id="nm-body" rows="6" required class="form-control"></textarea>
+      <button type="submit" class="btn btn-primary">{{t .Locale "common.send"}}</button>
       <span id="nm-compose-status" class="meta"></span>
     </form>
   </details>

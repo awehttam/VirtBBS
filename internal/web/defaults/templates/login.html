@@ -1,33 +1,42 @@
 {{define "login.html"}}
 <!DOCTYPE html>
-<html lang="{{.Locale}}">
+<html lang="{{.Locale}}" data-bs-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{.BBSName}} — {{t .Locale "app.title"}}</title>
+  <link rel="stylesheet" href="/static/bootstrap.min.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
-<div class="login-box panel">
-  <h2>{{t .Locale "login.title"}} — {{.BBSName}}</h2>
-  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  <form method="post" action="/login">
-    <label for="username">{{t .Locale "login.username"}}</label>
-    <input type="text" id="username" name="username" required autofocus autocomplete="username">
-    <label for="password">{{t .Locale "login.password"}}</label>
-    <input type="password" id="password" name="password" required autocomplete="current-password">
-    <button type="submit">{{t .Locale "login.submit"}}</button>
-  </form>
-  <p class="meta" style="margin-top:1rem"><a href="/forgot-password">{{t .Locale "login.forgot"}}</a></p>
-  <p class="meta"><a href="/register">{{t .Locale "login.new_user"}}</a></p>
-  <form method="post" action="/set-locale" style="margin-top:1rem">
-    <select name="lang" onchange="this.form.submit()">
-      <option value="en" {{if eq .Locale "en"}}selected{{end}}>{{t .Locale "lang.en"}}</option>
-      <option value="es" {{if eq .Locale "es"}}selected{{end}}>{{t .Locale "lang.es"}}</option>
-      <option value="af" {{if eq .Locale "af"}}selected{{end}}>{{t .Locale "lang.af"}}</option>
-    </select>
-  </form>
+<body class="virtbbs-body auth-page">
+<div class="auth-card card shadow">
+  <div class="card-body p-4">
+    <h1 class="h4 card-title text-center mb-3">{{t .Locale "login.title"}} — {{.BBSName}}</h1>
+    {{if .Error}}<div class="alert alert-danger py-2">{{.Error}}</div>{{end}}
+    <form method="post" action="/login">
+      <div class="mb-3">
+        <label class="form-label" for="username">{{t .Locale "login.username"}}</label>
+        <input type="text" class="form-control" id="username" name="username" required autofocus autocomplete="username">
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="password">{{t .Locale "login.password"}}</label>
+        <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary w-100">{{t .Locale "login.submit"}}</button>
+    </form>
+    <p class="meta text-center mt-3 mb-1"><a href="/forgot-password">{{t .Locale "login.forgot"}}</a></p>
+    <p class="meta text-center mb-3"><a href="/register">{{t .Locale "login.new_user"}}</a></p>
+    <form method="post" action="/set-locale" class="d-flex justify-content-center">
+      <select name="lang" class="form-select form-select-sm lang-select" style="width:auto" onchange="this.form.submit()">
+        <option value="en" {{if eq .Locale "en"}}selected{{end}}>{{t .Locale "lang.en"}}</option>
+        <option value="es" {{if eq .Locale "es"}}selected{{end}}>{{t .Locale "lang.es"}}</option>
+        <option value="af" {{if eq .Locale "af"}}selected{{end}}>{{t .Locale "lang.af"}}</option>
+      </select>
+    </form>
+  </div>
 </div>
+<script src="/static/jquery.min.js"></script>
+<script src="/static/bootstrap.bundle.min.js"></script>
 </body>
 </html>
 {{end}}

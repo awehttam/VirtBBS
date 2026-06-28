@@ -341,4 +341,4 @@ make sure you've fully stopped the old process before starting the new one.
 
 ## Version
 
-This guide covers VirtBBS **1.2.0**.
+This guide covers VirtBBS **1.3.0**.

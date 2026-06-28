@@ -1,35 +1,34 @@
 {{define "admin_fido_tools.html"}}
 {{template "header" .}}
-<div class="panel sysop-panel">
-  <h2>{{t .Locale "admin_fido_tools.title"}}</h2>
+<div class="card mb-3 sysop-panel"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_fido_tools.title"}}</h2></div><div class="card-body">
   <p><a href="/admin/fido">{{t .Locale "common.fido_back"}}</a></p>
-  {{if .Flash}}<p class="flash">{{.Flash}}</p>{{end}}
-  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  {{if .Result}}<p class="meta">{{tf .Locale "admin_fido_tools.packet" .Result}}</p>{{end}}
+  {{if .Flash}}<div class="alert alert-success py-2">{{.Flash}}</div>{{end}}
+  {{if .Error}}<div class="alert alert-danger py-2">{{.Error}}</div>{{end}}
+  {{if .Result}}<p class="meta">{{tf .Locale "admin_fido_tools.packet" .Result}}</div>{{end}}
   <form method="get" class="inline-form">
-    <label>{{t .Locale "common.network"}} <select name="network" onchange="this.form.submit()">{{range .Networks}}<option {{if eq $.Network .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.network"}} <select name="network" onchange="this.form.submit()" class="form-select">{{range .Networks}}<option {{if eq $.Network .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
   </form>
   <form method="post" class="admin-form">
     <input type="hidden" name="network" value="{{.Network}}">
-    <label>{{t .Locale "common.from_name"}} <input name="from_name" value="{{t .Locale "menu.sysop"}}"></label>
-    <label>{{t .Locale "common.to_addr"}} <input name="to_addr" required></label>
-    <label>{{t .Locale "common.to_name"}} <input name="to_name"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.from_name"}} <input class="form-control" name="from_name" value="{{t .Locale "menu.sysop"}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.to_addr"}} <input class="form-control" name="to_addr" required></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.to_name"}} <input class="form-control" name="to_name"></label>
     <div class="btn-row">
-      <button type="submit" name="action" value="ping">{{t .Locale "admin_fido_tools.send_ping"}}</button>
-      <button type="submit" name="action" value="trace">{{t .Locale "admin_fido_tools.send_trace"}}</button>
+      <button type="submit" class="btn btn-primary" name="action" value="ping">{{t .Locale "admin_fido_tools.send_ping"}}</button>
+      <button type="submit" class="btn btn-primary" name="action" value="trace">{{t .Locale "admin_fido_tools.send_trace"}}</button>
     </div>
   </form>
   <h3>{{t .Locale "admin_fido_tools.areafix_section"}}</h3>
   <form method="post" class="admin-form">
     <input type="hidden" name="network" value="{{.Network}}">
-    <label>{{t .Locale "common.from_name"}} <input name="from_name" value="{{t .Locale "menu.sysop"}}"></label>
-    <label>{{t .Locale "admin_fido_tools.add_areas"}} <textarea name="adds" rows="3"></textarea></label>
-    <label>{{t .Locale "admin_fido_tools.remove_areas"}} <textarea name="removes" rows="2"></textarea></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.from_name"}} <input class="form-control" name="from_name" value="{{t .Locale "menu.sysop"}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_fido_tools.add_areas"}} <textarea name="adds" rows="3" class="form-control"></textarea></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_fido_tools.remove_areas"}} <textarea name="removes" rows="2" class="form-control"></textarea></label>
     <div class="btn-row">
-      <button type="submit" name="action" value="areafix">{{t .Locale "admin_fido_tools.areafix_btn"}}</button>
-      <button type="submit" name="action" value="filefix">{{t .Locale "admin_fido_tools.filefix_btn"}}</button>
+      <button type="submit" class="btn btn-primary" name="action" value="areafix">{{t .Locale "admin_fido_tools.areafix_btn"}}</button>
+      <button type="submit" class="btn btn-primary" name="action" value="filefix">{{t .Locale "admin_fido_tools.filefix_btn"}}</button>
     </div>
   </form>
-</div>
+</div></div>
 {{template "footer" .}}
 {{end}}

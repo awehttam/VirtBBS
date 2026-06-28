@@ -1,50 +1,62 @@
 {{define "header"}}
 <!DOCTYPE html>
-<html lang="{{.Locale}}">
+<html lang="{{.Locale}}" data-bs-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#12121f">
   <title>{{.BBSName}} — {{t .Locale "app.title"}}</title>
   <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/static/bootstrap.min.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="virtbbs-body">
 {{if .User}}
-<header>
-  <h1>{{.BBSName}}</h1>
-  <nav>
-    <a href="/menu">{{t .Locale "nav.dashboard"}}</a>
-    <a href="/messages">{{t .Locale "nav.messages"}}<span id="nav-msg-badge" class="nav-badge" hidden></span></a>
-    <a href="/netmail/app">{{t .Locale "nav.netmail"}}<span id="nav-net-badge" class="nav-badge" hidden></span></a>
-    <a href="/files">{{t .Locale "nav.files"}}</a>
-    <a href="/search">{{t .Locale "nav.search"}}</a>
-    <a href="/qwk">{{t .Locale "nav.qwk"}}</a>
-    <a href="/subscriptions">{{t .Locale "nav.echo"}}</a>
-    <a href="/addressbook">{{t .Locale "nav.addressbook"}}</a>
-    <a href="/bulletins">{{t .Locale "nav.bulletins"}}</a>
-    <a href="/stats">{{t .Locale "nav.stats"}}</a>
-    <a href="/online">{{t .Locale "nav.online"}}</a>
-    <a href="/nodelist">{{t .Locale "nav.nodelist"}}</a>
-    {{if .User.Sysop}}<a href="/admin">{{t .Locale "nav.admin"}}</a>{{end}}
-    <a href="/profile">{{t .Locale "nav.profile"}}</a>
-    <a href="/logout">{{t .Locale "nav.logout"}}</a>
-  </nav>
-  <form class="lang-form" method="post" action="/set-locale">
-    <input type="hidden" name="next" id="lang-next" value="/menu">
-    <select name="lang" onchange="document.getElementById('lang-next').value=location.pathname+location.search;this.form.submit()">
-      <option value="en" {{if eq .Locale "en"}}selected{{end}}>{{t .Locale "lang.en"}}</option>
-      <option value="es" {{if eq .Locale "es"}}selected{{end}}>{{t .Locale "lang.es"}}</option>
-      <option value="af" {{if eq .Locale "af"}}selected{{end}}>{{t .Locale "lang.af"}}</option>
-    </select>
-  </form>
-</header>
+<nav class="navbar navbar-expand-lg navbar-dark virtbbs-navbar sticky-top">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-semibold" href="/menu">{{.BBSName}}</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+            aria-controls="mainNav" aria-expanded="false" aria-label="Menu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0 flex-wrap">
+        <li class="nav-item"><a class="nav-link" href="/menu" data-nav="/menu">{{t .Locale "nav.dashboard"}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="/messages" data-nav="/messages">{{t .Locale "nav.messages"}}<span id="nav-msg-badge" class="nav-badge badge rounded-pill bg-danger ms-1" hidden></span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/netmail/app" data-nav="/netmail">{{t .Locale "nav.netmail"}}<span id="nav-net-badge" class="nav-badge badge rounded-pill bg-danger ms-1" hidden></span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/files" data-nav="/files">{{t .Locale "nav.files"}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="/search" data-nav="/search">{{t .Locale "nav.search"}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="/qwk" data-nav="/qwk">{{t .Locale "nav.qwk"}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="/subscriptions" data-nav="/subscriptions">{{t .Locale "nav.echo"}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="/addressbook" data-nav="/addressbook">{{t .Locale "nav.addressbook"}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="/bulletins" data-nav="/bulletins">{{t .Locale "nav.bulletins"}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="/stats" data-nav="/stats">{{t .Locale "nav.stats"}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="/online" data-nav="/online">{{t .Locale "nav.online"}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="/nodelist" data-nav="/nodelist">{{t .Locale "nav.nodelist"}}</a></li>
+        {{if .User.Sysop}}<li class="nav-item"><a class="nav-link" href="/admin" data-nav="/admin">{{t .Locale "nav.admin"}}</a></li>{{end}}
+        <li class="nav-item"><a class="nav-link" href="/profile" data-nav="/profile">{{t .Locale "nav.profile"}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="/logout">{{t .Locale "nav.logout"}}</a></li>
+      </ul>
+      <form class="lang-form d-flex ms-lg-2" method="post" action="/set-locale">
+        <input type="hidden" name="next" id="lang-next" value="/menu">
+        <select name="lang" class="form-select form-select-sm lang-select" aria-label="Language">
+          <option value="en" {{if eq .Locale "en"}}selected{{end}}>{{t .Locale "lang.en"}}</option>
+          <option value="es" {{if eq .Locale "es"}}selected{{end}}>{{t .Locale "lang.es"}}</option>
+          <option value="af" {{if eq .Locale "af"}}selected{{end}}>{{t .Locale "lang.af"}}</option>
+        </select>
+      </form>
+    </div>
+  </div>
+</nav>
 {{end}}
-<main>
+<main class="container-fluid container-lg py-3 py-md-4">
 {{end}}
 
 {{define "footer"}}
 </main>
+<script src="/static/jquery.min.js"></script>
+<script src="/static/bootstrap.bundle.min.js"></script>
+<script src="/static/nav.js"></script>
 {{if .User}}<script src="/static/notify.js"></script>{{end}}
 <script>
 if ('serviceWorker' in navigator) {

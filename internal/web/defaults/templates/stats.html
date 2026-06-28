@@ -1,48 +1,48 @@
 {{define "stats.html"}}
 {{template "header" .}}
-<div class="panel">
+<div class="card mb-3"><div class="card-body">
   <p><a href="/menu">{{t .Locale "common.dashboard_back"}}</a></p>
   <h2>{{t .Locale "stats.title"}}</h2>
   <h3 class="section-head">{{tf .Locale "stats.account" .User.Name}}</h3>
-  <table>
+  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
     <tr><th>{{t .Locale "stats.times_on"}}</th><td>{{.User.TimesOnline}}</td></tr>
     <tr><th>{{t .Locale "stats.last_login"}}</th><td>{{.User.LastLoginDate}} {{.User.LastLoginTime}}</td></tr>
     <tr><th>{{t .Locale "stats.uploads"}}</th><td>{{.User.Uploads}} ({{.User.BytesUploaded}} {{t .Locale "common.bytes"}})</td></tr>
     <tr><th>{{t .Locale "stats.downloads"}}</th><td>{{.User.Downloads}} ({{.User.BytesDownloaded}} {{t .Locale "common.bytes"}})</td></tr>
     <tr><th>{{t .Locale "stats.new_mail"}}</th><td>{{.Stats.NewMsgsTotal}}</td></tr>
-  </table>
+  </table></div>
 
   <h3 class="section-head">{{t .Locale "stats.system_today"}}</h3>
-  <table>
+  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
     <tr><th>{{t .Locale "stats.calls_today"}}</th><td>{{.Stats.BBSCallsToday}}</td></tr>
     <tr><th>{{t .Locale "stats.unique_users"}}</th><td>{{.Stats.BBSUniqueToday}}</td></tr>
     <tr><th>{{t .Locale "stats.nodes_online"}}</th><td>{{.Stats.OnlineNodes}}</td></tr>
-  </table>
+  </table></div>
 
   <h3 class="section-head">{{t .Locale "stats.message_base"}}</h3>
-  <table>
+  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
     <tr><th>{{t .Locale "stats.conferences"}}</th><td>{{.Stats.BBSConfCount}}</td></tr>
     <tr><th>{{t .Locale "stats.total_messages"}}</th><td>{{.Stats.BBSMsgTotal}}</td></tr>
-  </table>
+  </table></div>
 
   <h3 class="section-head">{{t .Locale "stats.file_areas"}}</h3>
-  <table>
+  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
     <tr><th>{{t .Locale "stats.total_files"}}</th><td>{{.Stats.BBSFileTotal}}</td></tr>
     <tr><th>{{t .Locale "stats.added_today"}}</th><td>{{.Stats.BBSFileToday}}</td></tr>
     <tr><th>{{t .Locale "stats.last_30_days"}}</th><td>{{.Stats.BBSFileMonth}}</td></tr>
-  </table>
+  </table></div>
 
   {{if .NewMessages}}
   <h3 class="section-head">{{t .Locale "stats.new_by_area"}}</h3>
-  <table>
+  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.area"}}</th><th>{{t .Locale "subscriptions.col.new"}}</th></tr></thead>
     <tbody>
     {{range .NewMessages}}
     <tr><td><a href="/messages?conf={{.ConferenceID}}">{{.Name}}</a></td><td>{{.Count}}</td></tr>
     {{end}}
     </tbody>
-  </table>
+  </table></div>
   {{end}}
-</div>
+</div></div>
 {{template "footer" .}}
 {{end}}

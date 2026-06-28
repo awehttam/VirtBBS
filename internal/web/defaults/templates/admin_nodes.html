@@ -1,9 +1,8 @@
 {{define "admin_nodes.html"}}
 {{template "header" .}}
-<div class="panel sysop-panel">
-  <h2>{{t .Locale "admin_nodes.title"}}</h2>
+<div class="card mb-3 sysop-panel"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_nodes.title"}}</h2></div><div class="card-body">
   <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
-  <table>
+  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.node"}}</th><th>{{t .Locale "common.user"}}</th><th>{{t .Locale "common.status"}}</th><th>{{t .Locale "common.activity"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Nodes}}
@@ -16,7 +15,7 @@
         <form method="post" action="/admin/nodes" style="display:inline">
           <input type="hidden" name="action" value="kick">
           <input type="hidden" name="node_id" value="{{.ID}}">
-          <button type="submit" class="btn-link">{{t $.Locale "common.kick"}}</button>
+          <button type="submit" class="btn btn-link">{{t $.Locale "common.kick"}}</button>
         </form>
       </td>
     </tr>
@@ -24,13 +23,13 @@
     <tr><td colspan="5">{{t .Locale "admin_nodes.empty"}}</td></tr>
     {{end}}
     </tbody>
-  </table>
+  </table></div>
   <h3>{{t .Locale "admin_nodes.broadcast_title"}}</h3>
   <form method="post" action="/admin/broadcast" class="inline-form">
-    <input name="from" value="{{t .Locale "menu.sysop"}}" placeholder="{{t .Locale "common.from"}}" style="width:6rem">
-    <input name="message" placeholder="{{t .Locale "admin_nodes.broadcast_message"}}" required style="width:20rem">
-    <button type="submit">{{t .Locale "admin_nodes.broadcast_btn"}}</button>
+    <input class="form-control" name="from" value="{{t .Locale "menu.sysop"}}" placeholder="{{t .Locale "common.from"}}" style="width:6rem">
+    <input class="form-control" name="message" placeholder="{{t .Locale "admin_nodes.broadcast_message"}}" required style="width:20rem">
+    <button type="submit" class="btn btn-primary">{{t .Locale "admin_nodes.broadcast_btn"}}</button>
   </form>
-</div>
+</div></div>
 {{template "footer" .}}
 {{end}}

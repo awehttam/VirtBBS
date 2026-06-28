@@ -1,6 +1,6 @@
 {{define "read.html"}}
 {{template "header" .}}
-<div class="panel">
+<div class="card mb-3"><div class="card-body">
   <p><a href="/messages?conf={{.Conference.ID}}">← {{.Conference.Name}}</a></p>
   <h2>{{.Message.Subject}}</h2>
   <p class="meta">
@@ -25,10 +25,10 @@
       <input type="hidden" name="kind" value="message">
       <input type="hidden" name="conf" value="{{.Conference.ID}}">
       <input type="hidden" name="num" value="{{.Message.MsgNumber}}">
-      <button type="submit" class="btn btn-sm">{{t .Locale "common.share"}}</button>
+      <button type="submit" class="btn btn-primary btn-sm">{{t .Locale "common.share"}}</button>
     </form>
   </p>
   {{end}}
-</div>
+</div></div>
 {{template "footer" .}}
 {{end}}

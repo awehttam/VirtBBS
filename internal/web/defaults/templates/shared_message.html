@@ -1,6 +1,6 @@
 {{define "shared_message.html"}}
 {{template "header" .}}
-<div class="panel">
+<div class="card mb-3"><div class="card-body">
   <p class="meta">{{t .Locale "shared.expires"}} {{.Expires.Format "2006-01-02 15:04"}}</p>
   <h2>{{.Message.Subject}}</h2>
   <p class="meta">
@@ -9,6 +9,6 @@
   </p>
   <div class="msg-body">{{.Message.Body}}</div>
   <p><a href="/login">{{t .Locale "common.log_in_reply"}}</a></p>
-</div>
+</div></div>
 {{template "footer" .}}
 {{end}}

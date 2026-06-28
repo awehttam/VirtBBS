@@ -1,18 +1,18 @@
 {{define "post.html"}}
 {{template "header" .}}
-<div class="panel">
+<div class="card mb-3"><div class="card-body">
   <p><a href="/messages?conf={{.Conference.ID}}">← {{.Conference.Name}}</a></p>
   <h2>{{t .Locale "post.title"}}</h2>
-  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  {{if .Error}}<div class="alert alert-danger py-2">{{.Error}}</div>{{end}}
   <form method="post" action="/messages/post?conf={{.Conference.ID}}{{if .ReplyNum}}&amp;reply={{.ReplyNum}}{{end}}">
-    <label for="to">{{t .Locale "common.to"}}</label>
-    <input type="text" id="to" name="to" value="{{.ToName}}">
-    <label for="subject">{{t .Locale "common.subject"}}</label>
-    <input type="text" id="subject" name="subject" value="{{.Subject}}" required>
-    <label for="body">{{t .Locale "common.message"}}</label>
-    <textarea id="body" name="body" required>{{.Body}}</textarea>
-    <button type="submit">{{t .Locale "post.submit"}}</button>
+    <div class="mb-3"><label class="form-label" for="to">{{t .Locale "common.to"}}</label>
+    <input type="text" id="to" name="to" value="{{.ToName}}" class="form-control">
+    <div class="mb-3"><label class="form-label" for="subject">{{t .Locale "common.subject"}}</label>
+    <input type="text" id="subject" name="subject" value="{{.Subject}}" required class="form-control">
+    <div class="mb-3"><label class="form-label" for="body">{{t .Locale "common.message"}}</label>
+    <textarea id="body" name="body" required class="form-control">{{.Body}}</textarea>
+    <button type="submit" class="btn btn-primary">{{t .Locale "post.submit"}}</button>
   </form>
-</div>
+</div></div>
 {{template "footer" .}}
 {{end}}

@@ -1,9 +1,8 @@
 {{define "admin_conferences.html"}}
 {{template "header" .}}
-<div class="panel sysop-panel">
-  <h2>{{t .Locale "admin_conferences.title"}}</h2>
+<div class="card mb-3 sysop-panel"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_conferences.title"}}</h2></div><div class="card-body">
   <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
-  <table>
+  <div class="table-responsive"><table class="table table-dark table-striped table-hover align-middle mb-0">
     <thead><tr><th>{{t .Locale "common.id"}}</th><th>{{t .Locale "common.name"}}</th><th>{{t .Locale "common.echo"}}</th><th>{{t .Locale "admin_conferences.echo_from_name"}}</th><th>{{t .Locale "common.sec_rw"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Conferences}}
@@ -16,7 +15,7 @@
         <form method="post" action="/admin/conferences" class="inline-form">
           <input type="hidden" name="action" value="set_echo_from">
           <input type="hidden" name="id" value="{{.ID}}">
-          <select name="echo_from_name" onchange="this.form.submit()">
+          <select name="echo_from_name" onchange="this.form.submit()" class="form-select">
             <option value="real" {{if eq .EchoFromName "real"}}selected{{end}}>{{t $.Locale "admin_conferences.echo_from.real"}}</option>
             <option value="alias" {{if eq .EchoFromName "alias"}}selected{{end}}>{{t $.Locale "admin_conferences.echo_from.alias"}}</option>
             <option value="anonymous" {{if eq .EchoFromName "anonymous"}}selected{{end}}>{{t $.Locale "admin_conferences.echo_from.anonymous"}}</option>
@@ -29,35 +28,35 @@
         <form method="post" action="/admin/conferences" class="inline-form">
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="id" value="{{.ID}}">
-          <button type="submit" class="btn-link" onclick="return confirm('{{t $.Locale "admin_conferences.confirm_delete"}}')">{{t $.Locale "common.delete"}}</button>
+          <button type="submit" class="btn btn-link" onclick="return confirm('{{t $.Locale "admin_conferences.confirm_delete"}}')">{{t $.Locale "common.delete"}}</button>
         </form>
       </td>
     </tr>
     {{end}}
     </tbody>
-  </table>
+  </table></div>
   <h3>{{t .Locale "admin_conferences.create_section"}}</h3>
   <form method="post" action="/admin/conferences" class="admin-form">
     <input type="hidden" name="action" value="create">
-    <label>{{t .Locale "common.name"}} <input name="name" required></label>
-    <label>{{t .Locale "common.description"}} <input name="description"></label>
-    <label><input type="checkbox" name="public" value="1" checked> {{t .Locale "common.public"}}</label>
-    <label>{{t .Locale "common.read_sec"}} <input type="number" name="read_sec" value="10"></label>
-    <label>{{t .Locale "common.write_sec"}} <input type="number" name="write_sec" value="10"></label>
-    <label>{{t .Locale "common.sysop_sec"}} <input type="number" name="sysop_sec" value="110"></label>
-    <label><input type="checkbox" name="echo" value="1"> {{t .Locale "admin_conferences.echo_area"}}</label>
-    <label>{{t .Locale "admin_conferences.echo_tag"}} <input name="echo_tag"></label>
-    <label>{{t .Locale "admin_conferences.echo_from_name"}}
-      <select name="echo_from_name">
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.name"}} <input class="form-control" name="name" required></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.description"}} <input class="form-control" name="description"></label>
+    <div class="mb-3"><label class="form-label"><input type="checkbox" name="public" value="1" checked> {{t .Locale "common.public"}}</label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.read_sec"}} <input type="number" name="read_sec" value="10" class="form-control"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.write_sec"}} <input type="number" name="write_sec" value="10" class="form-control"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.sysop_sec"}} <input type="number" name="sysop_sec" value="110" class="form-control"></label>
+    <div class="mb-3"><label class="form-label"><input type="checkbox" name="echo" value="1"> {{t .Locale "admin_conferences.echo_area"}}</label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_conferences.echo_tag"}} <input class="form-control" name="echo_tag"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_conferences.echo_from_name"}}
+      <select name="echo_from_name" class="form-select">
         <option value="real" selected>{{t .Locale "admin_conferences.echo_from.real"}}</option>
         <option value="alias">{{t .Locale "admin_conferences.echo_from.alias"}}</option>
         <option value="anonymous">{{t .Locale "admin_conferences.echo_from.anonymous"}}</option>
       </select>
     </label>
-    <label>{{t .Locale "common.uplink_addr"}} <input name="uplink_addr"></label>
-    <label>{{t .Locale "common.network"}} <select name="network"><option value="">{{t .Locale "common.primary"}}</option>{{range .Networks}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
-    <button type="submit">{{t .Locale "admin_conferences.create_btn"}}</button>
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.uplink_addr"}} <input class="form-control" name="uplink_addr"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.network"}} <select name="network" class="form-select"><option value="">{{t .Locale "common.primary"}}</option>{{range .Networks}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
+    <button type="submit" class="btn btn-primary">{{t .Locale "admin_conferences.create_btn"}}</button>
   </form>
-</div>
+</div></div>
 {{template "footer" .}}
 {{end}}

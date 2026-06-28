@@ -1,37 +1,36 @@
 {{define "admin_config.html"}}
 {{template "header" .}}
-<div class="panel sysop-panel">
-  <h2>{{t .Locale "admin_config.title"}}</h2>
+<div class="card mb-3 sysop-panel"><div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_config.title"}}</h2></div><div class="card-body">
   <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
-  {{if .Flash}}<p class="flash">{{.Flash}}</p>{{end}}
-  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  {{if .Flash}}<div class="alert alert-success py-2">{{.Flash}}</div>{{end}}
+  {{if .Error}}<div class="alert alert-danger py-2">{{.Error}}</div>{{end}}
   <form method="post" action="/admin/config" class="admin-form">
     <h3>{{t .Locale "admin_config.section_bbs"}}</h3>
-    <label>{{t .Locale "common.name"}} <input name="bbs_name" value="{{.Config.BBS.Name}}"></label>
-    <label>{{t .Locale "admin_config.max_nodes"}} <input type="number" name="max_nodes" value="{{.Config.BBS.MaxNodes}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "common.name"}} <input class="form-control" name="bbs_name" value="{{.Config.BBS.Name}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.max_nodes"}} <input type="number" name="max_nodes" value="{{.Config.BBS.MaxNodes}}" class="form-control"></label>
     <h3>{{t .Locale "admin_config.section_ports"}}</h3>
-    <label>{{t .Locale "admin_config.telnet"}} <input type="number" name="telnet_port" value="{{.Config.Network.TelnetPort}}"></label>
-    <label>{{t .Locale "admin_config.ssh"}} <input type="number" name="ssh_port" value="{{.Config.Network.SSHPort}}"></label>
-    <label>{{t .Locale "admin_config.api_port"}} <input type="number" name="api_port" value="{{.Config.Network.APIPort}}"></label>
-    <label>{{t .Locale "admin_config.api_bind"}} <input name="api_bind" value="{{.Config.Network.APIBind}}"></label>
-    <label>{{t .Locale "admin_config.userapi_port"}} <input type="number" name="userapi_port" value="{{.Config.Network.UserAPIPort}}"></label>
-    <label>{{t .Locale "admin_config.userapi_bind"}} <input name="userapi_bind" value="{{.Config.Network.UserAPIBind}}"></label>
-    <label>{{t .Locale "admin_config.web_port"}} <input type="number" name="web_port" value="{{.Config.Network.WebPort}}"></label>
-    <label>{{t .Locale "admin_config.web_bind"}} <input name="web_bind" value="{{.Config.Network.WebBind}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.telnet"}} <input type="number" name="telnet_port" value="{{.Config.Network.TelnetPort}}" class="form-control"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.ssh"}} <input type="number" name="ssh_port" value="{{.Config.Network.SSHPort}}" class="form-control"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.api_port"}} <input type="number" name="api_port" value="{{.Config.Network.APIPort}}" class="form-control"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.api_bind"}} <input class="form-control" name="api_bind" value="{{.Config.Network.APIBind}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.userapi_port"}} <input type="number" name="userapi_port" value="{{.Config.Network.UserAPIPort}}" class="form-control"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.userapi_bind"}} <input class="form-control" name="userapi_bind" value="{{.Config.Network.UserAPIBind}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.web_port"}} <input type="number" name="web_port" value="{{.Config.Network.WebPort}}" class="form-control"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.web_bind"}} <input class="form-control" name="web_bind" value="{{.Config.Network.WebBind}}"></label>
     <h3>{{t .Locale "admin_config.section_paths"}}</h3>
-    <label>{{t .Locale "admin_config.database"}} <input name="db_path" value="{{.Config.Paths.DB}}"></label>
-    <label>{{t .Locale "admin_config.files"}} <input name="files_path" value="{{.Config.Paths.Files}}"></label>
-    <label>{{t .Locale "admin_config.logs"}} <input name="logs_path" value="{{.Config.Paths.Logs}}"></label>
-    <label>{{t .Locale "admin_config.www"}} <input name="www_path" value="{{.Config.Paths.WWW}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.database"}} <input class="form-control" name="db_path" value="{{.Config.Paths.DB}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.files"}} <input class="form-control" name="files_path" value="{{.Config.Paths.Files}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.logs"}} <input class="form-control" name="logs_path" value="{{.Config.Paths.Logs}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.www"}} <input class="form-control" name="www_path" value="{{.Config.Paths.WWW}}"></label>
     <h3>{{t .Locale "admin_config.section_session"}}</h3>
-    <label>{{t .Locale "admin_config.time_per_call"}} <input type="number" name="time_per_call_mins" value="{{.Config.Session.TimePerCallMins}}"></label>
-    <label>{{t .Locale "admin_config.idle_timeout"}} <input type="number" name="idle_timeout_mins" value="{{.Config.Session.IdleTimeoutMins}}"></label>
-    <label>{{t .Locale "admin_config.new_user_security"}} <input type="number" name="new_user_security" value="{{.Config.Session.NewUserSecurity}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.time_per_call"}} <input type="number" name="time_per_call_mins" value="{{.Config.Session.TimePerCallMins}}" class="form-control"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.idle_timeout"}} <input type="number" name="idle_timeout_mins" value="{{.Config.Session.IdleTimeoutMins}}" class="form-control"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.new_user_security"}} <input type="number" name="new_user_security" value="{{.Config.Session.NewUserSecurity}}" class="form-control"></label>
     <h3>{{t .Locale "admin_config.section_sysop"}}</h3>
-    <label>{{t .Locale "admin_config.sysop_name"}} <input name="sysop_name" value="{{.Config.Sysop.Name}}"></label>
+    <div class="mb-3"><label class="form-label">{{t .Locale "admin_config.sysop_name"}} <input class="form-control" name="sysop_name" value="{{.Config.Sysop.Name}}"></label>
     <p class="meta">{{t .Locale "admin_config.restart_note"}}</p>
-    <button type="submit">{{t .Locale "admin_config.save"}}</button>
+    <button type="submit" class="btn btn-primary">{{t .Locale "admin_config.save"}}</button>
   </form>
-</div>
+</div></div>
 {{template "footer" .}}
 {{end}}

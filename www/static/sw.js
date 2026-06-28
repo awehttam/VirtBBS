@@ -1,6 +1,6 @@
 /* VirtBBS Web — minimal offline shell (static assets only). */
 var CACHE = 'virtbbs-web-v1';
-var ASSETS = ['/static/style.css', '/static/notify.js', '/static/icon.svg'];
+var ASSETS = ['/static/bootstrap.min.css', '/static/style.css', '/static/jquery.min.js', '/static/bootstrap.bundle.min.js', '/static/nav.js', '/static/notify.js', '/static/icon.svg'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(
