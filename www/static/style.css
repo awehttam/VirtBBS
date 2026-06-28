@@ -314,6 +314,7 @@ body.virtbbs-body {
   border: 1px solid var(--virtbbs-border);
   overflow-x: auto;
   line-height: 1.35;
+  white-space: pre-wrap;
 }
 
 .ansi-bold { font-weight: bold; }

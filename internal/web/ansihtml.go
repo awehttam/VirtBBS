@@ -18,14 +18,14 @@ func ansiToHTML(raw string) string {
 	s = strings.ReplaceAll(s, "\r", "\n")
 
 	var out strings.Builder
-	classes := ""
+	var state sgrState
 	flush := func(text string) {
 		if text == "" {
 			return
 		}
 		escaped := html.EscapeString(text)
 		escaped = strings.ReplaceAll(escaped, "\n", "<br>")
-		if classes != "" {
+		if classes := state.classes(); classes != "" {
 			out.WriteString(`<span class="`)
 			out.WriteString(classes)
 			out.WriteString(`">`)
@@ -42,56 +42,75 @@ func ansiToHTML(raw string) string {
 		if m[0] > pos {
 			flush(s[pos:m[0]])
 		}
-		code := s[m[2]:m[3]]
-		classes = ansiClasses(code)
+		state.apply(s[m[2]:m[3]])
 		pos = m[1]
 	}
 	flush(s[pos:])
 	return out.String()
 }
 
-func ansiClasses(code string) string {
-	if code == "" || code == "0" {
-		return ""
-	}
+type sgrState struct {
+	bold bool
+	fg   string
+}
+
+func (s *sgrState) classes() string {
 	var classes []string
+	if s.bold {
+		classes = append(classes, "ansi-bold")
+	}
+	if s.fg != "" {
+		classes = append(classes, s.fg)
+	}
+	return strings.Join(classes, " ")
+}
+
+func (s *sgrState) apply(code string) {
+	if code == "" || code == "0" {
+		s.bold = false
+		s.fg = ""
+		return
+	}
 	for _, part := range strings.Split(code, ";") {
 		switch part {
 		case "1":
-			classes = append(classes, "ansi-bold")
+			s.bold = true
+		case "22":
+			s.bold = false
 		case "30":
-			classes = append(classes, "ansi-fg-black")
+			s.fg = "ansi-fg-black"
 		case "31":
-			classes = append(classes, "ansi-fg-red")
+			s.fg = "ansi-fg-red"
 		case "32":
-			classes = append(classes, "ansi-fg-green")
+			s.fg = "ansi-fg-green"
 		case "33":
-			classes = append(classes, "ansi-fg-yellow")
+			s.fg = "ansi-fg-yellow"
 		case "34":
-			classes = append(classes, "ansi-fg-blue")
+			s.fg = "ansi-fg-blue"
 		case "35":
-			classes = append(classes, "ansi-fg-magenta")
+			s.fg = "ansi-fg-magenta"
 		case "36":
-			classes = append(classes, "ansi-fg-cyan")
+			s.fg = "ansi-fg-cyan"
 		case "37":
-			classes = append(classes, "ansi-fg-white")
+			s.fg = "ansi-fg-white"
+		case "39":
+			s.fg = ""
 		case "90":
-			classes = append(classes, "ansi-fg-bright-black")
+			s.fg = "ansi-fg-bright-black"
 		case "91":
-			classes = append(classes, "ansi-fg-bright-red")
+			s.fg = "ansi-fg-bright-red"
 		case "92":
-			classes = append(classes, "ansi-fg-bright-green")
+			s.fg = "ansi-fg-bright-green"
 		case "93":
-			classes = append(classes, "ansi-fg-bright-yellow")
+			s.fg = "ansi-fg-bright-yellow"
 		case "94":
-			classes = append(classes, "ansi-fg-bright-blue")
+			s.fg = "ansi-fg-bright-blue"
 		case "95":
-			classes = append(classes, "ansi-fg-bright-magenta")
+			s.fg = "ansi-fg-bright-magenta"
 		case "96":
-			classes = append(classes, "ansi-fg-bright-cyan")
+			s.fg = "ansi-fg-bright-cyan"
 		case "97":
-			classes = append(classes, "ansi-fg-bright-white")
+			s.fg = "ansi-fg-bright-white"
 		}
 	}
-	return strings.Join(classes, " ")
 }

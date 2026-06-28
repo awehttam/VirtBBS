@@ -126,7 +126,11 @@ func (s *Server) handleAdminMessages(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		if r.FormValue("action") == "delete" {
 			id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
-			_ = s.Deps.Messages.Delete(id)
+			if confID, err := s.Deps.Messages.Delete(id); err == nil && confID != 0 {
+				if high, err := s.Deps.Messages.HighMsgNumber(confID); err == nil {
+					_ = s.Deps.Users.ClampLastReadForConference(confID, high)
+				}
+			}
 		}
 		confID := r.FormValue("conf")
 		http.Redirect(w, r, "/admin/messages?conf="+confID, http.StatusSeeOther)

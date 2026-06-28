@@ -129,11 +129,17 @@ func (s *Server) buildConferenceListRows(u *users.User, confs []*conferences.Con
 	lastMap := s.Deps.Users.LastReadMap(u.ID)
 	rows := make([]ConferenceListRow, 0, len(confs))
 	for _, c := range confs {
+		total := highMap[c.ID]
+		lastRead := lastMap[c.ID]
+		if lastRead > total {
+			_ = s.Deps.Users.SetLastRead(u.ID, c.ID, total)
+			lastRead = total
+		}
 		rows = append(rows, ConferenceListRow{
 			Conference: c,
-			Total:      highMap[c.ID],
+			Total:      total,
 			Unread:     unread[c.ID],
-			LastRead:   lastMap[c.ID],
+			LastRead:   lastRead,
 		})
 	}
 	return rows

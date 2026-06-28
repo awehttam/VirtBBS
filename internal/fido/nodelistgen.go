@@ -85,7 +85,7 @@ func GenerateNodelist(db *sql.DB, nd *NetworkDef, hubBBSName, hubSysopName strin
 // network so web/API nodelist search sees every VirtNet member (and each
 // net's Host at zone:net/0 per FTS-0005).
 func RebuildHubNodelistDB(db *sql.DB, nd *NetworkDef, hubBBSName, hubSysopName string) error {
-	if !nd.IsHub() {
+	if !nd.UsesMemberNodelist() {
 		return nil
 	}
 	mdb := OpenMembersDB(db)

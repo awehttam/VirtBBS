@@ -189,6 +189,17 @@ type PollAndTossResult struct {
 // the "fido.poll" management API, and the automatic scheduler, so all three
 // behave identically.
 func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string) *PollAndTossResult {
+	if store != nil {
+		if qr := ScanNetmailQueue(nd, store.DB()); qr != nil {
+			for _, e := range qr.Errors {
+				LogBinkp(fmt.Sprintf("netmail queue [%s]: %s", nd.Name, e))
+			}
+			if qr.Exported > 0 {
+				LogBinkp(fmt.Sprintf("netmail queue [%s]: exported %d message(s) to outbound", nd.Name, qr.Exported))
+			}
+		}
+	}
+
 	uplink := nd.UplinkAddr()
 	outFiles := binkpOutboundFilesFor(nd, nil, uplink)
 

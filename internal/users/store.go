@@ -375,45 +375,43 @@ func (s *Store) ListRegistered(userID int64) (map[int]bool, error) {
 	return out, rows.Err()
 }
 
-// NewMessageCounts returns, for each conference the user has a record in,
-// the count of messages with msg_number > last_msg_read.
-// Also returns any conference with new messages even if no user_conference record exists,
-// using 0 as the baseline.
+// ClampLastReadForConference lowers last_msg_read for all users when it exceeds
+// the current active high message number (e.g. after deletions).
+func (s *Store) ClampLastReadForConference(conferenceID, maxActiveMsg int) error {
+	_, err := s.db.Exec(`
+		UPDATE user_conferences SET last_msg_read=?
+		WHERE conference_id=? AND last_msg_read > ?`,
+		maxActiveMsg, conferenceID, maxActiveMsg)
+	return err
+}
+
+// NewMessageCounts returns the count of active messages with msg_number greater
+// than the user's last_msg_read for each conference.
 // Map: conferenceID → count of new messages.
 func (s *Store) NewMessageCounts(userID int64) (map[int]int, error) {
-	// Get last_msg_read per conference for this user.
-	rows, err := s.db.Query(
-		`SELECT conference_id, last_msg_read FROM user_conferences WHERE user_id=?`, userID)
+	rows, err := s.db.Query(`
+		SELECT m.conference_id, COUNT(*)
+		FROM messages m
+		LEFT JOIN user_conferences uc
+			ON uc.conference_id = m.conference_id AND uc.user_id = ?
+		WHERE m.status != 'D'
+		  AND m.msg_number > COALESCE(uc.last_msg_read, 0)
+		GROUP BY m.conference_id`, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	lastRead := map[int]int{}
-	for rows.Next() {
-		var cid, last int
-		if err := rows.Scan(&cid, &last); err == nil {
-			lastRead[cid] = last
-		}
-	}
-
-	// Count new messages per conference.
-	msgRows, err := s.db.Query(
-		`SELECT conference_id, MAX(msg_number) FROM messages WHERE status!='D' GROUP BY conference_id`)
-	if err != nil {
-		return nil, err
-	}
-	defer msgRows.Close()
 	counts := map[int]int{}
-	for msgRows.Next() {
-		var cid, high int
-		if err := msgRows.Scan(&cid, &high); err == nil {
-			baseline := lastRead[cid] // 0 if no record
-			if high > baseline {
-				counts[cid] = high - baseline
-			}
+	for rows.Next() {
+		var cid, n int
+		if err := rows.Scan(&cid, &n); err != nil {
+			return nil, err
+		}
+		if n > 0 {
+			counts[cid] = n
 		}
 	}
-	return counts, nil
+	return counts, rows.Err()
 }
 
 func boolInt(b bool) int {

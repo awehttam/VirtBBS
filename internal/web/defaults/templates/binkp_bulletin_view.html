@@ -1,0 +1,193 @@
+{{define "binkp_bulletin_view.html"}}
+{{template "header" .}}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h5 mb-0">{{.Title}}</h2></div>
+  <div class="card-body">
+  <p><a href="/bulletins">{{t .Locale "common.bulletins_back"}}</a></p>
+  {{if .Subtitle}}<p class="meta mb-3">{{.Subtitle}}</p>{{end}}
+
+  {{if not .NetworkViews}}
+  <p class="meta">{{t .Locale "admin_binkp.no_activity"}}</p>
+  {{else}}
+  {{range .NetworkViews}}
+  <div class="card mb-4 binkp-net-card">
+    <div class="card-header"><h3 class="h6 mb-0">{{.Network}}</h3></div>
+    <div class="card-body">
+      <div class="stat-grid">
+        <div class="stat-row">
+          <span class="stat-label">{{t $.Locale "admin_binkp.stat.outbound_polls"}}</span>
+          <span class="stat-value"><span class="stat-num">{{.Stats.PollClientOK}}</span> {{t $.Locale "admin_binkp.ok"}} / <span class="stat-num">{{.Stats.PollClientFail}}</span> {{t $.Locale "admin_binkp.fail"}}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">{{t $.Locale "admin_binkp.stat.outbound_files"}}</span>
+          <span class="stat-value"><span class="stat-num">{{.Stats.PollClientFilesSent}}</span> {{t $.Locale "admin_binkp.sent"}} / <span class="stat-num">{{.Stats.PollClientFilesRecv}}</span> {{t $.Locale "admin_binkp.recv"}}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">{{t $.Locale "admin_binkp.stat.inbound_uplink"}}</span>
+          <span class="stat-value"><span class="stat-num">{{.Stats.PollServerUplinkOK}}</span> {{t $.Locale "admin_binkp.ok"}} / <span class="stat-num">{{.Stats.PollServerUplinkFail}}</span> {{t $.Locale "admin_binkp.fail"}}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">{{t $.Locale "admin_binkp.stat.uplink_files"}}</span>
+          <span class="stat-value"><span class="stat-num">{{.Stats.PollServerUplinkSent}}</span> {{t $.Locale "admin_binkp.sent"}} / <span class="stat-num">{{.Stats.PollServerUplinkRecv}}</span> {{t $.Locale "admin_binkp.recv"}}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">{{t $.Locale "admin_binkp.stat.inbound_downlink"}}</span>
+          <span class="stat-value"><span class="stat-num">{{.Stats.PollServerDownlinkOK}}</span> {{t $.Locale "admin_binkp.ok"}} / <span class="stat-num">{{.Stats.PollServerDownlinkFail}}</span> {{t $.Locale "admin_binkp.fail"}}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">{{t $.Locale "admin_binkp.stat.downlink_files"}}</span>
+          <span class="stat-value"><span class="stat-num">{{.Stats.PollServerDownlinkSent}}</span> {{t $.Locale "admin_binkp.sent"}} / <span class="stat-num">{{.Stats.PollServerDownlinkRecv}}</span> {{t $.Locale "admin_binkp.recv"}}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">{{t $.Locale "admin_binkp.stat.netmail"}}</span>
+          <span class="stat-value"><span class="stat-num">{{.Stats.NetmailRecv}}</span> {{t $.Locale "admin_binkp.recv"}} / <span class="stat-num">{{.Stats.NetmailSent}}</span> {{t $.Locale "admin_binkp.sent"}}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">{{t $.Locale "admin_binkp.stat.echomail"}}</span>
+          <span class="stat-value"><span class="stat-num">{{.Stats.EchomailRecv}}</span> {{t $.Locale "admin_binkp.recv"}} / <span class="stat-num">{{.Stats.EchomailSent}}</span> {{t $.Locale "admin_binkp.sent"}}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">{{t $.Locale "admin_binkp.stat.toss"}}</span>
+          <span class="stat-value"><span class="stat-num">{{.Stats.TossImported}}</span> {{t $.Locale "admin_binkp.imported"}} / <span class="stat-num">{{.Stats.TossSkipped}}</span> {{t $.Locale "admin_binkp.skipped"}} / <span class="stat-num">{{.Stats.TossHeld}}</span> {{t $.Locale "admin_binkp.held"}}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">{{t $.Locale "admin_binkp.stat.packets"}}</span>
+          <span class="stat-value"><span class="stat-num">{{.Stats.TossPackets}}</span></span>
+        </div>
+        {{if gt .Stats.SessionErrors 0}}
+        <div class="stat-row">
+          <span class="stat-label">{{t $.Locale "admin_binkp.stat.errors"}}</span>
+          <span class="stat-value text-warning"><span class="stat-num">{{.Stats.SessionErrors}}</span></span>
+        </div>
+        {{end}}
+      </div>
+
+      {{if .Links}}
+      <h4 class="h6 section-head">{{t $.Locale "admin_binkp.link_detail"}}</h4>
+      <div class="table-responsive">
+      <table class="table table-dark table-sm table-striped align-middle mb-0 binkp-link-table">
+        <thead>
+          <tr>
+            <th>{{t $.Locale "admin_binkp.col.link"}}</th>
+            <th>{{t $.Locale "admin_binkp.col.peer"}}</th>
+            <th class="text-end">{{t $.Locale "admin_binkp.col.polls"}}</th>
+            <th class="text-end">{{t $.Locale "admin_binkp.col.files"}}</th>
+            <th class="text-end">{{t $.Locale "admin_binkp.col.netmail"}}</th>
+            <th class="text-end">{{t $.Locale "admin_binkp.col.echomail"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+        {{range .Links}}
+        <tr>
+          <td>{{.LinkType}}</td>
+          <td>{{.PeerKey}}</td>
+          <td class="text-end stat-num">{{.PollOK}} / {{.PollFail}}</td>
+          <td class="text-end stat-num">{{.FilesSent}} / {{.FilesRecv}}</td>
+          <td class="text-end stat-num">{{.NetmailSent}} / {{.NetmailRecv}}</td>
+          <td class="text-end stat-num">{{.EchomailSent}} / {{.EchomailRecv}}</td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table>
+      </div>
+      {{end}}
+
+      {{if .ChartJSON}}
+      <h4 class="h6 section-head">{{t $.Locale "admin_binkp.charts"}}</h4>
+      <div class="row g-3">
+        <div class="col-12 col-lg-6">
+          <h5 class="small text-muted">{{t $.Locale "admin_binkp.chart.polls"}}</h5>
+          <div class="stats-chart-wrap"><canvas id="chart-polls-{{.ChartID}}"></canvas></div>
+        </div>
+        <div class="col-12 col-lg-6">
+          <h5 class="small text-muted">{{t $.Locale "admin_binkp.chart.files"}}</h5>
+          <div class="stats-chart-wrap"><canvas id="chart-files-{{.ChartID}}"></canvas></div>
+        </div>
+        <div class="col-12 col-lg-6">
+          <h5 class="small text-muted">{{t $.Locale "admin_binkp.chart.mail"}}</h5>
+          <div class="stats-chart-wrap"><canvas id="chart-mail-{{.ChartID}}"></canvas></div>
+        </div>
+        <div class="col-12 col-lg-6">
+          <h5 class="small text-muted">{{t $.Locale "admin_binkp.chart.toss"}}</h5>
+          <div class="stats-chart-wrap"><canvas id="chart-toss-{{.ChartID}}"></canvas></div>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+  {{end}}
+
+  <p class="meta mb-0">Generated {{.GeneratedAt}}</p>
+  </div>
+</div>
+
+{{if .NetworkViews}}
+<script src="/static/chart.umd.min.js"></script>
+<script>
+(function () {
+  if (typeof Chart === 'undefined') return;
+  var gridColor = 'rgba(255,255,255,0.08)';
+  var tickColor = 'rgba(255,255,255,0.65)';
+  function barChart(id, labels, datasets) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    new Chart(el, {
+      type: 'bar',
+      data: { labels: labels, datasets: datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: tickColor } } },
+        scales: {
+          x: { stacked: false, ticks: { color: tickColor, maxRotation: 45, autoSkip: true, maxTicksLimit: 10 }, grid: { color: gridColor } },
+          y: { beginAtZero: true, ticks: { color: tickColor, precision: 0 }, grid: { color: gridColor } }
+        }
+      }
+    });
+  }
+  function lineChart(id, labels, datasets) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    new Chart(el, {
+      type: 'line',
+      data: { labels: labels, datasets: datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: tickColor } } },
+        scales: {
+          x: { ticks: { color: tickColor, maxRotation: 45, autoSkip: true, maxTicksLimit: 10 }, grid: { color: gridColor } },
+          y: { beginAtZero: true, ticks: { color: tickColor, precision: 0 }, grid: { color: gridColor } }
+        }
+      }
+    });
+  }
+  {{range .NetworkViews}}{{if .ChartJSON}}
+  (function () {
+    var data = {{.ChartJSON}};
+    var id = '{{.ChartID}}';
+    barChart('chart-polls-' + id, data.labels, [
+      { label: 'OK', data: data.datasets.pollsOK, backgroundColor: 'rgba(72, 187, 120, 0.7)' },
+      { label: 'Fail', data: data.datasets.pollsFail, backgroundColor: 'rgba(245, 101, 101, 0.7)' }
+    ]);
+    lineChart('chart-files-' + id, data.labels, [
+      { label: 'Sent', data: data.datasets.filesSent, borderColor: 'rgba(99, 179, 237, 1)', tension: 0.25 },
+      { label: 'Recv', data: data.datasets.filesRecv, borderColor: 'rgba(129, 230, 217, 1)', tension: 0.25 }
+    ]);
+    lineChart('chart-mail-' + id, data.labels, [
+      { label: 'Netmail sent', data: data.datasets.netmailSent, borderColor: 'rgba(246, 173, 85, 1)', tension: 0.25 },
+      { label: 'Netmail recv', data: data.datasets.netmailRecv, borderColor: 'rgba(237, 137, 54, 1)', tension: 0.25 },
+      { label: 'Echo sent', data: data.datasets.echomailSent, borderColor: 'rgba(183, 148, 244, 1)', tension: 0.25 },
+      { label: 'Echo recv', data: data.datasets.echomailRecv, borderColor: 'rgba(159, 122, 234, 1)', tension: 0.25 }
+    ]);
+    lineChart('chart-toss-' + id, data.labels, [
+      { label: 'Imported', data: data.datasets.tossImported, borderColor: 'rgba(252, 211, 77, 1)', fill: true, backgroundColor: 'rgba(252, 211, 77, 0.15)', tension: 0.25 }
+    ]);
+  })();
+  {{end}}{{end}}
+})();
+</script>
+{{end}}
+{{template "footer" .}}
+{{end}}

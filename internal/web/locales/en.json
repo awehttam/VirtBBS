@@ -284,6 +284,8 @@
   "netmail.app.from": "From %s · #%d",
   "netmail.app.queued": "Queued for next poll.",
   "netmail.app.send_failed": "Send failed.",
+  "netmail.app.load_failed": "Could not load netmail.",
+  "netmail.app.crash": "Crash (send direct)",
   "files.title": "File Areas",
   "files.empty": "No file areas available.",
   "files_browse.col.downloads": "Downloads",

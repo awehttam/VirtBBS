@@ -28,7 +28,7 @@ type nodeDetailJSON struct {
 
 func (s *Server) maybeRebuildHubNodelist(network string) error {
 	nd, err := networkDefByName(network)
-	if err != nil || !nd.IsHub() {
+	if err != nil || !nd.UsesMemberNodelist() {
 		return err
 	}
 	cfg := config.Get()

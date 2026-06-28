@@ -164,6 +164,10 @@ func (s *Server) handleBulletinView(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/bulletins", http.StatusSeeOther)
 		return
 	}
+	if name == "BINKPDAY" || name == "BINKPALL" {
+		s.renderBinkpStatsBulletin(w, r, name)
+		return
+	}
 	html, err := s.renderDisplayHTML(name, u)
 	if err != nil {
 		http.Error(w, "bulletin not found", http.StatusNotFound)
@@ -598,14 +602,11 @@ func (s *Server) handleNodelist(w http.ResponseWriter, r *http.Request) {
 	}
 	var results *fido.SearchResult
 	if network != "" {
-		ndb := fido.OpenNodelistDB(s.Deps.Messages.DB())
-		if nd, err := networkDefByName(network); err == nil && nd.IsHub() {
-			cfg := config.Get()
-			if err := fido.RebuildHubNodelistDB(s.Deps.Messages.DB(), nd, cfg.BBS.Name, cfg.Sysop.Name); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+		if err := s.maybeRebuildHubNodelist(network); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
+		ndb := fido.OpenNodelistDB(s.Deps.Messages.DB())
 		var err error
 		results, err = ndb.Search(network, query, page, 25)
 		if err != nil {
@@ -653,14 +654,11 @@ func (s *Server) handleNodelistExport(w http.ResponseWriter, r *http.Request) {
 	}
 	query := strings.TrimSpace(r.FormValue("q"))
 	scope := r.FormValue("scope")
-	ndb := fido.OpenNodelistDB(s.Deps.Messages.DB())
-	if nd, err := networkDefByName(network); err == nil && nd.IsHub() {
-		cfg := config.Get()
-		if err := fido.RebuildHubNodelistDB(s.Deps.Messages.DB(), nd, cfg.BBS.Name, cfg.Sysop.Name); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	if err := s.maybeRebuildHubNodelist(network); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	ndb := fido.OpenNodelistDB(s.Deps.Messages.DB())
 	var nodes []fido.NodeEntry
 	var err error
 	if scope == "all" {

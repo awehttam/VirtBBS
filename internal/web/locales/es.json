@@ -284,6 +284,8 @@
   "netmail.app.from": "De %s · #%d",
   "netmail.app.queued": "En cola para el próximo sondeo.",
   "netmail.app.send_failed": "Error al enviar.",
+  "netmail.app.load_failed": "No se pudo cargar el netmail.",
+  "netmail.app.crash": "Crash (envío directo)",
   "files.title": "Áreas de archivos",
   "files.empty": "No hay áreas de archivos disponibles.",
   "files_browse.col.downloads": "Descargas",

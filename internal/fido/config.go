@@ -509,6 +509,13 @@ func (n *NetworkDef) NodelistFetchEnabled() bool {
 	return n.EffectiveNodelistURL() != ""
 }
 
+// UsesMemberNodelist reports whether this hub network publishes its nodelist
+// from fido_members (VirtNet) rather than an imported FidoNet-style file.
+// Primary FidoNet always has automatic fetch enabled and must keep imported rows.
+func (n *NetworkDef) UsesMemberNodelist() bool {
+	return n.IsHub() && !n.NodelistFetchEnabled()
+}
+
 // DefaultNodelistEchoTag is used when NodelistEchoTag is left blank.
 const DefaultNodelistEchoTag = "VNET.NODELIST"
 

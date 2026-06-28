@@ -4,7 +4,7 @@
   if (!listEl || !paneEl) return;
 
   var i18nEl = document.getElementById('netmail-i18n');
-  var i18n = { empty: 'No netmail.', from: 'From %s · #%d', queued: 'Queued for next poll.', sendFailed: 'Send failed.' };
+  var i18n = { empty: 'No netmail.', from: 'From %s · #%d', queued: 'Queued for next poll.', sendFailed: 'Send failed.', loadFailed: 'Could not load netmail.' };
   if (i18nEl) {
     try { i18n = JSON.parse(i18nEl.textContent); } catch (e) {}
   }
@@ -22,9 +22,12 @@
 
   function loadList() {
     fetch('/api/netmail', { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok) throw new Error('load failed');
+        return r.json();
+      })
       .then(function (msgs) {
-        if (!msgs.length) {
+        if (!msgs || !msgs.length) {
           listEl.innerHTML = '<p class="meta">' + esc(i18n.empty) + '</p>';
           return;
         }
@@ -41,18 +44,27 @@
             loadMessage(a.getAttribute('data-num'));
           });
         });
+      })
+      .catch(function () {
+        listEl.innerHTML = '<p class="meta">' + esc(i18n.loadFailed) + '</p>';
       });
   }
 
   function loadMessage(num) {
     fetch('/api/netmail?num=' + encodeURIComponent(num), { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok) throw new Error('load failed');
+        return r.json();
+      })
       .then(function (m) {
         paneEl.innerHTML = '<h3>' + esc(m.Subject) + '</h3>' +
           '<p class="meta">' + esc(formatFrom(m.FromName, m.MsgNumber)) +
           (m.LangLabel ? ' <span class="badge bg-secondary">' + esc(m.LangLabel) + '</span>' : '') +
           '</p>' +
           '<div class="msg-body">' + esc(m.DisplayBody || m.Body) + '</div>';
+      })
+      .catch(function () {
+        paneEl.innerHTML = '<p class="meta">' + esc(i18n.loadFailed) + '</p>';
       });
   }
 
@@ -69,7 +81,8 @@
           to_name: document.getElementById('nm-to-name').value,
           to_addr: document.getElementById('nm-to-addr').value,
           subject: document.getElementById('nm-subject').value,
-          body: document.getElementById('nm-body').value
+          body: document.getElementById('nm-body').value,
+          crash: document.getElementById('nm-crash').checked
         })
       }).then(function (r) {
         if (!r.ok) throw new Error('send failed');

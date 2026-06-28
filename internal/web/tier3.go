@@ -10,6 +10,7 @@ import (
 
 	"github.com/virtbbs/virtbbs/internal/config"
 	"github.com/virtbbs/virtbbs/internal/fido"
+	"github.com/virtbbs/virtbbs/internal/messages"
 	"github.com/virtbbs/virtbbs/internal/node"
 	"github.com/virtbbs/virtbbs/internal/users"
 )
@@ -178,6 +179,9 @@ func (s *Server) handleAPINetmail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if msgs == nil {
+		msgs = []*messages.Message{}
+	}
 	_ = json.NewEncoder(w).Encode(msgs)
 }
 
@@ -197,6 +201,7 @@ func (s *Server) handleAPINetmailCompose(w http.ResponseWriter, r *http.Request)
 		Subject string `json:"subject"`
 		Body    string `json:"body"`
 		Network string `json:"network"`
+		Crash   bool   `json:"crash"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "bad json", http.StatusBadRequest)
@@ -224,6 +229,7 @@ func (s *Server) handleAPINetmailCompose(w http.ResponseWriter, r *http.Request)
 		ToAddr:     body.ToAddr,
 		Subject:    body.Subject,
 		Body:       body.Body,
+		Crash:      body.Crash,
 		AuthorLang: authorLangCode(u, r),
 	}
 	ndb := fido.OpenNetmailDB(s.Deps.Messages.DB())

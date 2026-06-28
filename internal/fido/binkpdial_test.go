@@ -19,6 +19,9 @@ func TestDialFromNodeFlags(t *testing.T) {
 		{"CM,IBN,INA:bbs.outpostbbs.net,ITN:60177", "bbs.outpostbbs.net", 60177},
 		{"CM,INA:ftsc.bnbbbs.net,IBN:24555", "ftsc.bnbbbs.net", 24555},
 		{"CM,IBN:24555,INA:phoenix.bnbbbs.net", "phoenix.bnbbbs.net", 24555},
+		{"CM,IBN:host.example.com", "host.example.com", 0},
+		{"CM,IBN:host.example.com:24556", "host.example.com", 24556},
+		{"CM,IBN:some.host.com,ITN:24555", "some.host.com", 24555},
 	}
 	for _, tc := range tests {
 		h, p := dialFromNodeFlags(tc.flags)
@@ -54,6 +57,34 @@ func TestResolveBinkpDialTarget_nodelist(t *testing.T) {
 	}
 	if host != "ferchobbs.ddns.net" || port != 24554 {
 		t.Fatalf("got (%q, %d), want (ferchobbs.ddns.net, 24554)", host, port)
+	}
+}
+
+func TestResolveBinkpDialTarget_zone2net277(t *testing.T) {
+	dir := t.TempDir()
+	sqlDB, err := db.Open(filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sqlDB.Close()
+
+	if _, err := messages.Open(sqlDB); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = sqlDB.Exec(`INSERT INTO fido_nodes
+		(network, zone, net, node_num, point, name, location, sysop, phone, baud, flags, node_type, is_active)
+		VALUES ('FidoNet', 2, 277, 1, 0, 'Example_Hub', 'Internet', 'Sysop', '', 300, 'CM,IBN:host.example.com', 'Node', 1)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	host, port, err := ResolveBinkpDialTarget("FidoNet", "2:277/1", 24554, sqlDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if host != "host.example.com" || port != 24554 {
+		t.Fatalf("got (%q, %d), want (host.example.com, 24554)", host, port)
 	}
 }
 

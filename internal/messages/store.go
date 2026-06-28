@@ -369,10 +369,13 @@ func (s *Store) Get(conferenceID, msgNumber int) (*Message, error) {
 	return scanMessage(row)
 }
 
-// Delete marks a message as deleted.
-func (s *Store) Delete(id int64) error {
-	_, err := s.db.Exec(`UPDATE messages SET status='D' WHERE id=?`, id)
-	return err
+// Delete marks a message as deleted and returns its conference ID.
+func (s *Store) Delete(id int64) (conferenceID int, err error) {
+	if err := s.db.QueryRow(`SELECT conference_id FROM messages WHERE id=?`, id).Scan(&conferenceID); err != nil {
+		return 0, err
+	}
+	_, err = s.db.Exec(`UPDATE messages SET status='D' WHERE id=?`, id)
+	return conferenceID, err
 }
 
 // ListEcho returns echo-flagged messages in a conference that have not yet
@@ -469,10 +472,10 @@ func (s *Store) Search(query string, limit int) ([]*Message, error) {
 	return scanMessages(rows)
 }
 
-// HighMsgNumber returns the highest message number in a conference.
+// HighMsgNumber returns the highest active (non-deleted) message number in a conference.
 func (s *Store) HighMsgNumber(conferenceID int) (int, error) {
 	var n int
-	err := s.db.QueryRow(`SELECT COALESCE(MAX(msg_number),0) FROM messages WHERE conference_id=?`, conferenceID).Scan(&n)
+	err := s.db.QueryRow(`SELECT COALESCE(MAX(msg_number),0) FROM messages WHERE conference_id=? AND status!='D'`, conferenceID).Scan(&n)
 	return n, err
 }
 

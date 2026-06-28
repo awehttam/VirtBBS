@@ -284,6 +284,8 @@
   "netmail.app.from": "Van %s · #%d",
   "netmail.app.queued": "In tou vir volgende poll.",
   "netmail.app.send_failed": "Stuur het misluk.",
+  "netmail.app.load_failed": "Kon nie netmail laai nie.",
+  "netmail.app.crash": "Crash (stuur direk)",
   "files.title": "Lêerareas",
   "files.empty": "Geen lêerareas beskikbaar nie.",
   "files_browse.col.downloads": "Aflaaie",

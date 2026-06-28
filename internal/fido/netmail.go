@@ -127,6 +127,55 @@ func (ndb *NetmailDB) MarkSent(id int64) error {
 	return err
 }
 
+// ScanNetmailResult summarises flushing the fido_netmail queue to outbound PKTs.
+type ScanNetmailResult struct {
+	Exported int
+	Errors   []string
+}
+
+// ScanNetmailQueue writes pending netmail for nd to outbound .PKT files so the
+// next BinkP poll can send them. Web and admin compose enqueue rows instead of
+// writing PKTs immediately (unlike the terminal compose path).
+func ScanNetmailQueue(nd *NetworkDef, db *sql.DB) *ScanNetmailResult {
+	result := &ScanNetmailResult{}
+	if nd == nil || db == nil {
+		return result
+	}
+	ndb := OpenNetmailDB(db)
+	msgs, ids, err := ndb.Pending()
+	if err != nil {
+		result.Errors = append(result.Errors, err.Error())
+		return result
+	}
+	origAddr := nd.NodeAddr()
+	if origAddr == (Addr{}) {
+		result.Errors = append(result.Errors, fmt.Sprintf("invalid node address %q", nd.Address))
+		return result
+	}
+	uplink := nd.UplinkAddr()
+	for i, m := range msgs {
+		if m.Network != nd.Name {
+			continue
+		}
+		nextHop, err := RouteAddr(db, m, nd)
+		if err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("id %d: %v", ids[i], err))
+			continue
+		}
+		outDir := OutboundDir(nd.OutboundDir, nextHop, uplink, m.Crash)
+		if _, err := WritePKT(origAddr, nextHop, nd.Password, outDir, []*NetmailMsg{m}, nd.Name); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("id %d: %v", ids[i], err))
+			continue
+		}
+		if err := ndb.MarkSent(ids[i]); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("id %d mark sent: %v", ids[i], err))
+			continue
+		}
+		result.Exported++
+	}
+	return result
+}
+
 // ─── PKT writer ──────────────────────────────────────────────────────────────
 
 // WritePKT writes a single FTS-0001 Type-2 PKT file containing the given
