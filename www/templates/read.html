@@ -10,7 +10,15 @@
   </p>
   <div class="msg-body">{{.Message.Body}}</div>
   {{if .CanWrite}}
-  <p><a class="btn" href="/messages/post?conf={{.Conference.ID}}&amp;reply={{.Message.MsgNumber}}">Reply</a></p>
+  <p>
+    <a class="btn" href="/messages/post?conf={{.Conference.ID}}&amp;reply={{.Message.MsgNumber}}">Reply</a>
+    <form method="post" action="/share/create" style="display:inline;margin-left:0.5rem">
+      <input type="hidden" name="kind" value="message">
+      <input type="hidden" name="conf" value="{{.Conference.ID}}">
+      <input type="hidden" name="num" value="{{.Message.MsgNumber}}">
+      <button type="submit" class="btn btn-sm">Share link</button>
+    </form>
+  </p>
   {{end}}
 </div>
 {{template "footer" .}}

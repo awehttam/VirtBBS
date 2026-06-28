@@ -1,0 +1,32 @@
+{{define "subscriptions.html"}}
+{{template "header" .}}
+<div class="panel">
+  <h2>Echo Subscriptions</h2>
+  <p>Subscribe to echomail areas to highlight them on your dashboard. Unsubscribed areas remain readable if you have access.</p>
+  {{if not .Rows}}
+  <p class="meta">No echomail conferences configured.</p>
+  {{else}}
+  <table>
+    <thead><tr><th>Area</th><th>Tag</th><th>Network</th><th>New</th><th></th></tr></thead>
+    <tbody>
+    {{range .Rows}}
+      <tr>
+        <td><a href="/messages?conf={{.Conference.ID}}">{{.Conference.Name}}</a></td>
+        <td>{{.Conference.EchoTag}}</td>
+        <td>{{if .Conference.Network}}{{.Conference.Network}}{{else}}—{{end}}</td>
+        <td>{{if .NewCount}}<span class="badge">{{.NewCount}}</span>{{else}}—{{end}}</td>
+        <td>
+          <form method="post" action="/subscriptions" style="display:inline">
+            <input type="hidden" name="conf" value="{{.Conference.ID}}">
+            <input type="hidden" name="subscribe" value="{{if .Subscribed}}0{{else}}1{{end}}">
+            <button type="submit" class="btn btn-sm">{{if .Subscribed}}Unsubscribe{{else}}Subscribe{{end}}</button>
+          </form>
+        </td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{end}}
+</div>
+{{template "footer" .}}
+{{end}}

@@ -1,0 +1,48 @@
+{{define "search.html"}}
+{{template "header" .}}
+<div class="panel">
+  <h2>Search</h2>
+  <form method="get" action="/search" class="search-form">
+    <input type="search" name="q" value="{{.Query}}" placeholder="Search messages and files…" autofocus>
+    <button type="submit" class="btn">Search</button>
+  </form>
+</div>
+{{if .Query}}
+<div class="panel">
+  <h2>Messages ({{len .Messages}})</h2>
+  {{if not .Messages}}<p class="meta">No message matches.</p>{{else}}
+  <table>
+    <thead><tr><th>Area</th><th>From</th><th>Subject</th><th>Date</th></tr></thead>
+    <tbody>
+    {{range .Messages}}
+      <tr>
+        <td>{{.Conference}}</td>
+        <td>{{.Message.FromName}}</td>
+        <td><a href="/messages/read?conf={{.Message.ConferenceID}}&amp;num={{.Message.MsgNumber}}">{{.Message.Subject}}</a></td>
+        <td>{{.Message.DatePosted.Format "2006-01-02"}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{end}}
+</div>
+<div class="panel">
+  <h2>Files ({{len .Files}})</h2>
+  {{if not .Files}}<p class="meta">No file matches.</p>{{else}}
+  <table>
+    <thead><tr><th>File</th><th>Description</th><th></th></tr></thead>
+    <tbody>
+    {{range .Files}}
+      <tr>
+        <td>{{.Filename}}</td>
+        <td>{{.Description}}</td>
+        <td><a href="/files/browse?dir={{.DirID}}">Browse area</a></td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{end}}
+</div>
+{{end}}
+{{template "footer" .}}
+{{end}}

@@ -1,0 +1,14 @@
+{{define "shared_message.html"}}
+{{template "header" .}}
+<div class="panel">
+  <p class="meta">Shared message · expires {{.Expires.Format "2006-01-02 15:04"}}</p>
+  <h2>{{.Message.Subject}}</h2>
+  <p class="meta">
+    From <strong>{{.Message.FromName}}</strong> in {{.Conference.Name}}
+    · {{.Message.DatePosted.Format "2006-01-02 15:04"}}
+  </p>
+  <div class="msg-body">{{.Message.Body}}</div>
+  <p><a href="/login">Log in to reply</a></p>
+</div>
+{{template "footer" .}}
+{{end}}

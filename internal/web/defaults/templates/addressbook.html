@@ -1,0 +1,46 @@
+{{define "addressbook.html"}}
+{{template "header" .}}
+<div class="panel">
+  <h2>{{t .Locale "addressbook.title"}}</h2>
+  <form method="get" action="/addressbook" class="search-form">
+    <input type="search" name="q" value="{{.Query}}" placeholder="Search contacts…">
+    <button type="submit" class="btn">Search</button>
+  </form>
+</div>
+<div class="panel">
+  <h2>Add contact</h2>
+  <form method="post" action="/addressbook">
+    <input type="hidden" name="action" value="add">
+    <label>Name</label><input type="text" name="name" required>
+    <label>Fido address</label><input type="text" name="fido_addr" placeholder="1:234/567">
+    <label>Email</label><input type="email" name="email">
+    <label>Notes</label><textarea name="notes" rows="2"></textarea>
+    <button type="submit" class="btn">Add</button>
+  </form>
+</div>
+<div class="panel">
+  <table>
+    <thead><tr><th>Name</th><th>Fido</th><th>Email</th><th>Notes</th><th></th></tr></thead>
+    <tbody>
+    {{range .Entries}}
+    <tr>
+      <td>{{.Name}}</td>
+      <td>{{.FidoAddr}}</td>
+      <td>{{.Email}}</td>
+      <td class="meta">{{.Notes}}</td>
+      <td>
+        <form method="post" action="/addressbook" style="display:inline">
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="id" value="{{.ID}}">
+          <button type="submit" class="btn-link">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5">No contacts.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "footer" .}}
+{{end}}

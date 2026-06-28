@@ -285,19 +285,8 @@ func (s *session) newUser() bool {
 		s.writeln(ansi.Colorize(ansi.Red, "\r\nPasswords do not match."))
 		return false
 	}
-	secLevel := config.Get().Session.NewUserSecurity
-	if secLevel <= 0 {
-		secLevel = 10
-	}
-	u := &users.User{
-		Name:          name,
-		City:          city,
-		SecurityLevel: secLevel,
-		PageLength:    24,
-		XferProtocol:  "Z",
-		ANSI:          true,
-	}
-	if err := s.deps.Users.Create(u, pass); err != nil {
+	u, err := s.deps.Users.RegisterNew(name, city, pass)
+	if err != nil {
 		s.writeln(ansi.Colorize(ansi.Red, "\r\nRegistration failed: "+err.Error()))
 		return false
 	}

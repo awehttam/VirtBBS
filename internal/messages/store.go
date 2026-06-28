@@ -419,6 +419,29 @@ func (s *Store) TotalCount() (int, error) {
 	return n, err
 }
 
+// Search finds messages whose subject, body, or from_name contains query
+// (case-insensitive), newest first.
+func (s *Store) Search(query string, limit int) ([]*Message, error) {
+	q := strings.TrimSpace(query)
+	if q == "" {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	like := "%" + strings.ToLower(q) + "%"
+	rows, err := s.db.Query(`
+		SELECT `+messageCols+`
+		FROM messages WHERE status!='D'
+		AND (lower(subject) LIKE ? OR lower(body) LIKE ? OR lower(from_name) LIKE ?)
+		ORDER BY date_posted DESC LIMIT ?`, like, like, like, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanMessages(rows)
+}
+
 // HighMsgNumber returns the highest message number in a conference.
 func (s *Store) HighMsgNumber(conferenceID int) (int, error) {
 	var n int

@@ -1,15 +1,32 @@
 {{define "login.html"}}
-{{template "header" .}}
+<!DOCTYPE html>
+<html lang="{{.Locale}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.BBSName}} — VirtBBS Web</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
 <div class="login-box panel">
-  <h2>Login — {{.BBSName}}</h2>
+  <h2>{{t .Locale "login.title"}} — {{.BBSName}}</h2>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form method="post" action="/login">
-    <label for="username">Username</label>
+    <label for="username">{{t .Locale "login.username"}}</label>
     <input type="text" id="username" name="username" required autofocus autocomplete="username">
-    <label for="password">Password</label>
+    <label for="password">{{t .Locale "login.password"}}</label>
     <input type="password" id="password" name="password" required autocomplete="current-password">
-    <button type="submit">Login</button>
+    <button type="submit">{{t .Locale "login.submit"}}</button>
+  </form>
+  <p class="meta" style="margin-top:1rem"><a href="/forgot-password">{{t .Locale "login.forgot"}}</a></p>
+  <p class="meta"><a href="/register">{{t .Locale "login.new_user"}}</a></p>
+  <form method="post" action="/set-locale" style="margin-top:1rem">
+    <select name="lang" onchange="this.form.submit()">
+      <option value="en" {{if eq .Locale "en"}}selected{{end}}>English</option>
+      <option value="es" {{if eq .Locale "es"}}selected{{end}}>Español</option>
+    </select>
   </form>
 </div>
-{{template "footer" .}}
+</body>
+</html>
 {{end}}

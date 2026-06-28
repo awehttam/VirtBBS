@@ -26,7 +26,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/menu", http.StatusSeeOther)
 		return
 	}
-	data := s.base(r)
+	data := s.page(r)
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {
 			data.Error = "Invalid form"
@@ -237,6 +237,7 @@ func (s *Server) handleMessageRead(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "message not found", http.StatusNotFound)
 		return
 	}
+	_ = s.Deps.Users.SetLastRead(u.ID, confID, msgNum)
 	data := struct {
 		pageData
 		Conference *conferences.Conference

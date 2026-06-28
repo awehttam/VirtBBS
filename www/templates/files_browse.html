@@ -13,7 +13,14 @@
       <td class="meta">{{.Size}}</td>
       <td>{{.Description}}</td>
       <td class="meta">{{.Downloads}}</td>
-      <td><a href="/files/download?dir={{$.Dir.ID}}&amp;file={{.Filename}}">Download</a></td>
+      <td><a href="/files/download?dir={{$.Dir.ID}}&amp;file={{.Filename}}">Download</a>
+        <form method="post" action="/share/create" style="display:inline;margin-left:0.5rem">
+          <input type="hidden" name="kind" value="file">
+          <input type="hidden" name="dir" value="{{$.Dir.ID}}">
+          <input type="hidden" name="file" value="{{.Filename}}">
+          <button type="submit" class="btn-link">Share</button>
+        </form>
+      </td>
     </tr>
     {{else}}
     <tr><td colspan="5">No files in this area.</td></tr>

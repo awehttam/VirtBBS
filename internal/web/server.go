@@ -52,6 +52,8 @@ func (s *Server) ListenAndServe() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleRoot)
 	mux.HandleFunc("/login", s.handleLogin)
+	mux.HandleFunc("/register", s.handleRegister)
+	mux.HandleFunc("/register/welcome", s.handleRegisterWelcome)
 	mux.HandleFunc("/logout", s.handleLogout)
 	mux.HandleFunc("/menu", s.handleMenu)
 	mux.HandleFunc("/stats", s.handleStats)
@@ -69,6 +71,26 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc("/files/upload", s.handleFilesUpload)
 	mux.HandleFunc("/profile", s.handleProfile)
 	mux.HandleFunc("/nodelist", s.handleNodelist)
+	mux.HandleFunc("/qwk", s.handleQWK)
+	mux.HandleFunc("/subscriptions", s.handleSubscriptions)
+	mux.HandleFunc("/search", s.handleSearch)
+	mux.HandleFunc("/share/create", s.handleShareCreate)
+	mux.HandleFunc("/share/created", s.handleShareCreated)
+	mux.HandleFunc("/shared/", s.handleShared)
+	mux.HandleFunc("/api/notify", s.handleNotify)
+	mux.HandleFunc("/api/stream", s.handleStream)
+	mux.HandleFunc("/manifest.webmanifest", s.handleManifest)
+	mux.HandleFunc("/forgot-password", s.handleForgotPassword)
+	mux.HandleFunc("/reset-password", s.handleResetPassword)
+	mux.HandleFunc("/addressbook", s.handleAddressBook)
+	mux.HandleFunc("/netmail/app", s.handleNetmailApp)
+	mux.HandleFunc("/api/netmail", s.handleAPINetmail)
+	mux.HandleFunc("/api/netmail/compose", s.handleAPINetmailCompose)
+	mux.HandleFunc("/admin", s.handleAdmin)
+	mux.HandleFunc("/admin/binkp", s.handleAdminBinkP)
+	mux.HandleFunc("/admin/users", s.handleAdminUsers)
+	mux.HandleFunc("/admin/nodes", s.handleAdminNodes)
+	mux.HandleFunc("/set-locale", s.handleSetLocale)
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(s.Root, "static")))))
 	log.Printf("Web UI www root: %s", s.Root)
 	return http.ListenAndServe(s.Addr, mux)
@@ -76,10 +98,12 @@ func (s *Server) ListenAndServe() error {
 
 func (s *Server) templates() (*template.Template, error) {
 	s.tmplOnce.Do(func() {
+		initLocales()
 		pattern := filepath.Join(s.Root, "templates", "*.html")
 		funcs := template.FuncMap{
 			"add": func(a, b int) int { return a + b },
 			"safeHTML": func(s string) template.HTML { return template.HTML(s) },
+			"t": func(locale, key string) string { return tr(locale, key) },
 		}
 		s.tmpl, s.tmplErr = template.New("").Funcs(funcs).ParseGlob(pattern)
 	})
@@ -106,6 +130,7 @@ type pageData struct {
 	User    *users.User
 	Flash   string
 	Error   string
+	Locale  string
 }
 
 func (s *Server) base(r *http.Request) pageData {

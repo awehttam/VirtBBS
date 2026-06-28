@@ -264,6 +264,12 @@
 //                        and sysop dashboard; display/list.go for bulletin discovery;
 //                        web_port/web_bind and paths.www config + sysop GUI fields;
 //                        WriteHeader fix for template responses; scripts/build-release.sh.
+//   v1.0.2  2026-06-28  Web UI Tier 2: QWK/REP, echo subscriptions, message/file
+//                        search, shared links, nav unread badges, PWA manifest/service
+//                        worker; new user registration (/register, users.RegisterNew);
+//                        www/README feature checklist.
+//   v1.1.0  2026-06-28  Web UI Tier 3: forgot/reset password, address book, netmail SPA,
+//                        SSE notify stream, sysop admin (users/nodes/BinkP), i18n (en/es).
 // ============================================================================
 
 // Package version holds the VirtBBS version number.
@@ -274,4 +280,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "1.0.1"
+const Version = "1.1.0"

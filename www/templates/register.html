@@ -1,0 +1,26 @@
+{{define "register.html"}}
+{{template "header" .}}
+<div class="login-box panel register-box">
+  <h2>New User Registration — {{.BBSName}}</h2>
+  <p class="meta">Same as typing <strong>NEW</strong> at the Telnet login prompt. Your security level is set by the sysop (<code>new_user_security</code> in VirtBBS.DAT).</p>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="post" action="/register">
+    <div class="hp-field" aria-hidden="true">
+      <label for="website">Leave blank</label>
+      <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+    </div>
+    <label for="name">Full name</label>
+    <input type="text" id="name" name="name" value="{{.Name}}" maxlength="25" required autofocus autocomplete="name">
+    <p class="meta">Up to 25 characters (PCBoard-style handle).</p>
+    <label for="city">City / State</label>
+    <input type="text" id="city" name="city" value="{{.City}}" autocomplete="address-level2">
+    <label for="password">Choose a password</label>
+    <input type="password" id="password" name="password" required autocomplete="new-password">
+    <label for="password_confirm">Confirm password</label>
+    <input type="password" id="password_confirm" name="password_confirm" required autocomplete="new-password">
+    <button type="submit">Create account</button>
+  </form>
+  <p class="meta" style="margin-top:1.5rem">Already have an account? <a href="/login">Log in</a></p>
+</div>
+{{template "footer" .}}
+{{end}}

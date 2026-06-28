@@ -308,6 +308,35 @@ func (s *Store) SetLastRead(userID int64, conferenceID, lastMsgRead int) error {
 	return err
 }
 
+// SetRegistered marks whether a user is subscribed to a conference (echo area).
+func (s *Store) SetRegistered(userID int64, conferenceID int, registered bool) error {
+	_, err := s.db.Exec(`
+		INSERT INTO user_conferences (user_id, conference_id, registered, last_msg_read)
+		VALUES (?,?,?,0)
+		ON CONFLICT(user_id, conference_id) DO UPDATE SET registered=excluded.registered`,
+		userID, conferenceID, boolInt(registered))
+	return err
+}
+
+// ListRegistered returns conference IDs the user has subscribed to.
+func (s *Store) ListRegistered(userID int64) (map[int]bool, error) {
+	rows, err := s.db.Query(
+		`SELECT conference_id FROM user_conferences WHERE user_id=? AND registered=1`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[int]bool{}
+	for rows.Next() {
+		var cid int
+		if err := rows.Scan(&cid); err != nil {
+			return nil, err
+		}
+		out[cid] = true
+	}
+	return out, rows.Err()
+}
+
 // NewMessageCounts returns, for each conference the user has a record in,
 // the count of messages with msg_number > last_msg_read.
 // Also returns any conference with new messages even if no user_conference record exists,

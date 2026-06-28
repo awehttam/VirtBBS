@@ -1,0 +1,38 @@
+{{define "admin_users.html"}}
+{{template "header" .}}
+<div class="panel sysop-panel">
+  <h2>{{t .Locale "admin.users"}}</h2>
+  <p><a href="/admin">← Admin</a></p>
+  <table>
+    <thead><tr><th>Name</th><th>City</th><th>Sec</th><th>Calls</th><th>Reset password</th><th></th></tr></thead>
+    <tbody>
+    {{range .Users}}
+    <tr>
+      <td>{{.Name}}{{if .Sysop}} <span class="sysop-badge">SYSOP</span>{{end}}</td>
+      <td>{{.City}}</td>
+      <td>{{.SecurityLevel}}</td>
+      <td>{{.TimesOnline}}</td>
+      <td>
+        <form method="post" action="/admin/users" class="inline-form">
+          <input type="hidden" name="action" value="password">
+          <input type="hidden" name="id" value="{{.ID}}">
+          <input type="password" name="password" placeholder="new password" required>
+          <button type="submit" class="btn-sm">Set</button>
+        </form>
+      </td>
+      <td>
+        {{if not .Sysop}}
+        <form method="post" action="/admin/users" style="display:inline" onsubmit="return confirm('Delete user?');">
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="id" value="{{.ID}}">
+          <button type="submit" class="btn-link">Delete</button>
+        </form>
+        {{end}}
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "footer" .}}
+{{end}}

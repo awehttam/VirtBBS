@@ -1,0 +1,12 @@
+{{define "register_welcome.html"}}
+{{template "header" .}}
+<div class="panel">
+  <h2>Registration complete</h2>
+  <p class="flash">Welcome, {{.User.Name}}!</p>
+  {{if .WelcomeHTML}}
+  <div class="ansi-screen">{{.WelcomeHTML | safeHTML}}</div>
+  {{end}}
+  <p><a class="btn" href="/menu">Continue to the BBS</a></p>
+</div>
+{{template "footer" .}}
+{{end}}

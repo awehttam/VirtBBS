@@ -1,0 +1,23 @@
+{{define "netmail_app.html"}}
+{{template "header" .}}
+<div class="panel netmail-app">
+  <h2>{{t .Locale "netmail.app.title"}}</h2>
+  <div id="netmail-app" class="netmail-layout">
+    <aside id="netmail-list"><p class="meta">Loading…</p></aside>
+    <section id="netmail-pane"><p class="meta">Select a message</p></section>
+  </div>
+  <details class="compose-panel">
+    <summary>Compose netmail</summary>
+    <form id="netmail-compose">
+      <label>To name</label><input type="text" id="nm-to-name" required>
+      <label>To address</label><input type="text" id="nm-to-addr" placeholder="1:234/567" required>
+      <label>Subject</label><input type="text" id="nm-subject" required>
+      <label>Message</label><textarea id="nm-body" rows="6" required></textarea>
+      <button type="submit" class="btn">Send</button>
+      <span id="nm-compose-status" class="meta"></span>
+    </form>
+  </details>
+</div>
+<script src="/static/netmail.js"></script>
+{{template "footer" .}}
+{{end}}

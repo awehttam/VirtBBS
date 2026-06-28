@@ -1,0 +1,30 @@
+{{define "admin_binkp.html"}}
+{{template "header" .}}
+<div class="panel sysop-panel">
+  <h2>{{t .Locale "admin.binkp"}}</h2>
+  {{if .Flash}}<p class="flash">{{.Flash}}</p>{{end}}
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="post" action="/admin/binkp">
+    <label>Network</label>
+    <select name="network">
+    {{range .Networks}}<option value="{{.}}">{{.}}</option>{{end}}
+    </select>
+    <button type="submit" class="btn">Poll uplink now</button>
+  </form>
+  {{if .Stats}}
+  <h3>Today's stats</h3>
+  <table>
+    <thead><tr><th>Network</th><th>Up</th><th>Down</th></tr></thead>
+    <tbody>
+    {{range .Stats.Networks}}
+    <tr><td>{{.Network}}</td><td>{{.PollClientFilesSent}} / {{.PollServerUplinkSent}}</td><td>{{.PollClientFilesRecv}} / {{.PollServerDownlinkRecv}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{end}}
+  <h3>Recent log ({{.LogPath}})</h3>
+  <pre class="log-tail">{{range .LogLines}}{{.}}
+{{end}}</pre>
+</div>
+{{template "footer" .}}
+{{end}}

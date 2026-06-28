@@ -7,6 +7,7 @@
   --accent-dim: #2678b8;
   --error: #f66;
   --ok: #6c6;
+  --warn: #fc6;
 }
 
 * { box-sizing: border-box; }
@@ -177,4 +178,180 @@ button:hover, .btn:hover {
   padding: 0.1rem 0.5rem;
   border-radius: 10px;
   margin-left: 0.5rem;
+}
+
+.sysop-badge {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.alert-panel {
+  border-color: var(--warn);
+  background: rgba(255, 200, 80, 0.08);
+}
+
+.alert-panel h2 { color: var(--warn); }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.stat-card {
+  background: #080810;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+.compact-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.compact-list li { margin: 0.25rem 0; }
+
+.section-head {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--accent-dim);
+}
+
+.sysop-panel {
+  border-color: #665500;
+  background: rgba(255, 200, 50, 0.05);
+}
+
+.sysop-panel h2 { color: var(--warn); }
+
+.ansi-screen {
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 0.85rem;
+  background: #080810;
+  padding: 1rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  line-height: 1.35;
+}
+
+.ansi-bold { font-weight: bold; }
+.ansi-fg-black { color: #111; }
+.ansi-fg-red { color: #c44; }
+.ansi-fg-green { color: #4c4; }
+.ansi-fg-yellow { color: #cc4; }
+.ansi-fg-blue { color: #48c; }
+.ansi-fg-magenta { color: #c4c; }
+.ansi-fg-cyan { color: #4cc; }
+.ansi-fg-white { color: #ddd; }
+.ansi-fg-bright-black { color: #666; }
+.ansi-fg-bright-red { color: #f66; }
+.ansi-fg-bright-green { color: #6f6; }
+.ansi-fg-bright-yellow { color: #ff6; }
+.ansi-fg-bright-blue { color: #6af; }
+.ansi-fg-bright-magenta { color: #f6f; }
+.ansi-fg-bright-cyan { color: #6ff; }
+.ansi-fg-bright-white { color: #fff; }
+
+.nav-badge {
+  display: inline-block;
+  background: var(--error);
+  color: #fff;
+  font-size: 0.65rem;
+  min-width: 1.1rem;
+  text-align: center;
+  padding: 0.05rem 0.35rem;
+  border-radius: 8px;
+  margin-left: 0.2rem;
+  vertical-align: super;
+}
+
+.search-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.search-form input[type="search"] {
+  flex: 1;
+}
+
+.share-url {
+  width: 100%;
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  margin-top: 0;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  margin: 0;
+  text-decoration: underline;
+}
+
+.check-list {
+  list-style: none;
+  padding: 0;
+}
+
+.check-list li { margin: 0.35rem 0; }
+
+.tag {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  margin-left: 0.25rem;
+}
+
+.lang-form { margin-left: auto; }
+.lang-form select { width: auto; padding: 0.25rem 0.5rem; }
+
+.netmail-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1rem; min-height: 320px; }
+.netmail-items { list-style: none; padding: 0; margin: 0; }
+.netmail-items li { margin: 0.35rem 0; }
+.compose-panel { margin-top: 1rem; }
+.log-tail { font-size: 0.75rem; max-height: 240px; overflow: auto; background: #080810; padding: 0.75rem; }
+.inline-form { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
+
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.register-box {
+  max-width: 480px;
+}
+
+.register-splash {
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
 }

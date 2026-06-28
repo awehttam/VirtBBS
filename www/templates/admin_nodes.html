@@ -1,0 +1,30 @@
+{{define "admin_nodes.html"}}
+{{template "header" .}}
+<div class="panel sysop-panel">
+  <h2>Online nodes</h2>
+  <p><a href="/admin">← Admin</a></p>
+  <table>
+    <thead><tr><th>Node</th><th>User</th><th>Status</th><th>Activity</th><th></th></tr></thead>
+    <tbody>
+    {{range .Nodes}}
+    <tr>
+      <td>{{.ID}}</td>
+      <td>{{.UserName}}</td>
+      <td>{{.Status}}</td>
+      <td class="meta">{{.Operation}}</td>
+      <td>
+        <form method="post" action="/admin/nodes" style="display:inline">
+          <input type="hidden" name="action" value="kick">
+          <input type="hidden" name="node_id" value="{{.ID}}">
+          <button type="submit" class="btn-link">Kick</button>
+        </form>
+      </td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5">No active nodes.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "footer" .}}
+{{end}}

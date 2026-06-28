@@ -1,10 +1,12 @@
 {{define "header"}}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{.Locale}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#12121f">
   <title>{{.BBSName}} — VirtBBS Web</title>
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -12,17 +14,29 @@
 <header>
   <h1>{{.BBSName}}</h1>
   <nav>
-    <a href="/menu">Dashboard</a>
-    <a href="/messages">Messages</a>
-    <a href="/netmail">Netmail</a>
-    <a href="/files">Files</a>
-    <a href="/bulletins">Bulletins</a>
-    <a href="/stats">Stats</a>
-    <a href="/online">Online</a>
-    <a href="/nodelist">Nodelist</a>
-    <a href="/profile">Profile</a>
-    <a href="/logout">Logout</a>
+    <a href="/menu">{{t .Locale "nav.dashboard"}}</a>
+    <a href="/messages">{{t .Locale "nav.messages"}}<span id="nav-msg-badge" class="nav-badge" hidden></span></a>
+    <a href="/netmail/app">{{t .Locale "nav.netmail"}}<span id="nav-net-badge" class="nav-badge" hidden></span></a>
+    <a href="/files">{{t .Locale "nav.files"}}</a>
+    <a href="/search">{{t .Locale "nav.search"}}</a>
+    <a href="/qwk">{{t .Locale "nav.qwk"}}</a>
+    <a href="/subscriptions">{{t .Locale "nav.echo"}}</a>
+    <a href="/addressbook">{{t .Locale "nav.addressbook"}}</a>
+    <a href="/bulletins">{{t .Locale "nav.bulletins"}}</a>
+    <a href="/stats">{{t .Locale "nav.stats"}}</a>
+    <a href="/online">{{t .Locale "nav.online"}}</a>
+    <a href="/nodelist">{{t .Locale "nav.nodelist"}}</a>
+    {{if .User.Sysop}}<a href="/admin">{{t .Locale "nav.admin"}}</a>{{end}}
+    <a href="/profile">{{t .Locale "nav.profile"}}</a>
+    <a href="/logout">{{t .Locale "nav.logout"}}</a>
   </nav>
+  <form class="lang-form" method="post" action="/set-locale">
+    <input type="hidden" name="next" id="lang-next" value="/menu">
+    <select name="lang" onchange="document.getElementById('lang-next').value=location.pathname+location.search;this.form.submit()">
+      <option value="en" {{if eq .Locale "en"}}selected{{end}}>{{t .Locale "lang.en"}}</option>
+      <option value="es" {{if eq .Locale "es"}}selected{{end}}>{{t .Locale "lang.es"}}</option>
+    </select>
+  </form>
 </header>
 {{end}}
 <main>
@@ -30,6 +44,12 @@
 
 {{define "footer"}}
 </main>
+{{if .User}}<script src="/static/notify.js"></script>{{end}}
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/sw.js').catch(function(){});
+}
+</script>
 </body>
 </html>
 {{end}}
