@@ -12,7 +12,7 @@ namespace VirtBBS.GUI.ViewModels;
 public partial class FidoJoinViewModel(ApiClient client) : ViewModelBase
 {
     [ObservableProperty] private string _status = "";
-    [ObservableProperty] private string _selectedNetwork = FidoNetworksViewModel.PrimaryNetwork;
+    [ObservableProperty] private string _selectedNetwork = FidoNetworksViewModel.DefaultPrimaryNetwork;
     [ObservableProperty] private FidoJoinRequest? _selected;
     [ObservableProperty] private int _approveNet = 1;
     [ObservableProperty] private int _approveNode;
@@ -33,7 +33,7 @@ public partial class FidoJoinViewModel(ApiClient client) : ViewModelBase
     {
         try
         {
-            var names = await client.CallAsync<string[]>("fido.networks.list", null, ct) ?? [FidoNetworksViewModel.PrimaryNetwork];
+            var names = await client.CallAsync<string[]>("fido.networks.list", null, ct) ?? [FidoNetworksViewModel.DefaultPrimaryNetwork];
             NetworkNames.Clear();
             foreach (var n in names) NetworkNames.Add(n);
 

@@ -3,7 +3,7 @@
 This guide covers every FidoNet setting in `VirtBBS.DAT`, how echomail/netmail
 routing works, the BinkP server, how to add additional FidoNet-compatible
 networks, AreaFix, FileFix, the PING/TRACE test utilities, and automatic
-nodelist updates. It covers VirtBBS **0.5.0**.
+nodelist updates. It covers VirtBBS **0.15.0**.
 
 ---
 
@@ -13,6 +13,7 @@ All FidoNet settings live under the `[fido]` table in `VirtBBS.DAT`:
 
 ```toml
 [fido]
+  name         = "FidoNet"          # display name for the primary network (default "FidoNet")
   enabled      = true
   address      = "1:1/1"
   uplink       = "1:1/100"
@@ -20,14 +21,19 @@ All FidoNet settings live under the `[fido]` table in `VirtBBS.DAT`:
   inbound_dir  = "fido/inbound"
   outbound_dir = "fido/outbound"
   nodelist_dir = "fido/nodelist"
+  holding_dir  = ""                 # optional; default is <inbound_dir>/.holding
   binkp_port   = 24554
   taglines_file = ""
+  areafix_password = ""
+  filefix_password = ""
+  tic_password = ""                 # password WE send to OUR uplink's TIC processor
 
   [fido.areas]
 ```
 
 | Field | Meaning |
 |---|---|
+| `name` | Display name for the **primary** network. Defaults to `"FidoNet"` if blank. Renamable via the sysop GUI or `fido.network.rename` API. |
 | `enabled` | Master on/off switch. When `false`, all FidoNet menus, the toss/scan/poll commands, and the management API's `fido.*` endpoints refuse to run. |
 | `address` | **This BBS's own FidoNet address**, in `zone:net/node` or `zone:net/node.point` form (e.g. `1:234/567` or `1:234/567.1` for a point system). |
 | `uplink` | The address of the system this BBS exchanges mail with — your boss node or hub. All routed (non-crash) netmail and all echomail go here. |
@@ -35,10 +41,12 @@ All FidoNet settings live under the `[fido]` table in `VirtBBS.DAT`:
 | `inbound_dir` | Directory `.pkt` files are read from when tossing (see §4). Created automatically if missing. |
 | `outbound_dir` | Directory `.pkt` files are written to when scanning/sending (see §5). Created automatically if missing. |
 | `nodelist_dir` | Directory containing `NODELIST.*` files for address lookups (sysop name, BBS name, phone, flags) shown in the in-BBS nodelist browser and used by `[I]Ping a node`. |
+| `holding_dir` | Optional override for where **orphaned** inbound mail is held for sysop review (§4.1). Blank = `<inbound_dir>/.holding`. |
 | `binkp_port` | TCP port used both when **polling** your uplink over BinkP, and **listened on** for inbound BinkP connections from your uplink/downlinks (§6.1). Defaults to `24554` if zero/unset. |
 | `taglines_file` | Optional path to a text file, one tagline per line. A random line is inserted above the tear line on every outgoing echomail message. Leave blank to disable. |
 | `areafix_password` | Password **we** send when requesting areas from **our own uplink's** AreaFix — see §8.4. |
 | `filefix_password` | Password **we** send when requesting file areas from **our own uplink's** FileFix — see §9. |
+| `tic_password` | Password **we** send when requesting file transfers from **our own uplink's** TIC processor (FTS-5005). Downlinks authenticate with the same `password` as AreaFix/FileFix. See §9.3. |
 | `poll_interval_mins` | Overrides how often the automatic scheduler polls this network's uplink, in minutes. `0`/unset = 6 hours. Any value below 5 is clamped up to 5 — see §6.2. |
 | `nodelist_url` | Direct file URL or discovery page for automatic nodelist updates. Blank = scan `https://www.darkrealms.ca/` — see §12. |
 | `nodelist_update_interval_hours` | Overrides how often the scheduler fetches a fresh nodelist, in hours. `0`/unset = 24 hours. Any value below 1 is clamped up to 1 — see §12.2. |
@@ -80,7 +88,7 @@ echomail message belongs to:
 
 - The key is the exact `AREA:` tag as it appears in the inbound packet (case-sensitive, no `AREA:` prefix).
 - The value is the numeric conference ID (see conference list in the sysop menu or `conferences.list` API).
-- Any inbound echomail whose `AREA:` tag isn't listed here is **skipped** (not imported) and counted in the toss result's `Skipped` total.
+- Any inbound echomail whose `AREA:` tag isn't listed here is **held for sysop review** in the network's holding directory (§4.1) rather than discarded.
 
 > **Why two area mappings?** `[fido.areas]` (toss/inbound) and each conference's `EchoTag` field (scan/outbound) are independent on purpose — a conference can be a *recipient* of an echo area without VirtBBS originating/relaying traffic for it, and vice versa. For a normal two-way echo area, set up both: add the tag to `[fido.areas]` so inbound mail is filed correctly, **and** set the conference's `Echo=true`/`EchoTag` so locally-posted replies get scanned back out.
 
@@ -97,12 +105,27 @@ Ways to trigger a toss:
 - **API:** `fido.toss`
 
 What happens during toss:
-- **Netmail** (no `AREA:` line) is filed into conference 0 (General), addressed to the recipient named in the message.
-- **Echomail** is routed via `[fido.areas]` (§3); unknown areas are skipped.
+- **Netmail** (no `AREA:` line) addressed to **this node** is filed into conference 0 (General).
+- **Netmail not addressed to this node** is held in the holding directory (§4.1) for sysop review — mail from anyone is accepted, not rejected at toss time.
+- **Echomail** is routed via `[fido.areas]` (§3); unknown areas are held (§4.1), not discarded.
 - Each message's `^AMSGID`, `SEEN-BY:`, and `^APATH` are parsed out and stored as structured metadata (not shown in the message body) so they can be correctly re-emitted if you relay the message onward. The tear line (`--- ...`) and `* Origin: ...` line are **kept visible** in the stored body, matching how real FidoNet readers display them.
 - Duplicate packets (same `^AMSGID` re-processed twice, e.g. after a crash) are detected and skipped automatically.
 - A netmail with **Subject `PING`** triggers an automatic `PONG` reply (§10), and **Subject `TRACE`** triggers a routing-info reply (§11).
 - A netmail addressed to **"AreaFix"** (§8) or **"FileFix"** (§9) is processed by its responder.
+
+### 4.1 Orphan / holding directory
+
+Mail that cannot be imported automatically is saved as a one-message `.PKT`
+file under the network's holding directory (default `<inbound_dir>/.holding/`).
+Each hold is logged in `ORPHANS.log`. After toss, the sysop receives a
+**NetMail summary** in conference 0 listing what was held and why.
+
+Held when:
+- Echomail `AREA:` tag is not in `[fido.areas]`
+- Netmail destination address does not match this node (AreaFix/FileFix/PING/TRACE handled first)
+- Database insert fails
+
+Global fallback when the source network is unknown: `fido/holding/`.
 
 ---
 
@@ -201,11 +224,13 @@ Notes:
 
 VirtBBS can participate in more than one FidoNet-compatible network (e.g.
 FidoNet plus a regional/hobby net) at the same time. The top-level `[fido]`
-table describes your **primary** network (always named `"FidoNet"`
-internally). Add others under `[[fido.networks]]`:
+table describes your **primary** network. Its display name defaults to
+`"FidoNet"` but is configurable via `name = "..."`. Add others under
+`[[fido.networks]]`:
 
 ```toml
 [fido]
+  name         = "FidoNet"
   enabled      = true
   address      = "1:1/1"
   uplink       = "1:1/100"
@@ -222,9 +247,9 @@ internally). Add others under `[[fido.networks]]`:
   address      = "80:774/1"
   uplink       = "80:774/100"
   password     = ""
-  inbound_dir  = "fido/lovelynet/inbound"
-  outbound_dir = "fido/lovelynet/outbound"
-  nodelist_dir = "fido/lovelynet/nodelist"
+  inbound_dir  = "fido/LovelyNet_inbound"
+  outbound_dir = "fido/LovelyNet_outbound"
+  nodelist_dir = "fido/LovelyNet_nodelist"
   binkp_port   = 24554
   taglines_file = ""
 
@@ -235,6 +260,14 @@ internally). Add others under `[[fido.networks]]`:
 Each `[[fido.networks]]` entry is a **fully independent** network: its own
 address, uplink, inbound/outbound directories, nodelist, and area map. Use
 a distinct `inbound_dir`/`outbound_dir` per network so packets don't collide.
+
+When adding a network via the sysop GUI, directories default to
+`fido/<NetworkName>_inbound`, `_outbound`, and `_nodelist`. Saving config
+(via GUI or `config.update` API) **creates** inbound, outbound, nodelist,
+`.tossed`, and `.holding` directories automatically.
+
+Rename a network via the sysop GUI **Networks** tab or the `fido.network.rename`
+API — updates config and SQLite references (routes, members, subscriptions).
 
 - **Scanning** (§5) iterates every enabled network and writes separate `.pkt` files for each — link a conference to a specific network via its `Network` field (§2) so the scanner knows which network's address/uplink to use for it.
 - **Tossing** (§4) — `[T]oss inbound`, `fido.toss`, and `-fido-toss` all toss **every enabled network's** `inbound_dir` in one pass; there's no need to toss each network separately.
@@ -380,15 +413,22 @@ Sysop menu → FidoNet → `[F]ileFix`:
 The main listing shows each configured downlink (from the AreaFix list)
 alongside its current **file-area** subscriptions.
 
-### 9.3 Limitation — no file distribution pipeline yet
+### 9.3 TIC password and distribution limitation
 
-**FileFix subscriptions are tracked but nothing currently acts on them.**
-VirtBBS has no TIC (FTS-5005) file-echo distribution pipeline — there is no
-"file scan" step that bundles new uploads into outbound announcements the
+Configure `tic_password` (under `[fido]` or `[[fido.networks]]`) for the
+password **this BBS sends** when requesting file transfers from its uplink's
+TIC processor — parallel to `areafix_password` and `filefix_password`.
+Downlinks use the same `password` in their `[[fido.downlinks]]` entry for
+AreaFix, FileFix, and TIC authentication.
+
+**FileFix subscriptions are tracked but no TIC distribution pipeline runs yet.**
+VirtBBS has no TIC (FTS-5005) file-echo distribution step — there is no
+"file scan" that bundles new uploads into outbound announcements the
 way `scan.go` does for echomail (§5/§8.3). The request/response protocol
 works end-to-end (a downlink can subscribe and get a confirmation reply),
-and the subscription data is there for a future distribution step to use,
-but no files are actually sent based on these subscriptions today.
+and the subscription data plus `tic_password` are ready for a future
+distribution step, but no files are actually sent based on these
+subscriptions today.
 
 ---
 
@@ -488,6 +528,7 @@ fetch schedule, same as the poll scheduler (§6.2).
 
 ```toml
 [fido]
+  name             = "FidoNet"          # primary network display name
   enabled          = false              # master on/off switch
   address          = "1:1/1"            # this BBS's own FidoNet address
   uplink           = ""                 # your boss/hub node's address
@@ -499,6 +540,8 @@ fetch schedule, same as the poll scheduler (§6.2).
   taglines_file      = ""               # optional taglines, one per line
   areafix_password   = ""               # password WE send to OUR uplink's AreaFix
   filefix_password   = ""               # password WE send to OUR uplink's FileFix
+  tic_password       = ""               # password WE send to OUR uplink's TIC
+  holding_dir        = ""               # optional; default <inbound>/.holding
   poll_interval_mins = 0                # 0 = scheduler default (6h); else clamped to >=5
   nodelist_url                   = ""   # blank = scan https://www.darkrealms.ca/
   nodelist_update_interval_hours = 0    # 0 = scheduler default (24h); else clamped to >=1
@@ -520,13 +563,15 @@ fetch schedule, same as the poll scheduler (§6.2).
   address            = "..."
   uplink             = "..."
   password           = ""
-  inbound_dir        = "..."
-  outbound_dir       = "..."
-  nodelist_dir       = "..."
+  inbound_dir        = "fido/NetworkName_inbound"
+  outbound_dir       = "fido/NetworkName_outbound"
+  nodelist_dir       = "fido/NetworkName_nodelist"
+  holding_dir        = ""
   binkp_port         = 24554
   taglines_file      = ""
   areafix_password   = ""
   filefix_password   = ""
+  tic_password       = ""
   poll_interval_mins = 0
   nodelist_url                   = ""
   nodelist_update_interval_hours = 0

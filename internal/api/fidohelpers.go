@@ -21,7 +21,7 @@ func randomMemberPassword() string {
 func saveNetworkDownlink(networkName string, dl fido.Downlink) error {
 	cfg := config.Get()
 	merged := *cfg
-	if strings.EqualFold(networkName, fido.PrimaryNetworkName) {
+	if strings.EqualFold(networkName, cfg.Fido.EffectivePrimaryName()) {
 		merged.Fido.Downlinks = append(append([]fido.Downlink{}, cfg.Fido.Downlinks...), dl)
 		return config.Save(&merged)
 	}

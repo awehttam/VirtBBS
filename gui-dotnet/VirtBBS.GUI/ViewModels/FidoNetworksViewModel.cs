@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,10 +13,11 @@ namespace VirtBBS.GUI.ViewModels;
 
 public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
 {
-    public const string PrimaryNetwork = "FidoNet";
+    public const string DefaultPrimaryNetwork = "FidoNet";
 
     [ObservableProperty] private string _status = "";
-    [ObservableProperty] private string _selectedNetwork = PrimaryNetwork;
+    [ObservableProperty] private string _selectedNetwork = DefaultPrimaryNetwork;
+    [ObservableProperty] private string _networkName = DefaultPrimaryNetwork;
     [ObservableProperty] private bool _isPrimaryNetwork = true;
     [ObservableProperty] private bool _enabled;
     [ObservableProperty] private string _address = "";
@@ -24,10 +26,12 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
     [ObservableProperty] private string _inboundDir = "";
     [ObservableProperty] private string _outboundDir = "";
     [ObservableProperty] private string _nodelistDir = "";
+    [ObservableProperty] private string _holdingDir = "";
     [ObservableProperty] private int _binkpPort = 24554;
     [ObservableProperty] private string _taglinesFile = "";
     [ObservableProperty] private string _areafixPassword = "";
     [ObservableProperty] private string _filefixPassword = "";
+    [ObservableProperty] private string _ticPassword = "";
     [ObservableProperty] private int _pollIntervalMins;
     [ObservableProperty] private string _nodelistUrl = "";
     [ObservableProperty] private int _nodelistUpdateIntervalHours;
@@ -41,12 +45,19 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
     public ObservableCollection<AreaFixSubscription> AreaFixSubs { get; } = [];
 
     private BbsConfig? _cachedConfig;
+    private string _loadedNetworkKey = DefaultPrimaryNetwork;
 
     partial void OnSelectedNetworkChanged(string value)
     {
-        IsPrimaryNetwork = value == PrimaryNetwork;
-        if (_cachedConfig is not null)
-            ApplyNetworkToForm(value);
+        if (_cachedConfig is null) return;
+        IsPrimaryNetwork = IsPrimaryName(value);
+        ApplyNetworkToForm(value);
+    }
+
+    partial void OnNetworkNameChanged(string value)
+    {
+        if (!IsPrimaryNetwork && !string.IsNullOrWhiteSpace(value))
+            ApplyDefaultDirsIfBlank(value.Trim());
     }
 
     [RelayCommand]
@@ -54,7 +65,7 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
     {
         try
         {
-            var names = await client.CallAsync<string[]>("fido.networks.list", null, ct) ?? [PrimaryNetwork];
+            var names = await client.CallAsync<string[]>("fido.networks.list", null, ct) ?? [DefaultPrimaryNetwork];
             NetworkNames.Clear();
             foreach (var n in names) NetworkNames.Add(n);
 
@@ -62,7 +73,7 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
             if (_cachedConfig is null) return;
 
             if (!NetworkNames.Contains(SelectedNetwork))
-                SelectedNetwork = NetworkNames.FirstOrDefault() ?? PrimaryNetwork;
+                SelectedNetwork = NetworkNames.FirstOrDefault() ?? PrimaryName();
 
             ApplyNetworkToForm(SelectedNetwork);
             await LoadAreaFixSubsAsync(ct);
@@ -71,11 +82,19 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
         catch (Exception ex) { Status = $"Error: {ex.Message}"; }
     }
 
+    private string PrimaryName() =>
+        string.IsNullOrWhiteSpace(_cachedConfig?.Fido.Name) ? DefaultPrimaryNetwork : _cachedConfig!.Fido.Name.Trim();
+
+    private bool IsPrimaryName(string network) =>
+        string.Equals(network, PrimaryName(), StringComparison.OrdinalIgnoreCase);
+
     private void ApplyNetworkToForm(string network)
     {
         if (_cachedConfig is null) return;
         var src = NetworkSource(_cachedConfig, network);
+        _loadedNetworkKey = network;
 
+        NetworkName = IsPrimaryName(network) ? PrimaryName() : src.Name;
         Enabled = src.Enabled;
         Address = src.Address;
         Uplink = src.Uplink;
@@ -83,10 +102,12 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
         InboundDir = src.InboundDir;
         OutboundDir = src.OutboundDir;
         NodelistDir = src.NodelistDir;
+        HoldingDir = src.HoldingDir;
         BinkpPort = src.BinkpPort;
         TaglinesFile = src.TaglinesFile;
         AreafixPassword = src.AreaFixPassword;
         FilefixPassword = src.FileFixPassword;
+        TicPassword = src.TicPassword;
         PollIntervalMins = src.PollIntervalMins;
         NodelistUrl = src.NodelistURL;
         NodelistUpdateIntervalHours = src.NodelistUpdateIntervalHours;
@@ -114,12 +135,13 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
 
     private static FidoNetworkDef NetworkSource(BbsConfig cfg, string network)
     {
+        var primary = PrimaryName(cfg);
         FidoNetworkDef src;
-        if (network == PrimaryNetwork)
+        if (string.Equals(network, primary, StringComparison.OrdinalIgnoreCase))
         {
             src = new FidoNetworkDef
             {
-                Name = PrimaryNetwork,
+                Name = primary,
                 Enabled = cfg.Fido.Enabled,
                 Address = cfg.Fido.Address,
                 Uplink = cfg.Fido.Uplink,
@@ -127,10 +149,12 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
                 InboundDir = cfg.Fido.InboundDir,
                 OutboundDir = cfg.Fido.OutboundDir,
                 NodelistDir = cfg.Fido.NodelistDir,
+                HoldingDir = cfg.Fido.HoldingDir,
                 BinkpPort = cfg.Fido.BinkpPort,
                 TaglinesFile = cfg.Fido.TaglinesFile,
                 AreaFixPassword = cfg.Fido.AreaFixPassword,
                 FileFixPassword = cfg.Fido.FileFixPassword,
+                TicPassword = cfg.Fido.TicPassword,
                 PollIntervalMins = cfg.Fido.PollIntervalMins,
                 NodelistURL = cfg.Fido.NodelistURL,
                 NodelistUpdateIntervalHours = cfg.Fido.NodelistUpdateIntervalHours,
@@ -153,6 +177,9 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
         return src;
     }
 
+    private static string PrimaryName(BbsConfig cfg) =>
+        string.IsNullOrWhiteSpace(cfg.Fido.Name) ? DefaultPrimaryNetwork : cfg.Fido.Name.Trim();
+
     [RelayCommand]
     private async Task SaveAsync(CancellationToken ct = default)
     {
@@ -160,6 +187,29 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
         {
             await LoadAsync(ct);
             if (_cachedConfig is null) return;
+        }
+
+        var newName = NetworkName.Trim();
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            Status = "Network name is required.";
+            return;
+        }
+
+        var renameFrom = IsPrimaryNetwork ? PrimaryName() : _loadedNetworkKey;
+        if (!string.Equals(newName, renameFrom, StringComparison.Ordinal))
+        {
+            try
+            {
+                await client.CallAsync("fido.network.rename",
+                    new { old_name = renameFrom, new_name = newName }, ct);
+                _cachedConfig = await client.CallAsync<BbsConfig>("config.get", null, ct) ?? _cachedConfig;
+            }
+            catch (Exception ex)
+            {
+                Status = $"Rename failed: {ex.Message}";
+                return;
+            }
         }
 
         var areas = new Dictionary<string, int>();
@@ -182,8 +232,11 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
 
         var akas = AkasText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
+        ApplyDefaultDirsIfBlank(newName);
+
         if (IsPrimaryNetwork)
         {
+            _cachedConfig.Fido.Name = newName;
             _cachedConfig.Fido.Enabled = Enabled;
             _cachedConfig.Fido.Address = Address;
             _cachedConfig.Fido.Uplink = Uplink;
@@ -191,10 +244,12 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
             _cachedConfig.Fido.InboundDir = InboundDir;
             _cachedConfig.Fido.OutboundDir = OutboundDir;
             _cachedConfig.Fido.NodelistDir = NodelistDir;
+            _cachedConfig.Fido.HoldingDir = HoldingDir;
             _cachedConfig.Fido.BinkpPort = BinkpPort;
             _cachedConfig.Fido.TaglinesFile = TaglinesFile;
             _cachedConfig.Fido.AreaFixPassword = AreafixPassword;
             _cachedConfig.Fido.FileFixPassword = FilefixPassword;
+            _cachedConfig.Fido.TicPassword = TicPassword;
             _cachedConfig.Fido.PollIntervalMins = PollIntervalMins;
             _cachedConfig.Fido.NodelistURL = NodelistUrl;
             _cachedConfig.Fido.NodelistUpdateIntervalHours = NodelistUpdateIntervalHours;
@@ -206,12 +261,14 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
         else
         {
             _cachedConfig.Fido.Networks ??= [];
-            var nd = _cachedConfig.Fido.Networks.FirstOrDefault(n => n.Name == SelectedNetwork);
+            var nd = _cachedConfig.Fido.Networks.FirstOrDefault(n => n.Name == newName)
+                ?? _cachedConfig.Fido.Networks.FirstOrDefault(n => n.Name == _loadedNetworkKey);
             if (nd is null)
             {
-                nd = new FidoNetworkDef { Name = SelectedNetwork };
+                nd = new FidoNetworkDef { Name = newName };
                 _cachedConfig.Fido.Networks.Add(nd);
             }
+            nd.Name = newName;
             nd.Enabled = Enabled;
             nd.Address = Address;
             nd.Uplink = Uplink;
@@ -219,10 +276,12 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
             nd.InboundDir = InboundDir;
             nd.OutboundDir = OutboundDir;
             nd.NodelistDir = NodelistDir;
+            nd.HoldingDir = HoldingDir;
             nd.BinkpPort = BinkpPort;
             nd.TaglinesFile = TaglinesFile;
             nd.AreaFixPassword = AreafixPassword;
             nd.FileFixPassword = FilefixPassword;
+            nd.TicPassword = TicPassword;
             nd.PollIntervalMins = PollIntervalMins;
             nd.NodelistURL = NodelistUrl;
             nd.NodelistUpdateIntervalHours = NodelistUpdateIntervalHours;
@@ -236,7 +295,9 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
         try
         {
             await client.CallAsync("config.update", new { fido = _cachedConfig.Fido }, ct);
-            Status = $"Network '{SelectedNetwork}' saved.";
+            Status = $"Network '{newName}' saved (directories created on server).";
+            SelectedNetwork = newName;
+            await LoadAsync(ct);
             await LoadAreaFixSubsAsync(ct);
         }
         catch (Exception ex) { Status = $"Error: {ex.Message}"; }
@@ -272,21 +333,56 @@ public partial class FidoNetworksViewModel(ApiClient client) : ViewModelBase
     [RelayCommand]
     private async Task AddNetworkAsync(CancellationToken ct = default)
     {
-        var name = $"Network{(_cachedConfig?.Fido.Networks.Count ?? 0) + 1}";
         _cachedConfig ??= await client.CallAsync<BbsConfig>("config.get", null, ct) ?? new BbsConfig();
         _cachedConfig.Fido.Networks ??= [];
-        _cachedConfig.Fido.Networks.Add(new FidoNetworkDef { Name = name, Enabled = true });
-        await SaveFullFidoAsync(ct);
-        if (!NetworkNames.Contains(name)) NetworkNames.Add(name);
-        SelectedNetwork = name;
-        Status = $"Added network '{name}'.";
-    }
 
-    private async Task SaveFullFidoAsync(CancellationToken ct)
-    {
-        if (_cachedConfig is null) return;
+        var baseName = "Network";
+        var n = _cachedConfig.Fido.Networks.Count + 1;
+        var name = $"{baseName}{n}";
+        while (_cachedConfig.Fido.Networks.Any(x => x.Name == name))
+        {
+            n++;
+            name = $"{baseName}{n}";
+        }
+
+        var (inbound, outbound, nodelist) = DefaultDirsForName(name);
+        var nd = new FidoNetworkDef
+        {
+            Name = name,
+            Enabled = true,
+            InboundDir = inbound,
+            OutboundDir = outbound,
+            NodelistDir = nodelist,
+        };
+        _cachedConfig.Fido.Networks.Add(nd);
         await client.CallAsync("config.update", new { fido = _cachedConfig.Fido }, ct);
         await LoadAsync(ct);
+        SelectedNetwork = name;
+        NetworkName = name;
+        Status = $"Added network '{name}' with default directories.";
+    }
+
+    private void ApplyDefaultDirsIfBlank(string name)
+    {
+        if (!string.IsNullOrWhiteSpace(InboundDir) &&
+            !string.IsNullOrWhiteSpace(OutboundDir) &&
+            !string.IsNullOrWhiteSpace(NodelistDir))
+            return;
+
+        var (inbound, outbound, nodelist) = DefaultDirsForName(name);
+        if (string.IsNullOrWhiteSpace(InboundDir)) InboundDir = inbound;
+        if (string.IsNullOrWhiteSpace(OutboundDir)) OutboundDir = outbound;
+        if (string.IsNullOrWhiteSpace(NodelistDir)) NodelistDir = nodelist;
+    }
+
+    private static (string inbound, string outbound, string nodelist) DefaultDirsForName(string name)
+    {
+        if (string.Equals(name, DefaultPrimaryNetwork, StringComparison.OrdinalIgnoreCase))
+            return ("fido/inbound", "fido/outbound", "fido/nodelist");
+
+        var safe = Regex.Replace(name.Trim(), @"[^a-zA-Z0-9_-]+", "_");
+        if (string.IsNullOrEmpty(safe)) safe = "network";
+        return ($"fido/{safe}_inbound", $"fido/{safe}_outbound", $"fido/{safe}_nodelist");
     }
 
     private async Task LoadAreaFixSubsAsync(CancellationToken ct)

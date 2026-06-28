@@ -1056,10 +1056,14 @@ func (s *session) sysopFidoMenu() {
 		switch cmd {
 		case "T":
 			s.writeln(ansi.Colorize(ansi.White, "Tossing inbound packets (all networks)…"))
-			result := fido.TossAll(&cfg.Fido, s.deps.Messages, s.deps.Conferences)
+			result := fido.TossAll(&cfg.Fido, s.deps.Messages, s.deps.Conferences, cfg.Sysop.Name)
 			s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf(
-				"Toss complete: %d packet(s), %d imported, %d skipped.",
-				result.Packets, result.Imported, result.Skipped)))
+				"Toss complete: %d packet(s), %d imported, %d skipped, %d held for review.",
+				result.Packets, result.Imported, result.Skipped, result.Orphaned)))
+			for _, n := range result.OrphanNotes {
+				s.writeln(ansi.Colorize(ansi.Yellow, fmt.Sprintf(
+					"  Held [%s]: %s from %s — %s", n.Reason, n.Subject, n.From, n.File)))
+			}
 			for _, e := range result.Errors {
 				s.writeln(ansi.Colorize(ansi.Red, "  Error: "+e))
 			}
@@ -1974,7 +1978,7 @@ func (s *session) fidoPoll() {
 
 	s.writeln(ansi.Colorize(ansi.White, fmt.Sprintf("Polling %s uplink %s…", target.Name, target.Uplink)))
 
-	result := fido.PollAndToss(target, s.deps.Messages, s.deps.Conferences)
+	result := fido.PollAndToss(target, s.deps.Messages, s.deps.Conferences, config.Get().Sysop.Name)
 	if result.Poll.Error != nil {
 		s.writeln(ansi.Colorize(ansi.Red, "Poll error: "+result.Poll.Error.Error()))
 		return
@@ -1985,8 +1989,8 @@ func (s *session) fidoPoll() {
 
 	if result.Toss != nil {
 		s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf(
-			"Auto-toss complete: %d packet(s), %d imported, %d skipped.",
-			result.Toss.Packets, result.Toss.Imported, result.Toss.Skipped)))
+			"Auto-toss complete: %d packet(s), %d imported, %d skipped, %d held.",
+			result.Toss.Packets, result.Toss.Imported, result.Toss.Skipped, result.Toss.Orphaned)))
 		for _, e := range result.Toss.Errors {
 			s.writeln(ansi.Colorize(ansi.Red, "  Toss error: "+e))
 		}

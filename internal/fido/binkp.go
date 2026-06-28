@@ -185,7 +185,7 @@ type PollAndTossResult struct {
 // This is the single entry point shared by the sysop "[P]oll uplink" menu,
 // the "fido.poll" management API, and the automatic scheduler, so all three
 // behave identically.
-func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.Store) *PollAndTossResult {
+func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string) *PollAndTossResult {
 	var outFiles []string
 	entries, _ := os.ReadDir(nd.OutboundDir)
 	for _, e := range entries {
@@ -204,7 +204,7 @@ func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.S
 		_ = os.Remove(filepath.Join(nd.OutboundDir, f))
 	}
 
-	tossResult, err := TossDir(nd, store, confStore)
+	tossResult, err := TossDir(nd, store, confStore, sysopName)
 	if err != nil {
 		tossResult = &TossResult{Errors: []string{err.Error()}}
 	}
@@ -229,7 +229,7 @@ func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.S
 // Returns a stop function that closes all listeners. Logs session activity
 // and errors with the standard logger; never returns an error itself once
 // listening has started (per-connection failures are logged, not fatal).
-func ServeBinkP(cfg *Config, store *messages.Store, confStore *conferences.Store) (stop func(), err error) {
+func ServeBinkP(cfg *Config, store *messages.Store, confStore *conferences.Store, sysopName string) (stop func(), err error) {
 	portCandidates := map[int][]NetworkDef{}
 	for _, nd := range cfg.AllNetworks() {
 		if !nd.Enabled {
@@ -253,7 +253,7 @@ func ServeBinkP(cfg *Config, store *messages.Store, confStore *conferences.Store
 		}
 		listeners = append(listeners, ln)
 		log.Printf("BinkP listening on %s (%d network(s))", addr, len(candidates))
-		go binkpAcceptLoop(ln, candidates, store, confStore)
+		go binkpAcceptLoop(ln, candidates, store, confStore, sysopName)
 	}
 
 	return func() {
@@ -263,20 +263,20 @@ func ServeBinkP(cfg *Config, store *messages.Store, confStore *conferences.Store
 	}, nil
 }
 
-func binkpAcceptLoop(ln net.Listener, candidates []NetworkDef, store *messages.Store, confStore *conferences.Store) {
+func binkpAcceptLoop(ln net.Listener, candidates []NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			return // listener closed
 		}
-		go binkpHandleIncoming(conn, candidates, store, confStore)
+		go binkpHandleIncoming(conn, candidates, store, confStore, sysopName)
 	}
 }
 
 // binkpHandleIncoming answers one inbound BinkP connection: handshake,
 // identify and authenticate the caller, receive their files, send back
 // whatever is queued for them, then toss what was received.
-func binkpHandleIncoming(conn net.Conn, candidates []NetworkDef, store *messages.Store, confStore *conferences.Store) {
+func binkpHandleIncoming(conn net.Conn, candidates []NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string) {
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(5 * time.Minute))
 	bp := &binkpConn{conn: conn}
@@ -353,11 +353,11 @@ func binkpHandleIncoming(conn net.Conn, candidates []NetworkDef, store *messages
 		nd.Name, who, peerAddrs, len(received), len(sent))
 
 	if len(received) > 0 {
-		if tr, err := TossDir(nd, store, confStore); err != nil {
+		if tr, err := TossDir(nd, store, confStore, sysopName); err != nil {
 			log.Printf("binkp server [%s]: auto-toss error: %v", nd.Name, err)
 		} else {
-			log.Printf("binkp server [%s]: auto-toss after incoming poll: %d imported, %d skipped",
-				nd.Name, tr.Imported, tr.Skipped)
+			log.Printf("binkp server [%s]: auto-toss after incoming poll: %d imported, %d skipped, %d held",
+				nd.Name, tr.Imported, tr.Skipped, tr.Orphaned)
 		}
 	}
 }

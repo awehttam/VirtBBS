@@ -26,18 +26,39 @@
   new_user_security  = 10
 
 [fido]
+  name         = "FidoNet"
   enabled      = false
   address      = "1:1/1"
   uplink       = ""
   password     = ""
   inbound_dir  = "fido/inbound"
   outbound_dir = "fido/outbound"
+  nodelist_dir = "fido/nodelist"
+  holding_dir  = ""
+  areafix_password = ""
+  filefix_password = ""
+  tic_password = ""
 
   # Map echomail area tags to VirtBBS conference IDs.
   # Example:
   #   FIDO_GENERAL     = 1
   #   VIRTBBS_SUPPORT  = 2
   [fido.areas]
+
+# Additional FidoNet-compatible networks (optional):
+#
+# [[fido.networks]]
+#   name         = "LovelyNet"
+#   enabled      = true
+#   address      = "80:774/1"
+#   uplink       = "80:774/100"
+#   inbound_dir  = "fido/LovelyNet_inbound"
+#   outbound_dir = "fido/LovelyNet_outbound"
+#   nodelist_dir = "fido/LovelyNet_nodelist"
+#   tic_password = ""
+#
+#   [fido.networks.areas]
+#     LOVELY_CHAT = 3
 
 # ── Door Games ────────────────────────────────────────────────────────────────
 # Each [[doors]] section defines one door game.

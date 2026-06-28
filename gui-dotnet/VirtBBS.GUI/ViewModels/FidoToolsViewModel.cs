@@ -11,7 +11,7 @@ namespace VirtBBS.GUI.ViewModels;
 public partial class FidoToolsViewModel(ApiClient client) : ViewModelBase
 {
     [ObservableProperty] private string _status = "";
-    [ObservableProperty] private string _selectedNetwork = FidoNetworksViewModel.PrimaryNetwork;
+    [ObservableProperty] private string _selectedNetwork = FidoNetworksViewModel.DefaultPrimaryNetwork;
     [ObservableProperty] private string _pingAddr = "";
     [ObservableProperty] private string _pingToName = "";
     [ObservableProperty] private string _traceAddr = "";
@@ -29,7 +29,7 @@ public partial class FidoToolsViewModel(ApiClient client) : ViewModelBase
         try
         {
             var names = await client.CallAsync<string[]>("fido.networks.list", null, ct)
-                ?? [FidoNetworksViewModel.PrimaryNetwork];
+                ?? [FidoNetworksViewModel.DefaultPrimaryNetwork];
             NetworkNames.Clear();
             foreach (var n in names) NetworkNames.Add(n);
         }

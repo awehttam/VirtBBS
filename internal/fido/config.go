@@ -43,6 +43,8 @@ import "time"
 // The top-level fields describe the primary (first) network.
 // Additional networks are listed in Networks[].
 type Config struct {
+	// Name is the display name for the primary network (default "FidoNet").
+	Name        string         `toml:"name"         json:"name"`
 	Enabled     bool           `toml:"enabled"      json:"enabled"`
 	Address     string         `toml:"address"      json:"address"`
 	Uplink      string         `toml:"uplink"       json:"uplink"`
@@ -50,6 +52,7 @@ type Config struct {
 	InboundDir  string         `toml:"inbound_dir"  json:"inbound_dir"`
 	OutboundDir string         `toml:"outbound_dir" json:"outbound_dir"`
 	NodelistDir string         `toml:"nodelist_dir" json:"nodelist_dir"` // dir holding NODELIST.xxx
+	HoldingDir  string         `toml:"holding_dir"  json:"holding_dir"` // optional override; default <inbound>/.holding
 	BinkpPort   int            `toml:"binkp_port"   json:"binkp_port"`   // default 24554
 	Areas       map[string]int `toml:"areas"        json:"areas"`
 
@@ -90,6 +93,11 @@ type Config struct {
 	// areas from its own uplink's FileFix — the FileFix equivalent of
 	// AreaFixPassword.
 	FileFixPassword string `toml:"filefix_password" json:"filefix_password"`
+
+	// TicPassword is the password THIS BBS sends when requesting file
+	// transfers from its uplink's TIC processor (FTS-5005). Downlinks use
+	// the same password as AreaFix/FileFix in Downlinks[].Password.
+	TicPassword string `toml:"tic_password" json:"tic_password"`
 
 	// NodelistURL is where the automatic nodelist fetcher downloads from.
 	// May be a direct file URL, or (the default if left blank) a discovery
@@ -167,6 +175,7 @@ type NetworkDef struct {
 	InboundDir  string         `toml:"inbound_dir"  json:"inbound_dir"`
 	OutboundDir string         `toml:"outbound_dir" json:"outbound_dir"`
 	NodelistDir string         `toml:"nodelist_dir" json:"nodelist_dir"`
+	HoldingDir  string         `toml:"holding_dir"  json:"holding_dir"`
 	BinkpPort   int            `toml:"binkp_port"   json:"binkp_port"`
 	Areas       map[string]int `toml:"areas"        json:"areas"`
 
@@ -181,6 +190,7 @@ type NetworkDef struct {
 	PollIntervalMins            int            `toml:"poll_interval_mins" json:"poll_interval_mins"`
 	FileAreas                   map[string]int `toml:"file_areas" json:"file_areas"`
 	FileFixPassword             string         `toml:"filefix_password" json:"filefix_password"`
+	TicPassword                 string         `toml:"tic_password" json:"tic_password"`
 	NodelistURL                 string         `toml:"nodelist_url" json:"nodelist_url"`
 	NodelistUpdateIntervalHours int            `toml:"nodelist_update_interval_hours" json:"nodelist_update_interval_hours"`
 
@@ -254,11 +264,19 @@ func (c *Config) FileDirForTag(tag string) int {
 	return id
 }
 
+// EffectivePrimaryName returns the configured primary network name.
+func (c *Config) EffectivePrimaryName() string {
+	if c.Name != "" {
+		return c.Name
+	}
+	return PrimaryNetworkName
+}
+
 // AllNetworks returns the primary network plus all additional networks as
 // a flat slice of NetworkDef. Used when iterating all configured networks.
 func (c *Config) AllNetworks() []NetworkDef {
 	primary := NetworkDef{
-		Name:            "FidoNet",
+		Name:            c.EffectivePrimaryName(),
 		Enabled:         c.Enabled,
 		Address:         c.Address,
 		Uplink:          c.Uplink,
@@ -266,6 +284,7 @@ func (c *Config) AllNetworks() []NetworkDef {
 		InboundDir:      c.InboundDir,
 		OutboundDir:     c.OutboundDir,
 		NodelistDir:     c.NodelistDir,
+		HoldingDir:      c.HoldingDir,
 		BinkpPort:        c.BinkpPort,
 		Areas:            c.Areas,
 		TaglinesFile:     c.TaglinesFile,
@@ -274,6 +293,7 @@ func (c *Config) AllNetworks() []NetworkDef {
 		PollIntervalMins:            c.PollIntervalMins,
 		FileAreas:                   c.FileAreas,
 		FileFixPassword:             c.FileFixPassword,
+		TicPassword:                 c.TicPassword,
 		NodelistURL:                 c.NodelistURL,
 		NodelistUpdateIntervalHours: c.NodelistUpdateIntervalHours,
 		AKAs:                        c.AKAs,

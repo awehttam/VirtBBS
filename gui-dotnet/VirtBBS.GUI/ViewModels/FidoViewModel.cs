@@ -12,7 +12,7 @@ namespace VirtBBS.GUI.ViewModels;
 public partial class FidoViewModel(ApiClient client) : ViewModelBase
 {
     [ObservableProperty] private string _status = "";
-    [ObservableProperty] private string _selectedNetwork = FidoNetworksViewModel.PrimaryNetwork;
+    [ObservableProperty] private string _selectedNetwork = FidoNetworksViewModel.DefaultPrimaryNetwork;
 
     // Nodelist search.
     [ObservableProperty] private string _nodeQuery = "";
@@ -40,11 +40,11 @@ public partial class FidoViewModel(ApiClient client) : ViewModelBase
         try
         {
             var names = await client.CallAsync<string[]>("fido.networks.list", null, ct)
-                ?? [FidoNetworksViewModel.PrimaryNetwork];
+                ?? [FidoNetworksViewModel.DefaultPrimaryNetwork];
             NetworkNames.Clear();
             foreach (var n in names) NetworkNames.Add(n);
             if (!NetworkNames.Contains(SelectedNetwork))
-                SelectedNetwork = NetworkNames.FirstOrDefault() ?? FidoNetworksViewModel.PrimaryNetwork;
+                SelectedNetwork = NetworkNames.FirstOrDefault() ?? FidoNetworksViewModel.DefaultPrimaryNetwork;
         }
         catch { /* ignore */ }
     }
@@ -104,7 +104,7 @@ public partial class FidoViewModel(ApiClient client) : ViewModelBase
                 Subject = NmSubject,
                 Body = NmBody,
                 Crash = Crash,
-                Network = SelectedNetwork == FidoNetworksViewModel.PrimaryNetwork ? "" : SelectedNetwork,
+                Network = SelectedNetwork == FidoNetworksViewModel.DefaultPrimaryNetwork ? "" : SelectedNetwork,
             }, ct);
             Status = "Netmail queued.";
             ToAddr = ToName = NmSubject = NmBody = "";

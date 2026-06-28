@@ -214,7 +214,7 @@ func (s *Server) dispatch(req Request) (any, error) {
 		if !cfg.Fido.Enabled {
 			return nil, fmt.Errorf("FidoNet is not enabled")
 		}
-		return fido.TossAll(&cfg.Fido, s.Deps.Messages, s.Deps.Conferences), nil
+		return fido.TossAll(&cfg.Fido, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name), nil
 
 	case "fido.scan":
 		cfg := config.Get()
@@ -240,6 +240,9 @@ func (s *Server) dispatch(req Request) (any, error) {
 		// Never let the API zero out the password hash.
 		if merged.Sysop.PasswordHash == "" {
 			merged.Sysop.PasswordHash = current.Sysop.PasswordHash
+		}
+		if err := fido.EnsureAllNetworkDirs(&merged.Fido); err != nil {
+			return nil, err
 		}
 		return nil, config.Save(&merged)
 
@@ -341,7 +344,7 @@ func (s *Server) dispatch(req Request) (any, error) {
 		if nd == nil {
 			return nil, fmt.Errorf("network %q not found", p.Network)
 		}
-		result := fido.PollAndToss(nd, s.Deps.Messages, s.Deps.Conferences)
+		result := fido.PollAndToss(nd, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name)
 		return result, result.Poll.Error
 
 	case "fido.netmail.send":
@@ -455,13 +458,32 @@ func (s *Server) dispatch(req Request) (any, error) {
 
 	case "fido.networks.list":
 		cfg := config.Get()
-		names := []string{fido.PrimaryNetworkName}
+		primary := cfg.Fido.EffectivePrimaryName()
+		names := []string{primary}
 		for _, nd := range cfg.Fido.Networks {
-			if nd.Name != "" && nd.Name != fido.PrimaryNetworkName {
+			if nd.Name != "" && !strings.EqualFold(nd.Name, primary) {
 				names = append(names, nd.Name)
 			}
 		}
 		return names, nil
+
+	case "fido.network.rename":
+		var p struct {
+			OldName string `json:"old_name"`
+			NewName string `json:"new_name"`
+		}
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, err
+		}
+		cfg := config.Get()
+		merged := *cfg
+		if err := fido.RenameNetwork(&merged.Fido, s.Deps.Messages.DB(), p.OldName, p.NewName); err != nil {
+			return nil, err
+		}
+		if err := fido.EnsureAllNetworkDirs(&merged.Fido); err != nil {
+			return nil, err
+		}
+		return nil, config.Save(&merged)
 
 	case "fido.routes.list":
 		var p struct{ Network string }

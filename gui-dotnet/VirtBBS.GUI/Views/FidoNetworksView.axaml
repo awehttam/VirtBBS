@@ -18,36 +18,42 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="10" MaxWidth="900">
                 <TextBlock Text="Node Settings" FontWeight="Bold" FontSize="14"/>
-                <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="6">
-                    <CheckBox Grid.Row="0" Grid.Column="1" Content="Enabled" IsChecked="{Binding Enabled}"/>
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Address:" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Address}"/>
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Uplink:" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Uplink}"/>
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Password:" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Password}"/>
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Inbound dir:" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding InboundDir}"/>
-                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Outbound dir:" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding OutboundDir}"/>
-                    <TextBlock Grid.Row="6" Grid.Column="0" Text="Nodelist dir:" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding NodelistDir}"/>
-                    <TextBlock Grid.Row="7" Grid.Column="0" Text="BinkP port:" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="7" Grid.Column="1" Value="{Binding BinkpPort}" Minimum="1" Maximum="65535"/>
-                    <TextBlock Grid.Row="8" Grid.Column="0" Text="Poll interval (mins):" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="8" Grid.Column="1" Value="{Binding PollIntervalMins}" Minimum="0"/>
-                    <TextBlock Grid.Row="9" Grid.Column="0" Text="Nodelist URL:" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding NodelistUrl}"/>
-                    <TextBlock Grid.Row="10" Grid.Column="0" Text="Nodelist update (hrs):" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="10" Grid.Column="1" Value="{Binding NodelistUpdateIntervalHours}" Minimum="0"/>
-                    <TextBlock Grid.Row="11" Grid.Column="0" Text="Nodelist echo tag:" VerticalAlignment="Center" IsVisible="{Binding !IsPrimaryNetwork}"/>
-                    <TextBox Grid.Row="11" Grid.Column="1" Text="{Binding NodelistEchoTag}" IsVisible="{Binding !IsPrimaryNetwork}"/>
-                    <TextBlock Grid.Row="12" Grid.Column="0" Text="AreaFix password:" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="12" Grid.Column="1" Text="{Binding AreafixPassword}"/>
-                    <TextBlock Grid.Row="13" Grid.Column="0" Text="FileFix password:" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="13" Grid.Column="1" Text="{Binding FilefixPassword}"/>
-                    <TextBlock Grid.Row="14" Grid.Column="0" Text="AKAs (one per line):" VerticalAlignment="Top"/>
-                    <TextBox Grid.Row="14" Grid.Column="1" Text="{Binding AkasText}" AcceptsReturn="True" Height="60"/>
+                <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="6">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Network name:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding NetworkName}"/>
+                    <CheckBox Grid.Row="1" Grid.Column="1" Content="Enabled" IsChecked="{Binding Enabled}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Address:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Address}"/>
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Uplink:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Uplink}"/>
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Password:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Password}"/>
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Inbound dir:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding InboundDir}"/>
+                    <TextBlock Grid.Row="6" Grid.Column="0" Text="Outbound dir:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding OutboundDir}"/>
+                    <TextBlock Grid.Row="7" Grid.Column="0" Text="Nodelist dir:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding NodelistDir}"/>
+                    <TextBlock Grid.Row="8" Grid.Column="0" Text="Holding dir:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding HoldingDir}" Watermark="(default: inbound/.holding)"/>
+                    <TextBlock Grid.Row="9" Grid.Column="0" Text="BinkP port:" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="9" Grid.Column="1" Value="{Binding BinkpPort}" Minimum="1" Maximum="65535"/>
+                    <TextBlock Grid.Row="10" Grid.Column="0" Text="Poll interval (mins):" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="10" Grid.Column="1" Value="{Binding PollIntervalMins}" Minimum="0"/>
+                    <TextBlock Grid.Row="11" Grid.Column="0" Text="Nodelist URL:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="11" Grid.Column="1" Text="{Binding NodelistUrl}"/>
+                    <TextBlock Grid.Row="12" Grid.Column="0" Text="Nodelist update (hrs):" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="12" Grid.Column="1" Value="{Binding NodelistUpdateIntervalHours}" Minimum="0"/>
+                    <TextBlock Grid.Row="13" Grid.Column="0" Text="Nodelist echo tag:" VerticalAlignment="Center" IsVisible="{Binding !IsPrimaryNetwork}"/>
+                    <TextBox Grid.Row="13" Grid.Column="1" Text="{Binding NodelistEchoTag}" IsVisible="{Binding !IsPrimaryNetwork}"/>
+                    <TextBlock Grid.Row="14" Grid.Column="0" Text="AreaFix password:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="14" Grid.Column="1" Text="{Binding AreafixPassword}"/>
+                    <TextBlock Grid.Row="15" Grid.Column="0" Text="FileFix password:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="15" Grid.Column="1" Text="{Binding FilefixPassword}"/>
+                    <TextBlock Grid.Row="16" Grid.Column="0" Text="TIC password:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="16" Grid.Column="1" Text="{Binding TicPassword}"/>
+                    <TextBlock Grid.Row="17" Grid.Column="0" Text="AKAs (one per line):" VerticalAlignment="Top"/>
+                    <TextBox Grid.Row="17" Grid.Column="1" Text="{Binding AkasText}" AcceptsReturn="True" Height="60"/>
                 </Grid>
 
                 <TextBlock Text="Inbound Echo Areas ([fido.areas] → conference ID)" FontWeight="Bold"/>

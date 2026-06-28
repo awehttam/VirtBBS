@@ -172,7 +172,7 @@ func runNetwork(networkName string, store *messages.Store, confStore *conference
 				log.Printf("fido scheduler: %s — interval changed to %s", networkName, interval)
 			}
 
-			result := fido.PollAndToss(nd, store, confStore)
+			result := fido.PollAndToss(nd, store, confStore, config.Get().Sysop.Name)
 			if result.Poll.Error != nil {
 				log.Printf("fido scheduler: %s poll error: %v", networkName, result.Poll.Error)
 				continue
@@ -181,8 +181,8 @@ func runNetwork(networkName string, store *messages.Store, confStore *conference
 				networkName, len(result.Poll.Sent), len(result.Poll.Received))
 
 			if result.Toss != nil {
-				log.Printf("fido scheduler: %s toss complete (%d imported, %d skipped)",
-					networkName, result.Toss.Imported, result.Toss.Skipped)
+				log.Printf("fido scheduler: %s toss complete (%d imported, %d skipped, %d held)",
+					networkName, result.Toss.Imported, result.Toss.Skipped, result.Toss.Orphaned)
 				for _, e := range result.Toss.Errors {
 					log.Printf("fido scheduler: %s toss error: %s", networkName, e)
 				}

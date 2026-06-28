@@ -61,5 +61,10 @@ The .NET GUI is cross-platform by default — `dotnet build`/`dotnet run` work u
 | Telnet | 2323 |
 | SSH | 3232 |
 | Sysop API | 9999 |
+| User API (VirtAnd/VirtTerm) | 9998 |
+| VirtTerm TLS | 6323 |
+| BinkP (FidoNet, per network) | 24554 |
 
-Change in `VirtBBS.DAT` under `[network]`.
+Change Telnet/SSH/API ports in `VirtBBS.DAT` under `[network]`. FidoNet
+mail directories (`fido/inbound`, `fido/<Name>_inbound`, etc.) are created
+automatically when config is saved.

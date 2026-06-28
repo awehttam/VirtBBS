@@ -12,7 +12,7 @@ namespace VirtBBS.GUI.ViewModels;
 public partial class FidoRoutingViewModel(ApiClient client) : ViewModelBase
 {
     [ObservableProperty] private string _status = "";
-    [ObservableProperty] private string _selectedNetwork = FidoNetworksViewModel.PrimaryNetwork;
+    [ObservableProperty] private string _selectedNetwork = FidoNetworksViewModel.DefaultPrimaryNetwork;
     [ObservableProperty] private string _newPattern = "";
     [ObservableProperty] private string _newRouteTo = "";
     [ObservableProperty] private FidoRoute? _selectedRoute;
@@ -51,11 +51,11 @@ public partial class FidoRoutingViewModel(ApiClient client) : ViewModelBase
     {
         try
         {
-            var names = await client.CallAsync<string[]>("fido.networks.list", null, ct) ?? [FidoNetworksViewModel.PrimaryNetwork];
+            var names = await client.CallAsync<string[]>("fido.networks.list", null, ct) ?? [FidoNetworksViewModel.DefaultPrimaryNetwork];
             NetworkNames.Clear();
             foreach (var n in names) NetworkNames.Add(n);
             if (!NetworkNames.Contains(SelectedNetwork))
-                SelectedNetwork = NetworkNames.FirstOrDefault() ?? FidoNetworksViewModel.PrimaryNetwork;
+                SelectedNetwork = NetworkNames.FirstOrDefault() ?? FidoNetworksViewModel.DefaultPrimaryNetwork;
 
             var routes = await client.CallAsync<FidoRoute[]>("fido.routes.list",
                 new { Network = SelectedNetwork }, ct) ?? [];

@@ -155,6 +155,7 @@ public class SysopSection
 
 public class FidoSection
 {
+    [JsonPropertyName("name")]         public string Name        { get; set; } = "";
     [JsonPropertyName("enabled")]      public bool   Enabled     { get; set; }
     [JsonPropertyName("address")]      public string Address     { get; set; } = "";
     [JsonPropertyName("uplink")]       public string Uplink      { get; set; } = "";
@@ -162,6 +163,7 @@ public class FidoSection
     [JsonPropertyName("inbound_dir")]  public string InboundDir  { get; set; } = "";
     [JsonPropertyName("outbound_dir")] public string OutboundDir { get; set; } = "";
     [JsonPropertyName("nodelist_dir")] public string NodelistDir { get; set; } = "";
+    [JsonPropertyName("holding_dir")] public string HoldingDir { get; set; } = "";
     [JsonPropertyName("binkp_port")]   public int    BinkpPort   { get; set; }
     [JsonPropertyName("areas")]        public Dictionary<string, int> Areas { get; set; } = new();
     [JsonPropertyName("akas")]         public List<string> AKAs { get; set; } = new();
@@ -171,6 +173,7 @@ public class FidoSection
     [JsonPropertyName("poll_interval_mins")] public int PollIntervalMins { get; set; }
     [JsonPropertyName("file_areas")]   public Dictionary<string, int> FileAreas { get; set; } = new();
     [JsonPropertyName("filefix_password")] public string FileFixPassword { get; set; } = "";
+    [JsonPropertyName("tic_password")] public string TicPassword { get; set; } = "";
     [JsonPropertyName("nodelist_url")]  public string NodelistURL { get; set; } = "";
     [JsonPropertyName("nodelist_update_interval_hours")] public int NodelistUpdateIntervalHours { get; set; }
     [JsonPropertyName("networks")]     public List<FidoNetworkDef> Networks { get; set; } = new();
@@ -186,6 +189,7 @@ public class FidoNetworkDef
     [JsonPropertyName("inbound_dir")]   public string InboundDir  { get; set; } = "";
     [JsonPropertyName("outbound_dir")]  public string OutboundDir { get; set; } = "";
     [JsonPropertyName("nodelist_dir")]  public string NodelistDir { get; set; } = "";
+    [JsonPropertyName("holding_dir")]  public string HoldingDir { get; set; } = "";
     [JsonPropertyName("binkp_port")]    public int    BinkpPort   { get; set; }
     [JsonPropertyName("areas")]         public Dictionary<string, int> Areas { get; set; } = new();
     [JsonPropertyName("akas")]          public List<string> AKAs { get; set; } = new();
@@ -195,6 +199,7 @@ public class FidoNetworkDef
     [JsonPropertyName("poll_interval_mins")] public int PollIntervalMins { get; set; }
     [JsonPropertyName("file_areas")]    public Dictionary<string, int> FileAreas { get; set; } = new();
     [JsonPropertyName("filefix_password")] public string FileFixPassword { get; set; } = "";
+    [JsonPropertyName("tic_password")] public string TicPassword { get; set; } = "";
     [JsonPropertyName("nodelist_url")]  public string NodelistURL { get; set; } = "";
     [JsonPropertyName("nodelist_update_interval_hours")] public int NodelistUpdateIntervalHours { get; set; }
     [JsonPropertyName("nodelist_echo_tag")] public string NodelistEchoTag { get; set; } = "";

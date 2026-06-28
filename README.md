@@ -27,6 +27,8 @@ PCBoard was one of the most influential Bulletin Board Systems (BBS) of its era,
 | **Multi-node** | Node status tracking via SQLite (replaces PCBoard's `USERNET.XXX`) |
 | **Callers log** | Compatible 64-byte record format |
 | **Remote sysop GUI** | .NET / Avalonia UI GUI (`VirtBBS.GUI`) connects over JSON/TCP API |
+| **FidoNet mail** | BinkP poll/server, toss/scan, AreaFix/FileFix, orphan-mail holding, multi-network support |
+| **QWK offline mail** | Real QWK/REP packets via `internal/qwk`; BBS `[O]ffline (QWK)` menu; VirtTerm/VirtTermMac graphical reader; VirtAnd sync |
 | **Config** | TOML format `VirtBBS.DAT` (replaces PCBoard's line-oriented `PCBOARD.DAT`) |
 
 ---
@@ -201,7 +203,7 @@ dotnet run
 | Minor (x.**N**.0) | Bumped on significant feature additions |
 | Major (**N**.0.0) | Bumped on explicit request |
 
-Current version: **0.10.0**
+Current version: **0.15.0**
 
 ---
 

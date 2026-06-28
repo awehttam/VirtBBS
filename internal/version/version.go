@@ -230,6 +230,20 @@
 //                        that binkp.go's existing per-peer crash-
 //                        subdirectory lookup needs no changes to pick this
 //                        up automatically.
+//   v0.15.0 2026-06-27  FidoNet orphan-mail holding: unknown echomail areas,
+//                        netmail not addressed to this node, and failed DB
+//                        inserts are saved as one-message .PKT files under
+//                        <inbound>/.holding/ (or holding_dir) with ORPHANS.log
+//                        and a sysop NetMail summary after each toss. Configurable
+//                        primary network name (fido.name), tic_password,
+//                        holding_dir; per-network default mail directories
+//                        (fido/<Name>_inbound etc.) auto-created on config.save;
+//                        fido.network.rename API + sysop GUI network name/rename.
+//                        QWK offline mail: graphical reader in VirtTermMac and
+//                        VirtTerm (Mail menu), BBS Messages [O]ffline (QWK)
+//                        Zmodem menu, VirtAnd queue/compose/detail enhancements.
+//                        Sysop GUI: scrollable edit panes, FidoNet tab fix,
+//                        VirtNet secondary-network null-safe editing.
 // ============================================================================
 
 // Package version holds the VirtBBS version number.
@@ -240,4 +254,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "0.14.0"
+const Version = "0.15.0"

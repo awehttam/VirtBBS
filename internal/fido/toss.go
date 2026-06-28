@@ -63,23 +63,25 @@ const PrimaryNetworkName = "FidoNet"
 
 // TossResult summarises the outcome of a toss run.
 type TossResult struct {
-	Packets  int // .PKT files processed
-	Imported int // messages inserted
-	Skipped  int // messages ignored (unknown area, duplicate, etc.)
-	Errors   []string
+	Packets     int // .PKT files processed
+	Imported    int // messages inserted
+	Skipped     int // messages ignored (duplicate, etc.)
+	Orphaned    int // messages held for sysop review
+	OrphanNotes []OrphanNote
+	Errors      []string
 }
 
 // TossAll tosses every enabled network's inbound directory in turn,
 // aggregating the results. Disabled networks are skipped. Used wherever
 // "toss inbound mail" should mean *all* configured networks, not just the
 // primary one (sysop [T]oss menu, fido.toss API, -fido-toss CLI flag).
-func TossAll(cfg *Config, store *messages.Store, confStore *conferences.Store) *TossResult {
+func TossAll(cfg *Config, store *messages.Store, confStore *conferences.Store, sysopName string) *TossResult {
 	total := &TossResult{}
 	for _, nd := range cfg.AllNetworks() {
 		if !nd.Enabled {
 			continue
 		}
-		r, err := TossDir(&nd, store, confStore)
+		r, err := TossDir(&nd, store, confStore, sysopName)
 		if err != nil {
 			total.Errors = append(total.Errors, fmt.Sprintf("[%s] %v", nd.Name, err))
 			continue
@@ -87,6 +89,8 @@ func TossAll(cfg *Config, store *messages.Store, confStore *conferences.Store) *
 		total.Packets += r.Packets
 		total.Imported += r.Imported
 		total.Skipped += r.Skipped
+		total.Orphaned += r.Orphaned
+		total.OrphanNotes = append(total.OrphanNotes, r.OrphanNotes...)
 		for _, e := range r.Errors {
 			total.Errors = append(total.Errors, fmt.Sprintf("[%s] %s", nd.Name, e))
 		}
@@ -98,7 +102,7 @@ func TossAll(cfg *Config, store *messages.Store, confStore *conferences.Store) *
 // echomail messages, and moves processed packets to <inbound>/.tossed/.
 // confStore may be nil (AreaFix's %LIST falls back to nd.Areas and area
 // validation is skipped for tag existence checks).
-func TossDir(nd *NetworkDef, store *messages.Store, confStore *conferences.Store) (*TossResult, error) {
+func TossDir(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string) (*TossResult, error) {
 	if !nd.Enabled {
 		return nil, fmt.Errorf("network %s is disabled", nd.Name)
 	}
@@ -107,6 +111,9 @@ func TossDir(nd *NetworkDef, store *messages.Store, confStore *conferences.Store
 	}
 	tossed := filepath.Join(nd.InboundDir, ".tossed")
 	if err := os.MkdirAll(tossed, 0755); err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(nd.EffectiveHoldingDir(), 0755); err != nil {
 		return nil, err
 	}
 
@@ -126,25 +133,34 @@ func TossDir(nd *NetworkDef, store *messages.Store, confStore *conferences.Store
 		}
 
 		pktPath := filepath.Join(nd.InboundDir, e.Name())
-		imp, skip, errs := tossFile(nd, store, confStore, pktPath)
+		imp, skip, orphans, notes, errs := tossFile(nd, store, confStore, pktPath)
 		result.Packets++
 		result.Imported += imp
 		result.Skipped += skip
+		result.Orphaned += orphans
+		result.OrphanNotes = append(result.OrphanNotes, notes...)
 		result.Errors = append(result.Errors, errs...)
 
 		// Move processed packet to .tossed/.
 		dest := filepath.Join(tossed, e.Name())
 		_ = os.Rename(pktPath, dest)
 	}
+
+	if len(result.OrphanNotes) > 0 {
+		if err := NotifySysopOrphans(store, sysopName, nd.Name, result.OrphanNotes); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("sysop notify: %v", err))
+		}
+	}
 	return result, nil
 }
 
 // TossFile processes a single .PKT file, importing its messages.
-func TossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, pktPath string) (imported, skipped int, errs []string) {
-	return tossFile(nd, store, confStore, pktPath)
+func TossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName, pktPath string) (imported, skipped, orphaned int, notes []OrphanNote, errs []string) {
+	imp, sk, orph, nts, es := tossFile(nd, store, confStore, pktPath)
+	return imp, sk, orph, nts, es
 }
 
-func tossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, pktPath string) (imported, skipped int, errs []string) {
+func tossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, pktPath string) (imported, skipped, orphaned int, notes []OrphanNote, errs []string) {
 	f, err := os.Open(pktPath)
 	if err != nil {
 		errs = append(errs, fmt.Sprintf("%s: %v", pktPath, err))
@@ -161,12 +177,9 @@ func tossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Stor
 	for _, pm := range msgs {
 		pb := pm.Parse()
 		area := pb.AreaTag
+		isNetmail := area == ""
 
-		var confID int
-		if area == "" {
-			// NetMail — route to conference 0 (General) addressed to the recipient.
-			confID = 0
-
+		if isNetmail {
 			// Auto-respond to PING test messages with a PONG reply. IsPing
 			// only matches "PING" exactly, so a PONG reaching us here never
 			// triggers another reply — no loop-guard needed beyond that.
@@ -208,11 +221,38 @@ func tossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Stor
 					errs = append(errs, fmt.Sprintf("node announce: %v", err))
 				}
 			}
+
+			// Netmail not addressed to this node — hold for sysop review
+			// instead of importing to conference 0.
+			if !IsAreaFixRequest(pm.ToName) && !IsFileFixRequest(pm.ToName) &&
+				!IsPing(pm.Subject) && !IsTrace(pm.Subject) &&
+				!(IsNodeAnnounceRequest(pm.Subject) && nd.IsHub()) &&
+				!nd.MatchesOurAddr(pm.DestAddr) {
+				if note, err := HoldOrphanMessage(nd, pm, "NOT_FOR_US"); err != nil {
+					errs = append(errs, fmt.Sprintf("hold netmail: %v", err))
+					skipped++
+				} else {
+					orphaned++
+					notes = append(notes, note)
+				}
+				continue
+			}
+		}
+
+		var confID int
+		if isNetmail {
+			confID = 0
 		} else {
 			confID = nd.ConferenceForArea(area)
 			if confID < 0 {
-				skipped++
-				continue // unknown area
+				if note, err := HoldOrphanMessage(nd, pm, "UNKNOWN_AREA"); err != nil {
+					errs = append(errs, fmt.Sprintf("hold echomail: %v", err))
+					skipped++
+				} else {
+					orphaned++
+					notes = append(notes, note)
+				}
+				continue
 			}
 
 			// VirtNet: this network's own generated nodelist, distributed
@@ -263,7 +303,13 @@ func tossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Stor
 		}
 		if err := store.Post(m); err != nil {
 			errs = append(errs, fmt.Sprintf("insert: %v", err))
-			skipped++
+			if note, holdErr := HoldOrphanMessage(nd, pm, "INSERT_FAILED"); holdErr != nil {
+				errs = append(errs, fmt.Sprintf("hold after insert fail: %v", holdErr))
+				skipped++
+			} else {
+				orphaned++
+				notes = append(notes, note)
+			}
 			continue
 		}
 		imported++
