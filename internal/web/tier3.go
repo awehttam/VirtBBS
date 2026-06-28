@@ -10,6 +10,7 @@ import (
 
 	"github.com/virtbbs/virtbbs/internal/config"
 	"github.com/virtbbs/virtbbs/internal/fido"
+	"github.com/virtbbs/virtbbs/internal/messages"
 	"github.com/virtbbs/virtbbs/internal/node"
 	"github.com/virtbbs/virtbbs/internal/users"
 )
@@ -40,18 +41,18 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		data.Username = strings.TrimSpace(r.FormValue("username"))
 		if data.Username == "" {
-			data.Error = "Username is required"
+			data.Error = tr(data.Locale, "forgot.error.username_required")
 		} else {
 			token, err := s.Deps.Users.CreatePasswordResetToken(data.Username)
 			if err != nil {
-				data.Error = err.Error()
+				data.Error = translateAPIError(data.Locale, err.Error())
 			} else {
 				scheme := "http"
 				if r.TLS != nil {
 					scheme = "https"
 				}
 				data.ResetURL = fmt.Sprintf("%s://%s/reset-password?token=%s", scheme, r.Host, token)
-				data.Flash = "Use this link within 1 hour (copy now):"
+				data.Flash = tr(data.Locale, "forgot.flash.link")
 			}
 		}
 	}
@@ -68,7 +69,7 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 		Token:    token,
 	}
 	if token == "" {
-		data.Error = "Missing reset token"
+		data.Error = tr(data.Locale, "reset.error.token")
 		s.render(w, "reset_password.html", data)
 		return
 	}
@@ -77,11 +78,11 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 		pass := r.FormValue("password")
 		pass2 := r.FormValue("password_confirm")
 		if pass != pass2 || pass == "" {
-			data.Error = "Passwords do not match"
+			data.Error = tr(data.Locale, "reset.error.password_mismatch")
 		} else if err := s.Deps.Users.ResetPasswordWithToken(token, pass); err != nil {
-			data.Error = err.Error()
+			data.Error = translateAPIError(data.Locale, err.Error())
 		} else {
-			data.Flash = "Password updated. You can log in now."
+			data.Flash = tr(data.Locale, "reset.flash.updated")
 			data.Token = ""
 		}
 	}
@@ -138,14 +139,14 @@ func (s *Server) handleAddressBook(w http.ResponseWriter, r *http.Request) {
 // ── Netmail SPA (12) ─────────────────────────────────────────────────────────
 
 func (s *Server) handleNetmailApp(w http.ResponseWriter, r *http.Request) {
-	u, ok := s.requireUser(w, r)
+	_, ok := s.requireUser(w, r)
 	if !ok {
 		return
 	}
 	data := struct {
 		pageData
 	}{
-		pageData: pageData{BBSName: config.Get().BBS.Name, User: u, Locale: localeFromRequest(r)},
+		pageData: s.page(r),
 	}
 	s.render(w, "netmail_app.html", data)
 }
@@ -164,7 +165,19 @@ func (s *Server) handleAPINetmail(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(msgs[0])
+		m := msgs[0]
+		if u.Sysop {
+			resp := struct {
+				*messages.Message
+				DisplayBody string `json:"DisplayBody"`
+			}{
+				Message:     m,
+				DisplayBody: fido.ReconstructSource(fidoSourceOpts(m, "")),
+			}
+			_ = json.NewEncoder(w).Encode(resp)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(m)
 		return
 	}
 	msgs, err := s.Deps.Messages.ListNetmail(u.Name, u.Sysop, 0, 200)
@@ -211,13 +224,14 @@ func (s *Server) handleAPINetmailCompose(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	m := fido.NetmailMsg{
-		Network:  netName,
-		FromName: u.Name,
-		FromAddr: nd.Address,
-		ToName:   body.ToName,
-		ToAddr:   body.ToAddr,
-		Subject:  body.Subject,
-		Body:     body.Body,
+		Network:    netName,
+		FromName:   u.Name,
+		FromAddr:   nd.Address,
+		ToName:     body.ToName,
+		ToAddr:     body.ToAddr,
+		Subject:    body.Subject,
+		Body:       body.Body,
+		AuthorLang: authorLangCode(u, r),
 	}
 	ndb := fido.OpenNetmailDB(s.Deps.Messages.DB())
 	id, err := ndb.Enqueue(&m)
@@ -281,7 +295,7 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 // ── Sysop admin (4, 5) ───────────────────────────────────────────────────────
 
 func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request) {
-	u, ok := s.requireSysop(w, r)
+	_, ok := s.requireSysop(w, r)
 	if !ok {
 		return
 	}
@@ -290,7 +304,7 @@ func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request) {
 		pageData
 		FidoEnabled bool
 	}{
-		pageData:    pageData{BBSName: cfg.BBS.Name, User: u, Locale: localeFromRequest(r)},
+		pageData: s.page(r),
 		FidoEnabled: cfg.Fido.Enabled,
 	}
 	s.render(w, "admin.html", data)
@@ -304,13 +318,13 @@ func (s *Server) handleAdminBinkP(w http.ResponseWriter, r *http.Request) {
 	cfg := config.Get()
 	data := struct {
 		pageData
-		Networks    []string
-		LogLines    []string
-		LogPath     string
-		Stats       *fido.BinkpStatsQueryResult
-		PollResult  string
-		Flash       string
-		Error       string
+		Networks   []string
+		LogLines   []string
+		LogPath    string
+		Stats      *fido.BinkpStatsQueryResult
+		PollResult string
+		Flash      string
+		Error      string
 	}{
 		pageData: pageData{BBSName: cfg.BBS.Name, User: u, Locale: localeFromRequest(r)},
 	}
@@ -331,7 +345,7 @@ func (s *Server) handleAdminBinkP(w http.ResponseWriter, r *http.Request) {
 		}
 		nd := cfg.Fido.NetworkByName(netName)
 		if nd == nil {
-			data.Error = "network not found"
+			data.Error = tr(data.Locale, "admin_binkp.error.network")
 		} else {
 			res := fido.PollAndToss(nd, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name)
 			if res.Poll.Error != nil {
@@ -341,7 +355,7 @@ func (s *Server) handleAdminBinkP(w http.ResponseWriter, r *http.Request) {
 				if res.Toss != nil {
 					tossed = res.Toss.Imported
 				}
-				data.Flash = fmt.Sprintf("Poll OK — sent: %d files, received: %d files, tossed: %d msgs",
+				data.Flash = trf(data.Locale, "admin_binkp.flash.poll_ok",
 					len(res.Poll.Sent), len(res.Poll.Received), tossed)
 			}
 		}

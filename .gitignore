@@ -11,14 +11,6 @@
 *.test
 *.out
 
-# .NET / Avalonia / WinForms
-gui-dotnet/**/bin/
-gui-dotnet/**/obj/
-dotnet-virtterm/**/bin/
-dotnet-virtterm/**/obj/
-dotnet-virttermmac/**/bin/
-dotnet-virttermmac/**/obj/
-
 # Android / Gradle
 android/**/build/
 android/**/.gradle/

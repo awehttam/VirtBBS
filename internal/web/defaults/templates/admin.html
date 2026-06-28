@@ -3,14 +3,21 @@
 <div class="panel sysop-panel">
   <h2>{{t .Locale "admin.title"}}</h2>
   <div class="menu-grid">
-    <div class="menu-card"><a href="/admin/users">{{t .Locale "admin.users"}}</a><p>Accounts, passwords, delete</p></div>
-    <div class="menu-card"><a href="/admin/nodes">Nodes</a><p>Online sessions, kick</p></div>
+    <div class="menu-card"><a href="/admin/users">{{t .Locale "admin.users"}}</a><p>{{t .Locale "admin.users_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/nodes">{{t .Locale "admin.nodes"}}</a><p>{{t .Locale "admin.nodes_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/conferences">{{t .Locale "admin.conferences"}}</a><p>{{t .Locale "admin.conferences_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/messages">{{t .Locale "admin.messages"}}</a><p>{{t .Locale "admin.messages_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/files">{{t .Locale "admin.files"}}</a><p>{{t .Locale "admin.files_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/callers">{{t .Locale "admin.callers"}}</a><p>{{t .Locale "admin.callers_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/config">{{t .Locale "admin.config"}}</a><p>{{t .Locale "admin.config_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/tokens">{{t .Locale "admin.tokens"}}</a><p>{{t .Locale "admin.tokens_desc"}}</p></div>
     {{if .FidoEnabled}}
-    <div class="menu-card"><a href="/admin/binkp">{{t .Locale "admin.binkp"}}</a><p>Poll uplink, stats, log</p></div>
+    <div class="menu-card"><a href="/admin/fido">{{t .Locale "admin.fido"}}</a><p>{{t .Locale "admin.fido_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/binkp">{{t .Locale "admin.binkp"}}</a><p>{{t .Locale "admin.binkp_desc"}}</p></div>
     {{end}}
-    <div class="menu-card"><a href="/stats">BBS Stats</a><p>Public stats page</p></div>
+    <div class="menu-card"><a href="/nodelist">{{t .Locale "nav.nodelist"}}</a><p>{{t .Locale "admin.nodelist_desc"}}</p></div>
+    <div class="menu-card"><a href="/stats">{{t .Locale "admin.stats"}}</a><p>{{t .Locale "admin.stats_desc"}}</p></div>
   </div>
-  <p class="meta">Full configuration: use VirtBBS.GUI (sysop API port {{.BBSName}}).</p>
 </div>
 {{template "footer" .}}
 {{end}}

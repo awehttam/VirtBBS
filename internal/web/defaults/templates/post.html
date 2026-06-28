@@ -2,16 +2,16 @@
 {{template "header" .}}
 <div class="panel">
   <p><a href="/messages?conf={{.Conference.ID}}">← {{.Conference.Name}}</a></p>
-  <h2>Post Message</h2>
+  <h2>{{t .Locale "post.title"}}</h2>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form method="post" action="/messages/post?conf={{.Conference.ID}}{{if .ReplyNum}}&amp;reply={{.ReplyNum}}{{end}}">
-    <label for="to">To</label>
+    <label for="to">{{t .Locale "common.to"}}</label>
     <input type="text" id="to" name="to" value="{{.ToName}}">
-    <label for="subject">Subject</label>
+    <label for="subject">{{t .Locale "common.subject"}}</label>
     <input type="text" id="subject" name="subject" value="{{.Subject}}" required>
-    <label for="body">Message</label>
+    <label for="body">{{t .Locale "common.message"}}</label>
     <textarea id="body" name="body" required>{{.Body}}</textarea>
-    <button type="submit">Post</button>
+    <button type="submit">{{t .Locale "post.submit"}}</button>
   </form>
 </div>
 {{template "footer" .}}

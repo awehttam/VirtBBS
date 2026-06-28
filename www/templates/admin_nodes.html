@@ -1,30 +1,36 @@
 {{define "admin_nodes.html"}}
 {{template "header" .}}
 <div class="panel sysop-panel">
-  <h2>Online nodes</h2>
-  <p><a href="/admin">← Admin</a></p>
+  <h2>{{t .Locale "admin_nodes.title"}}</h2>
+  <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
   <table>
-    <thead><tr><th>Node</th><th>User</th><th>Status</th><th>Activity</th><th></th></tr></thead>
+    <thead><tr><th>{{t .Locale "common.node"}}</th><th>{{t .Locale "common.user"}}</th><th>{{t .Locale "common.status"}}</th><th>{{t .Locale "common.activity"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Nodes}}
     <tr>
       <td>{{.ID}}</td>
       <td>{{.UserName}}</td>
-      <td>{{.Status}}</td>
-      <td class="meta">{{.Operation}}</td>
+      <td>{{if eq .Status "web"}}{{t $.Locale "status.web"}}{{else}}{{.Status}}{{end}}</td>
+      <td class="meta">{{webOp $.Locale .Operation}}</td>
       <td>
         <form method="post" action="/admin/nodes" style="display:inline">
           <input type="hidden" name="action" value="kick">
           <input type="hidden" name="node_id" value="{{.ID}}">
-          <button type="submit" class="btn-link">Kick</button>
+          <button type="submit" class="btn-link">{{t $.Locale "common.kick"}}</button>
         </form>
       </td>
     </tr>
     {{else}}
-    <tr><td colspan="5">No active nodes.</td></tr>
+    <tr><td colspan="5">{{t .Locale "admin_nodes.empty"}}</td></tr>
     {{end}}
     </tbody>
   </table>
+  <h3>{{t .Locale "admin_nodes.broadcast_title"}}</h3>
+  <form method="post" action="/admin/broadcast" class="inline-form">
+    <input name="from" value="{{t .Locale "menu.sysop"}}" placeholder="{{t .Locale "common.from"}}" style="width:6rem">
+    <input name="message" placeholder="{{t .Locale "admin_nodes.broadcast_message"}}" required style="width:20rem">
+    <button type="submit">{{t .Locale "admin_nodes.broadcast_btn"}}</button>
+  </form>
 </div>
 {{template "footer" .}}
 {{end}}

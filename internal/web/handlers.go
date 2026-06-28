@@ -17,7 +17,7 @@ import (
 	"github.com/virtbbs/virtbbs/internal/fido"
 	"github.com/virtbbs/virtbbs/internal/messages"
 	"github.com/virtbbs/virtbbs/internal/node"
-	"github.com/virtbbs/virtbbs/internal/users"
+	"github.com/virtbbs/virtbbs/internal/postname"
 )
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -29,7 +29,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	data := s.page(r)
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {
-			data.Error = "Invalid form"
+			data.Error = tr(data.Locale, "login.error.form")
 			s.render(w, "login.html", data)
 			return
 		}
@@ -37,17 +37,18 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		pass := r.FormValue("password")
 		u, err := s.Deps.Users.Authenticate(name, pass)
 		if err != nil {
-			data.Error = "Invalid username or password"
+			data.Error = tr(data.Locale, "login.error.credentials")
 			s.render(w, "login.html", data)
 			return
 		}
 		token, err := s.Sessions.Create(u.ID)
 		if err != nil {
-			data.Error = "Session error"
+			data.Error = tr(data.Locale, "login.error.session")
 			s.render(w, "login.html", data)
 			return
 		}
 		setSessionCookie(w, token)
+		s.bindWebNode(token, u)
 		_ = s.Deps.Users.RecordLogin(u.ID)
 		http.Redirect(w, r, "/menu", http.StatusSeeOther)
 		return
@@ -56,7 +57,9 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	if token := sessionToken(r); token != "" {
+	token := sessionToken(r)
+	if token != "" {
+		s.releaseWebNode(token)
 		s.Sessions.Delete(token)
 	}
 	clearSessionCookie(w)
@@ -76,7 +79,7 @@ func (s *Server) handleMenu(w http.ResponseWriter, r *http.Request) {
 		Bulletins    []BulletinView
 		LogonHTML    string
 	}{
-		pageData: pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 	}
 	if n, err := s.Deps.Messages.CountNetmail(u.Name, u.Sysop); err == nil {
 		data.NetmailCount = n
@@ -100,7 +103,7 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		Stats       DashboardStats
 		NewMessages []NewMessageLine
 	}{
-		pageData:    pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Stats:       s.gatherDashboardStats(u),
 		NewMessages: s.gatherNewMessageLines(u),
 	}
@@ -108,7 +111,7 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleOnline(w http.ResponseWriter, r *http.Request) {
-	u, ok := s.requireUser(w, r)
+	_, ok := s.requireUser(w, r)
 	if !ok {
 		return
 	}
@@ -117,14 +120,14 @@ func (s *Server) handleOnline(w http.ResponseWriter, r *http.Request) {
 		pageData
 		Nodes []*node.NodeInfo
 	}{
-		pageData: pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Nodes:    nodes,
 	}
 	s.render(w, "online.html", data)
 }
 
 func (s *Server) handleBulletins(w http.ResponseWriter, r *http.Request) {
-	u, ok := s.requireUser(w, r)
+	_, ok := s.requireUser(w, r)
 	if !ok {
 		return
 	}
@@ -132,7 +135,7 @@ func (s *Server) handleBulletins(w http.ResponseWriter, r *http.Request) {
 		pageData
 		Bulletins []BulletinView
 	}{
-		pageData:  pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Bulletins: s.listBulletins(),
 	}
 	s.render(w, "bulletins.html", data)
@@ -159,7 +162,7 @@ func (s *Server) handleBulletinView(w http.ResponseWriter, r *http.Request) {
 		Title string
 		HTML  string
 	}{
-		pageData: pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Name:     name,
 		Title:    bulletinTitle(name),
 		HTML:     html,
@@ -189,7 +192,7 @@ func (s *Server) handleMessages(w http.ResponseWriter, r *http.Request) {
 			pageData
 			Conferences []*conferences.Conference
 		}{
-			pageData:    pageData{BBSName: config.Get().BBS.Name, User: u},
+			pageData: s.page(r),
 			Conferences: visible,
 		}
 		s.render(w, "messages.html", data)
@@ -212,7 +215,7 @@ func (s *Server) handleMessages(w http.ResponseWriter, r *http.Request) {
 		Messages   []*messages.Message
 		CanWrite   bool
 	}{
-		pageData:   pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Conference: c,
 		Messages:   msgs,
 		CanWrite:   canWrite,
@@ -238,16 +241,27 @@ func (s *Server) handleMessageRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = s.Deps.Users.SetLastRead(u.ID, confID, msgNum)
+	showSource := u.Sysop && c.Echo && r.URL.Query().Get("source") == "1"
+	displayBody := msg.Body
+	if showSource {
+		displayBody = fido.ReconstructSource(fidoSourceOpts(msg, c.EchoTag))
+	}
 	data := struct {
 		pageData
-		Conference *conferences.Conference
-		Message    *messages.Message
-		CanWrite   bool
+		Conference        *conferences.Conference
+		Message           *messages.Message
+		CanWrite          bool
+		ShowSourceToggle  bool
+		ShowSource        bool
+		DisplayBody       string
 	}{
-		pageData:   pageData{BBSName: config.Get().BBS.Name, User: u},
-		Conference: c,
-		Message:    msg,
-		CanWrite:   canWriteConference(u, c),
+		pageData:         s.page(r),
+		Conference:       c,
+		Message:          msg,
+		CanWrite:         canWriteConference(u, c),
+		ShowSourceToggle: u.Sysop && c.Echo,
+		ShowSource:       showSource,
+		DisplayBody:      displayBody,
 	}
 	s.render(w, "read.html", data)
 }
@@ -267,8 +281,10 @@ func (s *Server) handleMessagePost(w http.ResponseWriter, r *http.Request) {
 	subject := ""
 	toName := "All"
 	body := ""
+	var origMsg *messages.Message
 	if replyNum > 0 {
 		if orig, err := s.Deps.Messages.Get(confID, replyNum); err == nil {
+			origMsg = orig
 			toName = orig.FromName
 			subject = replySubject(orig.Subject)
 			body = quoteReplyBody(orig)
@@ -286,6 +302,7 @@ func (s *Server) handleMessagePost(w http.ResponseWriter, r *http.Request) {
 		}
 		body := r.FormValue("body")
 		if subject == "" || body == "" {
+			pd := s.page(r)
 			data := struct {
 				pageData
 				Conference *conferences.Conference
@@ -295,26 +312,49 @@ func (s *Server) handleMessagePost(w http.ResponseWriter, r *http.Request) {
 				ReplyNum   int
 				Error      string
 			}{
-				pageData:   pageData{BBSName: config.Get().BBS.Name, User: u},
+				pageData:   pd,
 				Conference: c,
 				Subject:    subject,
 				ToName:     toName,
 				Body:       body,
 				ReplyNum:   replyNum,
-				Error:      "Subject and message body are required",
+				Error:      tr(pd.Locale, "post.error.required"),
+			}
+			s.render(w, "post.html", data)
+			return
+		}
+		if err := postname.ValidateEchoPost(c, u); err != nil {
+			pd := s.page(r)
+			data := struct {
+				pageData
+				Conference *conferences.Conference
+				Subject    string
+				ToName     string
+				Body       string
+				ReplyNum   int
+				Error      string
+			}{
+				pageData:   pd,
+				Conference: c,
+				Subject:    subject,
+				ToName:     toName,
+				Body:       body,
+				ReplyNum:   replyNum,
+				Error:      translateAPIError(pd.Locale, err.Error()),
 			}
 			s.render(w, "post.html", data)
 			return
 		}
 		m := &messages.Message{
 			ConferenceID: confID,
-			FromName:     u.Name,
+			FromName:     postname.ForConference(c, u),
 			ToName:       toName,
 			Subject:      subject,
 			Body:         body,
 			Status:       "P",
 			Echo:         c.Echo,
 		}
+		fido.ApplyLocalEchoMeta(m, c, postname.EchoOrigAddr(c), authorLangCode(u, r), origMsg)
 		if err := s.Deps.Messages.Post(m); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -330,7 +370,7 @@ func (s *Server) handleMessagePost(w http.ResponseWriter, r *http.Request) {
 		Body       string
 		ReplyNum   int
 	}{
-		pageData:   pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Conference: c,
 		Subject:    subject,
 		ToName:     toName,
@@ -354,7 +394,7 @@ func (s *Server) handleNetmail(w http.ResponseWriter, r *http.Request) {
 		pageData
 		Messages []*messages.Message
 	}{
-		pageData: pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Messages: msgs,
 	}
 	s.render(w, "netmail.html", data)
@@ -371,12 +411,19 @@ func (s *Server) handleNetmailRead(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "message not found", http.StatusNotFound)
 		return
 	}
+	msg := msgs[0]
+	displayBody := msg.Body
+	if u.Sysop {
+		displayBody = fido.ReconstructSource(fidoSourceOpts(msg, ""))
+	}
 	data := struct {
 		pageData
-		Message *messages.Message
+		Message     *messages.Message
+		DisplayBody string
 	}{
-		pageData: pageData{BBSName: config.Get().BBS.Name, User: u},
-		Message:  msgs[0],
+		pageData:    s.page(r),
+		Message:     msg,
+		DisplayBody: displayBody,
 	}
 	s.render(w, "netmail_read.html", data)
 }
@@ -401,7 +448,7 @@ func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
 		pageData
 		Dirs []*files.Dir
 	}{
-		pageData: pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Dirs:     dirs,
 	}
 	s.render(w, "files.html", data)
@@ -429,7 +476,7 @@ func (s *Server) handleFilesBrowse(w http.ResponseWriter, r *http.Request) {
 		Files    []*files.File
 		CanUpload bool
 	}{
-		pageData:  pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Dir:       dir,
 		Files:     filesList,
 		CanUpload: canUploadDir(u, dir),
@@ -520,50 +567,80 @@ func (s *Server) handleFilesUpload(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("/files/browse?dir=%d", dirID), http.StatusSeeOther)
 }
 
-func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
-	u, ok := s.requireUser(w, r)
-	if !ok {
-		return
-	}
-	data := struct {
-		pageData
-		Profile *users.User
-	}{
-		pageData: pageData{BBSName: config.Get().BBS.Name, User: u},
-		Profile:  u,
-	}
-	s.render(w, "profile.html", data)
-}
 
 func (s *Server) handleNodelist(w http.ResponseWriter, r *http.Request) {
-	u, ok := s.requireUser(w, r)
+	_, ok := s.requireUser(w, r)
 	if !ok {
 		return
 	}
-	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	networks := nodelistNetworkNames()
 	network := strings.TrimSpace(r.URL.Query().Get("network"))
 	if network == "" {
-		network = "FidoNet"
+		network = networks[0]
 	}
-	var results *fido.SearchResult
-	if query != "" {
-		ndb := fido.OpenNodelistDB(s.Deps.Messages.DB())
-		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-		if page < 1 {
-			page = 1
-		}
-		results, _ = ndb.Search(network, query, page, 25)
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	ndb := fido.OpenNodelistDB(s.Deps.Messages.DB())
+	results, err := ndb.Search(network, query, page, 25)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	data := struct {
 		pageData
-		Query   string
-		Network string
-		Results *fido.SearchResult
+		Query     string
+		Network   string
+		Networks  []string
+		Results   *fido.SearchResult
+		Page      int
 	}{
-		pageData: pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Query:    query,
 		Network:  network,
+		Networks: networks,
 		Results:  results,
+		Page:     page,
 	}
 	s.render(w, "nodelist.html", data)
+}
+
+func (s *Server) handleNodelistExport(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	network := strings.TrimSpace(r.FormValue("network"))
+	if network == "" {
+		network = nodelistNetworkNames()[0]
+	}
+	query := strings.TrimSpace(r.FormValue("q"))
+	scope := r.FormValue("scope")
+	ndb := fido.OpenNodelistDB(s.Deps.Messages.DB())
+	var nodes []fido.NodeEntry
+	var err error
+	if scope == "all" {
+		nodes, err = ndb.ListAll(network)
+	} else {
+		nodes, err = ndb.SearchAll(network, query)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	body := fido.EncodeNodelistBytes(network, nodes)
+	filename := safeNodelistFilename(network)
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
+	_, _ = w.Write(body)
 }

@@ -1,0 +1,17 @@
+{{define "admin_fido.html"}}
+{{template "header" .}}
+<div class="panel sysop-panel">
+  <h2>{{t .Locale "admin_fido.title"}}</h2>
+  <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
+  <div class="menu-grid">
+    <div class="menu-card"><a href="/admin/fido/ops">{{t .Locale "admin_fido.ops"}}</a><p>{{t .Locale "admin_fido.ops_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/fido/networks">{{t .Locale "admin_fido.networks"}}</a><p>{{t .Locale "admin_fido.networks_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/fido/routing">{{t .Locale "admin_fido.routing"}}</a><p>{{t .Locale "admin_fido.routing_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/fido/join">{{t .Locale "admin_fido.join"}}</a><p>{{t .Locale "admin_fido.join_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/fido/tools">{{t .Locale "admin_fido.tools"}}</a><p>{{t .Locale "admin_fido.tools_desc"}}</p></div>
+    <div class="menu-card"><a href="/admin/binkp">{{t .Locale "admin.binkp"}}</a><p>{{t .Locale "admin.binkp_desc"}}</p></div>
+    <div class="menu-card"><a href="/nodelist">{{t .Locale "admin_fido.nodelist_search"}}</a><p>{{t .Locale "admin_fido.nodelist_search_desc"}}</p></div>
+  </div>
+</div>
+{{template "footer" .}}
+{{end}}

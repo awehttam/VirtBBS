@@ -1,0 +1,74 @@
+{{define "admin_fido_ops.html"}}
+{{template "header" .}}
+<div class="panel sysop-panel">
+  <h2>{{t .Locale "admin_fido_ops.title"}}</h2>
+  <p><a href="/admin/fido">{{t .Locale "common.fido_back"}}</a></p>
+  {{if .Flash}}<p class="flash">{{.Flash}}</p>{{end}}
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="get" class="inline-form">
+    <label>{{t .Locale "common.network"}} <select name="network" onchange="this.form.submit()">{{range .Networks}}<option {{if eq $.Network .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+  </form>
+  {{if .VersionText}}<p class="meta">{{tf .Locale "admin_fido_ops.nodelist_version" .VersionText}}</p>{{end}}
+  <div class="btn-row">
+    <form method="post"><input type="hidden" name="network" value="{{.Network}}"><input type="hidden" name="action" value="toss"><button type="submit">{{t .Locale "admin_fido_ops.toss_inbound"}}</button></form>
+    <form method="post"><input type="hidden" name="network" value="{{.Network}}"><input type="hidden" name="action" value="scan"><button type="submit">{{t .Locale "admin_fido_ops.scan_outbound"}}</button></form>
+    <form method="post"><input type="hidden" name="network" value="{{.Network}}"><input type="hidden" name="action" value="poll"><button type="submit">{{t .Locale "admin_fido_ops.poll_uplink"}}</button></form>
+    <form method="post"><input type="hidden" name="network" value="{{.Network}}"><input type="hidden" name="action" value="fetch"><button type="submit">{{t .Locale "admin_fido_ops.fetch_nodelist"}}</button></form>
+    <form method="post"><input type="hidden" name="network" value="{{.Network}}"><input type="hidden" name="action" value="export_local"><button type="submit">{{t .Locale "admin_fido_ops.export_local"}}</button></form>
+  </div>
+  <h3>{{t .Locale "admin_fido_ops.import_nodelist"}}</h3>
+  <form method="post" action="/admin/fido/import" enctype="multipart/form-data" class="inline-form">
+    <input type="hidden" name="network" value="{{.Network}}">
+    <input type="file" name="nodelist" accept=".txt,.nodelist">
+    <button type="submit">{{t .Locale "admin_fido_ops.upload_import"}}</button>
+  </form>
+  <form method="post" class="inline-form">
+    <input type="hidden" name="network" value="{{.Network}}">
+    <input type="hidden" name="action" value="import">
+    <input name="import_path" placeholder="{{t .Locale "admin_fido_ops.import_path_placeholder"}}">
+    <button type="submit">{{t .Locale "admin_fido_ops.import_from_path"}}</button>
+  </form>
+  <h3>{{t .Locale "admin_fido_ops.queue_netmail"}}</h3>
+  <form method="post" class="admin-form">
+    <input type="hidden" name="network" value="{{.Network}}">
+    <input type="hidden" name="action" value="netmail">
+    <label>{{t .Locale "common.to_addr"}} <input name="to_addr" required></label>
+    <label>{{t .Locale "common.to_name"}} <input name="to_name"></label>
+    <label>{{t .Locale "common.subject"}} <input name="subject"></label>
+    <label>{{t .Locale "common.body"}} <textarea name="body" rows="4"></textarea></label>
+    <label><input type="checkbox" name="crash" value="1"> {{t .Locale "admin_fido_ops.crash"}}</label>
+    <button type="submit">{{t .Locale "admin_fido_ops.send_netmail"}}</button>
+  </form>
+  <h3>{{tf .Locale "admin_fido_ops.local_nodelist" (len .LocalNodes)}}</h3>
+  <form method="post">
+    <input type="hidden" name="network" value="{{.Network}}">
+    <input type="hidden" name="action" value="commit_local">
+    <table>
+      <thead><tr><th>{{t .Locale "nodelist.col.address"}}</th><th>{{t .Locale "common.name"}}</th><th>{{t .Locale "nodelist.col.location"}}</th><th>{{t .Locale "nodelist.col.sysop"}}</th><th>{{t .Locale "common.flags"}}</th><th>{{t .Locale "common.active"}}</th></tr></thead>
+      <tbody>
+      {{range $i, $n := .LocalNodes}}
+      <tr>
+        <td><input name="addr_{{$i}}" value="{{$n.Addr4D}}" size="10"></td>
+        <td><input name="name_{{$i}}" value="{{$n.Name}}"></td>
+        <td><input name="location_{{$i}}" value="{{$n.Location}}"></td>
+        <td><input name="sysop_{{$i}}" value="{{$n.Sysop}}"></td>
+        <td><input name="flags_{{$i}}" value="{{$n.Flags}}" size="20"></td>
+        <td><input type="checkbox" name="active_{{$i}}" value="1" {{if $n.Active}}checked{{end}}></td>
+      </tr>
+      {{end}}
+      <tr>
+        <td><input name="addr_{{len .LocalNodes}}" placeholder="{{t .Locale "admin_fido_ops.addr_placeholder"}}"></td>
+        <td colspan="4"><span class="meta">{{t .Locale "admin_fido_ops.new_row"}}</span></td>
+        <td><input type="checkbox" name="active_{{len .LocalNodes}}" value="1" checked></td>
+      </tr>
+      </tbody>
+    </table>
+    <label>{{t .Locale "admin_fido_ops.delete_addrs"}} <textarea name="delete_addrs" rows="2"></textarea></label>
+    <button type="submit">{{t .Locale "admin_fido_ops.commit_local"}}</button>
+  </form>
+  {{if .BinkpStatsText}}<p class="meta">{{.BinkpStatsText}}</p>{{end}}
+  {{if .BinkpLogPath}}<h3>{{tf .Locale "admin_fido_ops.binkp_log" .BinkpLogPath}}</h3><pre class="log-pre">{{range .BinkpLogLines}}{{.}}
+{{end}}</pre>{{end}}
+</div>
+{{template "footer" .}}
+{{end}}

@@ -1,9 +1,9 @@
 {{define "netmail.html"}}
 {{template "header" .}}
 <div class="panel">
-  <h2>Netmail</h2>
+  <h2>{{t .Locale "netmail.title"}}</h2>
   <table>
-    <thead><tr><th>#</th><th>From</th><th>Subject</th><th>Date</th></tr></thead>
+    <thead><tr><th>{{t .Locale "messages_list.col.num"}}</th><th>{{t .Locale "common.from"}}</th><th>{{t .Locale "common.subject"}}</th><th>{{t .Locale "common.date"}}</th></tr></thead>
     <tbody>
     {{range .Messages}}
     <tr>
@@ -13,7 +13,7 @@
       <td class="meta">{{.DatePosted.Format "2006-01-02 15:04"}}</td>
     </tr>
     {{else}}
-    <tr><td colspan="4">No netmail.</td></tr>
+    <tr><td colspan="4">{{t .Locale "netmail.empty"}}</td></tr>
     {{end}}
     </tbody>
   </table>

@@ -68,6 +68,9 @@ type NetmailMsg struct {
 
 	Crash   bool   `json:"Crash"`
 	Network string `json:"Network"`
+
+	// AuthorLang is the origin user's ISO 639-1 code (^ALANG kludge).
+	AuthorLang string `json:"AuthorLang,omitempty"`
 }
 
 // NetmailDB wraps the database for netmail queue operations.
@@ -83,10 +86,10 @@ func (ndb *NetmailDB) Enqueue(m *NetmailMsg) (int64, error) {
 		crash = 1
 	}
 	res, err := ndb.db.Exec(`INSERT INTO fido_netmail
-		(from_name, from_addr, to_name, to_addr, subject, body, crash, network)
-		VALUES (?,?,?,?,?,?,?,?)`,
+		(from_name, from_addr, to_name, to_addr, subject, body, crash, network, author_lang)
+		VALUES (?,?,?,?,?,?,?,?,?)`,
 		m.FromName, m.FromAddr, m.ToName, m.ToAddr,
-		m.Subject, m.Body, crash, m.Network)
+		m.Subject, m.Body, crash, m.Network, NormalizeLangCode(m.AuthorLang))
 	if err != nil {
 		return 0, err
 	}
@@ -95,7 +98,7 @@ func (ndb *NetmailDB) Enqueue(m *NetmailMsg) (int64, error) {
 
 // Pending returns all unsent netmails.
 func (ndb *NetmailDB) Pending() ([]*NetmailMsg, []int64, error) {
-	rows, err := ndb.db.Query(`SELECT id, from_name, from_addr, to_name, to_addr, subject, body, crash, network
+	rows, err := ndb.db.Query(`SELECT id, from_name, from_addr, to_name, to_addr, subject, body, crash, network, author_lang
 		FROM fido_netmail WHERE sent_at IS NULL ORDER BY id`)
 	if err != nil {
 		return nil, nil, err
@@ -108,7 +111,7 @@ func (ndb *NetmailDB) Pending() ([]*NetmailMsg, []int64, error) {
 		var id int64
 		var crash int
 		if err := rows.Scan(&id, &m.FromName, &m.FromAddr, &m.ToName, &m.ToAddr,
-			&m.Subject, &m.Body, &crash, &m.Network); err != nil {
+			&m.Subject, &m.Body, &crash, &m.Network, &m.AuthorLang); err != nil {
 			return nil, nil, err
 		}
 		m.Crash = crash != 0
@@ -197,6 +200,11 @@ func buildBody(m *NetmailMsg, from, to Addr, localZone int) string {
 
 	// TZUTC kludge (FTS-4001): local UTC offset at composition time, e.g. "+0200".
 	sb.WriteString(fmt.Sprintf("\x01TZUTC: %s\r\n", time.Now().Format("-0700")))
+
+	// ^ALANG: origin author's UI language (VirtBBS experimental kludge).
+	sb.WriteString(LangKludgeLine(m.AuthorLang))
+	sb.WriteByte('\r')
+	sb.WriteByte('\n')
 
 	// INTL kludge: required when source/dest zones differ or either is non-local.
 	if from.Zone != to.Zone || from.Zone != localZone {

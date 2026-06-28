@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS conferences (
     sysop_sec    INTEGER NOT NULL DEFAULT 110,
     echo         INTEGER NOT NULL DEFAULT 0,  -- 1 = echomail area
     echo_tag     TEXT    NOT NULL DEFAULT '',  -- AREA: tag (e.g. FIDO_GENERAL)
+    echo_from_name TEXT NOT NULL DEFAULT 'real', -- real | alias | anonymous
     uplink_addr  TEXT    NOT NULL DEFAULT '',  -- override uplink (blank = use default)
     network      TEXT    NOT NULL DEFAULT '',  -- network name (blank = primary)
     created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
@@ -82,6 +83,7 @@ CREATE TABLE IF NOT EXISTS fido_netmail (
     body       TEXT    NOT NULL DEFAULT '',
     crash      INTEGER NOT NULL DEFAULT 0,   -- 1 = send directly (no routing)
     network    TEXT    NOT NULL DEFAULT '',  -- which network
+    author_lang TEXT   NOT NULL DEFAULT 'en', -- ^ALANG kludge (en, es, af)
     created_at TEXT    NOT NULL DEFAULT (datetime('now')),
     sent_at    TEXT
 );
@@ -116,7 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_filefix_subs_area     ON fido_filefix_subs(networ
 
 -- Nodelist version tracking: one row per successful import, written by
 -- fido.ImportFile (and therefore also fido.FetchAndImport). Lets clients
--- (internal/userapi, used by VirtAnd/VirtTerm) cheaply ask "has this
+-- (internal/userapi, used by VirtAnd) cheaply ask "has this
 -- network's nodelist changed since I last synced" without re-downloading.
 CREATE TABLE IF NOT EXISTS fido_nodelist_versions (
     network     TEXT    NOT NULL PRIMARY KEY,

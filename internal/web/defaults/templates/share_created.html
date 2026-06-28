@@ -1,11 +1,11 @@
 {{define "share_created.html"}}
 {{template "header" .}}
 <div class="panel">
-  <h2>Share link created</h2>
-  <p>This link is valid for 7 days (no login required to view):</p>
+  <h2>{{t .Locale "share_created.title"}}</h2>
+  <p>{{t .Locale "share_created.help"}}</p>
   <p><input type="text" readonly value="{{.URL}}" class="share-url" onclick="this.select()"></p>
-  <p><a href="{{.URL}}" target="_blank">Open shared link</a></p>
-  <p><a href="/menu">← Dashboard</a></p>
+  <p><a href="{{.URL}}" target="_blank">{{t .Locale "common.open_shared"}}</a></p>
+  <p><a href="/menu">{{t .Locale "common.dashboard_back"}}</a></p>
 </div>
 {{template "footer" .}}
 {{end}}

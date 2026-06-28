@@ -56,6 +56,7 @@ import (
 	"github.com/virtbbs/virtbbs/internal/files"
 	"github.com/virtbbs/virtbbs/internal/messages"
 	"github.com/virtbbs/virtbbs/internal/node"
+	"github.com/virtbbs/virtbbs/internal/postname"
 	"github.com/virtbbs/virtbbs/internal/ppl"
 	"github.com/virtbbs/virtbbs/internal/transfer"
 	"github.com/virtbbs/virtbbs/internal/users"
@@ -270,9 +271,15 @@ func (s *session) login() bool {
 
 func (s *session) newUser() bool {
 	s.writeln(ansi.Header("New User Registration"))
-	s.write(ansi.Prompt("Full name: "))
+	s.write(ansi.Prompt("BBS handle (up to 25 chars): "))
 	name := s.readline()
 	if name == "" {
+		return false
+	}
+	s.write(ansi.Prompt("Real name (FidoNet): "))
+	realName := strings.TrimSpace(s.readline())
+	if realName == "" {
+		s.writeln(ansi.Colorize(ansi.Red, "Real name is required."))
 		return false
 	}
 	s.write(ansi.Prompt("City/State: "))
@@ -285,7 +292,7 @@ func (s *session) newUser() bool {
 		s.writeln(ansi.Colorize(ansi.Red, "\r\nPasswords do not match."))
 		return false
 	}
-	u, err := s.deps.Users.RegisterNew(name, city, pass)
+	u, err := s.deps.Users.RegisterNew(name, realName, city, pass, "en")
 	if err != nil {
 		s.writeln(ansi.Colorize(ansi.Red, "\r\nRegistration failed: "+err.Error()))
 		return false
@@ -484,9 +491,19 @@ func (s *session) enterMessage() {
 		return
 	}
 
+	conf, err := s.deps.Conferences.Get(s.conference)
+	if err != nil || conf == nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Conference not found."))
+		return
+	}
+	if err := postname.ValidateEchoPost(conf, s.user); err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, err.Error()))
+		return
+	}
+
 	m := &messages.Message{
 		ConferenceID: s.conference,
-		FromName:     s.user.Name,
+		FromName:     postname.ForConference(conf, s.user),
 		ToName:       to,
 		Subject:      subj,
 		Status:       "A",
@@ -520,9 +537,19 @@ func (s *session) enterReply(orig *messages.Message) {
 		return
 	}
 
+	conf, err := s.deps.Conferences.Get(s.conference)
+	if err != nil || conf == nil {
+		s.writeln(ansi.Colorize(ansi.Red, "Conference not found."))
+		return
+	}
+	if err := postname.ValidateEchoPost(conf, s.user); err != nil {
+		s.writeln(ansi.Colorize(ansi.Red, err.Error()))
+		return
+	}
+
 	m := &messages.Message{
 		ConferenceID: s.conference,
-		FromName:     s.user.Name,
+		FromName:     postname.ForConference(conf, s.user),
 		ToName:       orig.FromName,
 		Subject:      subj,
 		Status:       "A",
@@ -538,37 +565,15 @@ func (s *session) enterReply(orig *messages.Message) {
 
 // applyFidoPostMeta assigns MSGID/REPLY kludges and echo flag for local posts.
 func (s *session) applyFidoPostMeta(m *messages.Message, replyTo *messages.Message) {
-	cfg := config.Get()
-	if !cfg.Fido.Enabled {
-		return
-	}
-
 	conf, err := s.deps.Conferences.Get(s.conference)
 	if err != nil || conf == nil {
 		return
 	}
-	if conf.Echo {
-		m.Echo = true
+	lang := "en"
+	if s.user != nil && strings.TrimSpace(s.user.Locale) != "" {
+		lang = fido.NormalizeLangCode(s.user.Locale)
 	}
-
-	orig := cfg.Fido.NodeAddr()
-	if conf.Network != "" {
-		if nd := cfg.Fido.NetworkByName(conf.Network); nd != nil {
-			if a := nd.NodeAddr(); a != (fido.Addr{}) {
-				orig = a
-			}
-		}
-	}
-	if orig == (fido.Addr{}) {
-		return
-	}
-
-	m.FidoMsgID = fido.FormatMSGID(orig, fido.NewMSGIDSerial())
-	m.FidoKludges = fmt.Sprintf("\x01TZUTC: %s", time.Now().Format("-0700"))
-
-	if replyTo != nil && replyTo.FidoMsgID != "" {
-		m.FidoReply = replyTo.FidoMsgID
-	}
+	fido.ApplyLocalEchoMeta(m, conf, postname.EchoOrigAddr(conf), lang, replyTo)
 }
 
 // runEditor invokes the user's preferred editor and returns the result.
@@ -1889,6 +1894,15 @@ func (s *session) echoFlagConference() {
 	if conf.Echo {
 		s.write(ansi.Prompt("AREA tag (e.g. FIDO_GENERAL): "))
 		conf.EchoTag = strings.TrimSpace(s.readline())
+		s.write(ansi.Prompt("From name policy [R]eal / [A]lias / [N]anonymous [R]: "))
+		switch strings.ToUpper(strings.TrimSpace(s.readline())) {
+		case "A":
+			conf.EchoFromName = conferences.EchoFromAlias
+		case "N":
+			conf.EchoFromName = conferences.EchoFromAnonymous
+		default:
+			conf.EchoFromName = conferences.EchoFromReal
+		}
 		s.write(ansi.Prompt("Override uplink address (blank=default): "))
 		conf.UplinkAddr = strings.TrimSpace(s.readline())
 		s.write(ansi.Prompt("Network name (blank=primary): "))
@@ -2079,6 +2093,7 @@ func (s *session) netmailReply(orig *messages.Message) {
 		Subject:    subj,
 		Body:       result.Body,
 		ReplyMsgID: orig.FidoMsgID,
+		AuthorLang: fido.NormalizeLangCode(s.user.Locale),
 	}
 
 	nd := cfg.Fido.AllNetworks()[0]
@@ -2158,14 +2173,15 @@ func (s *session) netmailCompose() {
 	crash := strings.ToUpper(strings.TrimSpace(s.readline())) == "Y"
 
 	msg := &fido.NetmailMsg{
-		FromName: s.user.Name,
-		FromAddr: cfg.Fido.Address,
-		ToName:   toName,
-		ToAddr:   toAddr,
-		Subject:  subject,
-		Body:     body,
-		Crash:    crash,
-		Network:  "",
+		FromName:   s.user.Name,
+		FromAddr:   cfg.Fido.Address,
+		ToName:     toName,
+		ToAddr:     toAddr,
+		Subject:    subject,
+		Body:       body,
+		Crash:      crash,
+		Network:    "",
+		AuthorLang: fido.NormalizeLangCode(s.user.Locale),
 	}
 
 	// Determine routing and write PKT.
@@ -2411,6 +2427,7 @@ func (s *session) profileMenu() {
 	for {
 		s.writeln(ansi.Header("User Profile"))
 		s.writeln(fmt.Sprintf("  %sName%s       : %s", ansi.Color(ansi.BrightCyan), ansi.Reset(), s.user.Name))
+		s.writeln(fmt.Sprintf("  %sReal name%s  : %s", ansi.Color(ansi.BrightCyan), ansi.Reset(), s.user.RealName))
 		s.writeln(fmt.Sprintf("  %sCity%s       : %s", ansi.Color(ansi.BrightCyan), ansi.Reset(), s.user.City))
 		s.writeln(fmt.Sprintf("  %sANSI%s       : %s", ansi.Color(ansi.BrightCyan), ansi.Reset(), yesNo(s.user.ANSI)))
 		s.writeln(fmt.Sprintf("  %sEditor%s     : %s", ansi.Color(ansi.BrightCyan), ansi.Reset(), editorLabel(s.user.EditorType)))
@@ -2419,7 +2436,7 @@ func (s *session) profileMenu() {
 		s.writeln(fmt.Sprintf("  %sExpert mode%s: %s", ansi.Color(ansi.BrightCyan), ansi.Reset(), yesNo(s.user.ExpertMode)))
 		s.writeln("")
 		s.writeln(ansi.Color(ansi.BrightWhite) +
-			"  [C]ity   [P]assword   [A]NSI   [M]sg editor   [L]ines/page   [X]fer   [E]xpert   [T]okens   [J]oin network   [Q]uit" +
+			"  [C]ity   [N]ame   [P]assword   [A]NSI   [M]sg editor   [L]ines/page   [X]fer   [E]xpert   [T]okens   [J]oin network   [Q]uit" +
 			ansi.Reset())
 		s.write(ansi.Prompt("Profile: "))
 		cmd := strings.ToUpper(strings.TrimSpace(s.readline()))
@@ -2431,6 +2448,14 @@ func (s *session) profileMenu() {
 				s.user.City = city
 				_ = s.deps.Users.Update(s.user)
 				s.writeln(ansi.Colorize(ansi.BrightGreen, "City updated."))
+			}
+		case "N":
+			s.write(ansi.Prompt("Real name (FidoNet): "))
+			realName := strings.TrimSpace(s.readline())
+			if realName != "" {
+				s.user.RealName = realName
+				_ = s.deps.Users.Update(s.user)
+				s.writeln(ansi.Colorize(ansi.BrightGreen, "Real name updated."))
 			}
 		case "P":
 			s.write(ansi.Prompt("Current password: "))
@@ -2564,12 +2589,12 @@ func (s *session) applyToJoinNetwork() {
 }
 
 // manageAPITokens lets a user generate or revoke their own API tokens, used
-// by the VirtAnd (Android) and VirtTerm (.NET terminal) client apps to
-// authenticate against internal/userapi without sending their BBS password.
+// by the VirtAnd (Android) client app to authenticate against internal/userapi
+// without sending their BBS password.
 func (s *session) manageAPITokens() {
 	for {
 		s.writeln("")
-		s.writeln(ansi.Header("API Tokens (VirtAnd / VirtTerm)"))
+		s.writeln(ansi.Header("API Tokens (VirtAnd)"))
 		tokens, err := s.deps.Users.ListAPITokens(s.user.ID)
 		if err != nil {
 			s.writeln(ansi.Colorize(ansi.Red, "Error: "+err.Error()))
@@ -2597,7 +2622,7 @@ func (s *session) manageAPITokens() {
 		cmd := strings.ToUpper(strings.TrimSpace(s.readline()))
 		switch cmd {
 		case "G":
-			s.write(ansi.Prompt("Device label (e.g. \"My Phone\", \"VirtTerm\"): "))
+			s.write(ansi.Prompt("Device label (e.g. \"My Phone\"): "))
 			label := strings.TrimSpace(s.readline())
 			raw, err := s.deps.Users.CreateAPIToken(s.user.ID, label)
 			if err != nil {

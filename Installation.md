@@ -4,7 +4,6 @@
 
 - macOS 12+, Linux (kernel 4.x+), or Windows 10+
 - The `virtbbs` server ships as a self-contained binary — no additional runtime required
-- The sysop GUI (`VirtBBS.GUI`) requires the [.NET 8 runtime](https://dotnet.microsoft.com/download/dotnet/8.0) on whichever machine runs it
 - **[Graphviz](https://graphviz.org/)** (optional) — required on the **server** host if you run VirtNet nodelist day-rollover and want `VirtDiag.zip` to include PNG network diagrams. Without the `dot` binary on PATH, rollover still publishes the nodelist and change log; diagram generation is skipped with a warning in the server log.
 
 ### Installing Graphviz
@@ -82,7 +81,7 @@ On macOS/Linux, make the server binary executable:
 chmod +x bin/virtbbs
 ```
 
-The sysop GUI (`VirtBBS.GUI`) is run separately from source — see [Open the Sysop Console (GUI)](#8-open-the-sysop-console-gui) below — and does not ship inside the `bin/` release package.
+The web-based sysop admin is served by the BBS server itself — no separate install step. See [Open the Sysop Admin (Web)](#8-open-the-sysop-admin-web) below.
 
 ### 3. Review `VirtBBS.DAT`
 
@@ -96,8 +95,9 @@ max_nodes = 10              # Maximum simultaneous connections
 [network]
 telnet_port = 2323          # Telnet listen port
 ssh_port    = 3232          # SSH listen port
-api_port    = 9999          # Sysop GUI API port
-api_bind    = "0.0.0.0"    # Bind address ("127.0.0.1" to restrict to localhost)
+api_port    = 9999          # JSON/TCP management API (scripts/automation)
+web_port    = 8081          # Browser BBS + sysop admin UI
+web_bind    = "0.0.0.0"
 
 [paths]
 db    = "data/virtbbs.db"  # SQLite database path (relative to install dir)
@@ -169,26 +169,17 @@ ssh -p 3232 YourSysopName@localhost
 
 Accept the host key fingerprint on first connection. SSH does not require any special terminal mode configuration.
 
-### 8. Open the Sysop Console (GUI)
+### 8. Open the Sysop Admin (Web)
 
-The sysop GUI (`VirtBBS.GUI`) is a .NET 8 / Avalonia UI application. It can run on the same machine as the server or on any machine with network access to the API port (default 9999), and requires the [.NET 8 SDK or runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+The built-in web UI includes a full sysop administration panel. Log in with your sysop account and open **Admin** in the navigation bar, or go directly to:
 
-From the `gui-dotnet/VirtBBS.GUI` directory:
-
-```bash
-dotnet run
+```
+http://localhost:8081/admin
 ```
 
-The connection bar at the top of the window asks for:
+From there you can manage users, online nodes, BBS configuration, conferences, file areas, callers log, FidoNet settings, and VirtAnd API tokens. See `www/README.md` for the complete route list.
 
-| Field | Value |
-|---|---|
-| Host | `127.0.0.1` (or remote server IP) |
-| Port | `9999` |
-| User | Your sysop name |
-| Pass | Your sysop password |
-
-Click **Connect**. The Nodes, Users, Messages, Conferences, Callers, Config, and FidoNet tabs will populate with live data.
+The JSON/TCP management API (port 9999) remains available for scripts and automation; the web admin calls the same underlying server functions directly.
 
 ---
 
@@ -350,4 +341,4 @@ make sure you've fully stopped the old process before starting the new one.
 
 ## Version
 
-This guide covers VirtBBS **1.1.0**.
+This guide covers VirtBBS **1.2.0**.

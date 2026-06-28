@@ -1,18 +1,18 @@
 {{define "search.html"}}
 {{template "header" .}}
 <div class="panel">
-  <h2>Search</h2>
+  <h2>{{t .Locale "search.title"}}</h2>
   <form method="get" action="/search" class="search-form">
-    <input type="search" name="q" value="{{.Query}}" placeholder="Search messages and files…" autofocus>
-    <button type="submit" class="btn">Search</button>
+    <input type="search" name="q" value="{{.Query}}" placeholder="{{t .Locale "search.placeholder"}}" autofocus>
+    <button type="submit" class="btn">{{t .Locale "common.search"}}</button>
   </form>
 </div>
 {{if .Query}}
 <div class="panel">
-  <h2>Messages ({{len .Messages}})</h2>
-  {{if not .Messages}}<p class="meta">No message matches.</p>{{else}}
+  <h2>{{tf .Locale "search.messages_heading" (len .Messages)}}</h2>
+  {{if not .Messages}}<p class="meta">{{t .Locale "search.no_messages"}}</p>{{else}}
   <table>
-    <thead><tr><th>Area</th><th>From</th><th>Subject</th><th>Date</th></tr></thead>
+    <thead><tr><th>{{t .Locale "common.area"}}</th><th>{{t .Locale "common.from"}}</th><th>{{t .Locale "common.subject"}}</th><th>{{t .Locale "common.date"}}</th></tr></thead>
     <tbody>
     {{range .Messages}}
       <tr>
@@ -27,16 +27,16 @@
   {{end}}
 </div>
 <div class="panel">
-  <h2>Files ({{len .Files}})</h2>
-  {{if not .Files}}<p class="meta">No file matches.</p>{{else}}
+  <h2>{{tf .Locale "search.files_heading" (len .Files)}}</h2>
+  {{if not .Files}}<p class="meta">{{t .Locale "search.no_files"}}</p>{{else}}
   <table>
-    <thead><tr><th>File</th><th>Description</th><th></th></tr></thead>
+    <thead><tr><th>{{t .Locale "common.file"}}</th><th>{{t .Locale "common.description"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Files}}
       <tr>
         <td>{{.Filename}}</td>
         <td>{{.Description}}</td>
-        <td><a href="/files/browse?dir={{.DirID}}">Browse area</a></td>
+        <td><a href="/files/browse?dir={{.DirID}}">{{t $.Locale "common.browse_area"}}</a></td>
       </tr>
     {{end}}
     </tbody>

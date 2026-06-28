@@ -1,0 +1,23 @@
+{{define "admin_user_edit.html"}}
+{{template "header" .}}
+<div class="panel sysop-panel">
+  <h2>{{tf .Locale "admin_user_edit.title" .Edit.Name}}</h2>
+  <p><a href="/admin/users">{{t .Locale "common.users_back"}}</a></p>
+  {{if .Flash}}<p class="flash">{{.Flash}}</p>{{end}}
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="post" action="/admin/users/edit?id={{.Edit.ID}}" class="admin-form">
+    <label>{{t .Locale "common.city"}} <input name="city" value="{{.Edit.City}}"></label>
+    <label>{{t .Locale "profile.real_name"}} <input name="real_name" value="{{.Edit.RealName}}" maxlength="36"></label>
+    <label>{{t .Locale "common.phone"}} <input name="phone" value="{{.Edit.PhoneBusiness}}"></label>
+    <label>{{t .Locale "common.security"}} <input type="number" name="security" value="{{.Edit.SecurityLevel}}"></label>
+    <label>{{t .Locale "common.page_length"}} <input type="number" name="page_length" value="{{.Edit.PageLength}}"></label>
+    <label><input type="checkbox" name="ansi" value="1" {{if .Edit.ANSI}}checked{{end}}> {{t .Locale "common.ansi"}}</label>
+    <label><input type="checkbox" name="sysop" value="1" {{if .Edit.Sysop}}checked{{end}}> {{t .Locale "menu.sysop"}}</label>
+    <label><input type="checkbox" name="deleted" value="1" {{if .Edit.Deleted}}checked{{end}}> {{t .Locale "common.deleted"}}</label>
+    <label>{{t .Locale "profile.comment"}} <input name="comment" value="{{.Edit.Comment1}}"></label>
+    <label>{{t .Locale "common.editor"}} <select name="editor_type"><option value="simple" {{if eq .Edit.EditorType "simple"}}selected{{end}}>{{t .Locale "common.editor_simple"}}</option><option value="full" {{if eq .Edit.EditorType "full"}}selected{{end}}>{{t .Locale "common.editor_full"}}</option></select></label>
+    <button type="submit">{{t .Locale "admin_user_edit.save"}}</button>
+  </form>
+</div>
+{{template "footer" .}}
+{{end}}

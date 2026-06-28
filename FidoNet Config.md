@@ -3,7 +3,7 @@
 This guide covers every FidoNet setting in `VirtBBS.DAT`, how echomail/netmail
 routing works, the BinkP server, how to add additional FidoNet-compatible
 networks, AreaFix, FileFix, the PING/TRACE test utilities, and automatic
-nodelist updates. It covers VirtBBS **1.1.0**.
+nodelist updates. It covers VirtBBS **1.2.0**.
 
 ---
 
@@ -33,7 +33,7 @@ All FidoNet settings live under the `[fido]` table in `VirtBBS.DAT`:
 
 | Field | Meaning |
 |---|---|
-| `name` | Display name for the **primary** network. Defaults to `"FidoNet"` if blank. Renamable via the sysop GUI or `fido.network.rename` API. |
+| `name` | Display name for the **primary** network. Defaults to `"FidoNet"` if blank. Renamable via the sysop web admin or `fido.network.rename` API. |
 | `enabled` | Master on/off switch. When `false`, all FidoNet menus, the toss/scan/poll commands, and the management API's `fido.*` endpoints refuse to run. |
 | `address` | **This BBS's own FidoNet address**, in `zone:net/node` or `zone:net/node.point` form (e.g. `1:234/567` or `1:234/567.1` for a point system). |
 | `uplink` | The address of the system this BBS exchanges mail with — your boss node or hub. All routed (non-crash) netmail and all echomail go here. |
@@ -60,7 +60,7 @@ All FidoNet settings live under the `[fido]` table in `VirtBBS.DAT`:
 
 ### 1.1 Node capability flags (`node_flags`)
 
-Each network entry can declare what services this node offers via standard FTS-0005 nodelist flags. Configure them in the sysop GUI **Network Setup → Node Capabilities** section, in `VirtBBS.DAT`, or via the `fido.network.flags.update` API.
+Each network entry can declare what services this node offers via standard FTS-0005 nodelist flags. Configure them in the sysop web admin **Network Setup → Node Capabilities** section, in `VirtBBS.DAT`, or via the `fido.network.flags.update` API.
 
 | Flag | Meaning |
 |------|---------|
@@ -73,7 +73,7 @@ Each network entry can declare what services this node offers via standard FTS-0
 | TRACE | Trace requests honoured |
 | PING | Ping requests honoured |
 
-**Defaults for new VirtTerm/VirtBBS networks:** `IBN`, `ITN`, `BEER`, `TRACE`, `PING`.
+**Defaults for new VirtBBS networks:** `IBN`, `ITN`, `BEER`, `TRACE`, `PING`.
 
 Example:
 
@@ -234,7 +234,7 @@ How an inbound connection is handled:
 Session activity and errors are written to **`binkp.log`** under your
 configured `[paths] logs` directory (default `./logs/binkp.log`), with
 RFC3339 timestamps. The same lines are also mirrored to the server's
-stdout log. In the sysop GUI, open **FidoNet → Operations → BinkP Log**
+stdout log. In the sysop web admin, open **FidoNet → Operations → BinkP Log**
 to view recent sessions, or call the `fido.binkp.log` management API
 (params: `{"lines": 200}`).
 
@@ -250,7 +250,7 @@ inbound uplink/downlink sessions, files sent/received, netmail and echomail
 sent/received, toss imported/skipped/held, and session errors. Per-link
 breakdowns are kept for configured uplinks and downlinks.
 
-- **Sysop GUI:** FidoNet → Operations → **BinkP Stats** (period selector)
+- **web admin (`/admin/fido/*`):** FidoNet → Operations → **BinkP Stats** (period selector)
 - **API:** `fido.binkp.stats` (params: `{"network":"","period":"day","period_key":"2026-06-27"}`)
 - **ANSI bulletins:** at local midnight the server overwrites
   `<session.display_dir>/BINKPDAY.ANS` (previous calendar day's stats) and
@@ -323,12 +323,12 @@ Each `[[fido.networks]]` entry is a **fully independent** network: its own
 address, uplink, inbound/outbound directories, nodelist, and area map. Use
 a distinct `inbound_dir`/`outbound_dir` per network so packets don't collide.
 
-When adding a network via the sysop GUI, directories default to
+When adding a network via the sysop web admin, directories default to
 `fido/<NetworkName>_inbound`, `_outbound`, and `_nodelist`. Saving config
 (via GUI or `config.update` API) **creates** inbound, outbound, nodelist,
 `.tossed`, and `.holding` directories automatically.
 
-Rename a network via the sysop GUI **Networks** tab or the `fido.network.rename`
+Rename a network via the sysop web admin **Networks** tab or the `fido.network.rename`
 API — updates config and SQLite references (routes, members, subscriptions).
 
 - **Scanning** (§5) iterates every enabled network and writes separate `.pkt` files for each — link a conference to a specific network via its `Network` field (§2) so the scanner knows which network's address/uplink to use for it.

@@ -6,13 +6,14 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/virtbbs/virtbbs/internal/callers"
 	"github.com/virtbbs/virtbbs/internal/conferences"
-	"github.com/virtbbs/virtbbs/internal/config"
 	"github.com/virtbbs/virtbbs/internal/files"
 	"github.com/virtbbs/virtbbs/internal/messages"
 	"github.com/virtbbs/virtbbs/internal/node"
@@ -71,6 +72,7 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc("/files/upload", s.handleFilesUpload)
 	mux.HandleFunc("/profile", s.handleProfile)
 	mux.HandleFunc("/nodelist", s.handleNodelist)
+	mux.HandleFunc("/nodelist/export", s.handleNodelistExport)
 	mux.HandleFunc("/qwk", s.handleQWK)
 	mux.HandleFunc("/subscriptions", s.handleSubscriptions)
 	mux.HandleFunc("/search", s.handleSearch)
@@ -89,7 +91,22 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc("/admin", s.handleAdmin)
 	mux.HandleFunc("/admin/binkp", s.handleAdminBinkP)
 	mux.HandleFunc("/admin/users", s.handleAdminUsers)
+	mux.HandleFunc("/admin/users/edit", s.handleAdminUserEdit)
 	mux.HandleFunc("/admin/nodes", s.handleAdminNodes)
+	mux.HandleFunc("/admin/broadcast", s.handleAdminBroadcast)
+	mux.HandleFunc("/admin/config", s.handleAdminConfig)
+	mux.HandleFunc("/admin/conferences", s.handleAdminConferences)
+	mux.HandleFunc("/admin/messages", s.handleAdminMessages)
+	mux.HandleFunc("/admin/files", s.handleAdminFiles)
+	mux.HandleFunc("/admin/callers", s.handleAdminCallers)
+	mux.HandleFunc("/admin/tokens", s.handleAdminTokens)
+	mux.HandleFunc("/admin/fido", s.handleAdminFido)
+	mux.HandleFunc("/admin/fido/ops", s.handleAdminFidoOps)
+	mux.HandleFunc("/admin/fido/networks", s.handleAdminFidoNetworks)
+	mux.HandleFunc("/admin/fido/routing", s.handleAdminFidoRouting)
+	mux.HandleFunc("/admin/fido/join", s.handleAdminFidoJoin)
+	mux.HandleFunc("/admin/fido/tools", s.handleAdminFidoTools)
+	mux.HandleFunc("/admin/fido/import", s.handleAdminFidoImportUpload)
 	mux.HandleFunc("/set-locale", s.handleSetLocale)
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(s.Root, "static")))))
 	log.Printf("Web UI www root: %s", s.Root)
@@ -102,8 +119,14 @@ func (s *Server) templates() (*template.Template, error) {
 		pattern := filepath.Join(s.Root, "templates", "*.html")
 		funcs := template.FuncMap{
 			"add": func(a, b int) int { return a + b },
-			"safeHTML": func(s string) template.HTML { return template.HTML(s) },
+			"sub": func(a, b int) int { return a - b },
+			"urlquery": func(s string) string {
+				return strings.ReplaceAll(url.QueryEscape(s), "+", "%20")
+			},
 			"t": func(locale, key string) string { return tr(locale, key) },
+			"tf": func(locale, key string, args ...any) string { return trf(locale, key, args...) },
+			"webOp": func(locale, op string) string { return translateWebOp(locale, op) },
+			"safeHTML": func(s string) template.HTML { return template.HTML(s) },
 		}
 		s.tmpl, s.tmplErr = template.New("").Funcs(funcs).ParseGlob(pattern)
 	})
@@ -134,8 +157,7 @@ type pageData struct {
 }
 
 func (s *Server) base(r *http.Request) pageData {
-	u, _ := s.currentUser(r)
-	return pageData{BBSName: config.Get().BBS.Name, User: u}
+	return s.page(r)
 }
 
 func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {

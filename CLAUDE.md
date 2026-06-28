@@ -6,66 +6,6 @@ Guidance for Claude, Cursor, and other coding agents working in this repository.
 
 The repo may live on an external volume (e.g. `/Volumes/JohnDovey/Projects/BBS/VirtBBS`). Toolchains are installed on the **host system**, not on that volume.
 
-## .NET SDK (macOS)
-
-| Item | Path |
-|------|------|
-| `dotnet` CLI | `/usr/local/share/dotnet/dotnet` |
-| SDKs | `/usr/local/share/dotnet/sdk/` |
-| Runtimes | `/usr/local/share/dotnet/shared/` |
-| User cache | `~/.dotnet/` |
-
-This repo pins **.NET 8** via `global.json` (SDK 8.0.203). Projects target `net8.0`.
-
-If `dotnet` is not found, ensure PATH includes:
-
-```bash
-export PATH="/usr/local/share/dotnet:$HOME/.dotnet/tools:$PATH"
-```
-
-Or invoke the full path: `/usr/local/share/dotnet/dotnet build …`
-
-## .NET projects
-
-| Project | Directory | Target | macOS build? | macOS run? |
-|---------|-----------|--------|--------------|------------|
-| Sysop GUI (Avalonia) | `gui-dotnet/VirtBBS.GUI/` | `net8.0` | Yes | Yes |
-| Terminal client (WinForms) | `dotnet-virtterm/VirtTerm/` | `net8.0-windows` | Type-check only (`-p:EnableWindowsTargeting=true`) | No — Windows only |
-| Terminal client (Avalonia port) | `dotnet-virttermmac/VirtTermMac/` | `net8.0` | Yes | Yes |
-
-### Sysop GUI (primary .NET app on macOS)
-
-```bash
-cd gui-dotnet/VirtBBS.GUI
-dotnet build
-dotnet run
-```
-
-### Terminal client
-
-`dotnet-virtterm` uses WinForms (`net8.0-windows`) — it cannot **run** on macOS/Linux (no WinForms runtime). For a real run, build on Windows instead.
-
-It *can* be type-checked on macOS/Linux, which is useful for catching compile errors without a Windows machine:
-
-```bash
-cd dotnet-virtterm/VirtTerm
-dotnet build -p:EnableWindowsTargeting=true
-```
-
-This only unblocks compilation against the Windows reference assemblies — it does not make the app runnable here. Don't rely on it as a substitute for a real run.
-
-### Terminal client, Avalonia port (VirtTermMac)
-
-`dotnet-virttermmac/VirtTermMac` is an Avalonia UI port of `VirtTerm`, built specifically to run on macOS/Linux (and still Windows). Unlike `VirtTerm` it builds *and runs* here:
-
-```bash
-cd dotnet-virttermmac/VirtTermMac
-dotnet build
-dotnet run
-```
-
-Most of the non-UI logic (`AnsiScreen`, `Cp437`, `TerminalConnection`, `UserApiClient`, `Models`, `AppSettings`, `NodelistSyncService`) is carried over from `VirtTerm` unmodified, just with the namespace changed. Only the UI layer (`TerminalControl`, the menu builder, the windows) was rewritten for Avalonia — see `dotnet-virttermmac/README.md` for the full file-by-file breakdown and what's been verified.
-
 ## Go server
 
 The BBS server is Go (no cgo). See `BUILDING.md` for full instructions.
@@ -74,6 +14,14 @@ The BBS server is Go (no cgo). See `BUILDING.md` for full instructions.
 go build ./cmd/virtbbs
 ./virtbbs -config VirtBBS.DAT
 ```
+
+## Web interface
+
+Browser-based BBS UI and sysop admin served by `internal/web`. Templates and static assets live under `paths.www` (default `www/`). See `www/README.md` for routes and feature checklist.
+
+Default URL: **http://localhost:8081/**
+
+Sysop administration: log in as sysop and use **Admin** in the nav bar (`/admin/*`).
 
 ## Android app (VirtAnd) — build like ClonesApp
 
@@ -143,10 +91,6 @@ When adding Android dependencies or UI, mirror ClonesApp patterns:
 
 ## Common mistakes to avoid
 
-- Assuming the .NET SDK is on the same drive as the repo — it is on the system install path above.
-- Assuming the Android SDK is on the system drive — it is on `/Volumes/JohnDovey/Android/Sdk`.
-- Trying to *run* `dotnet-virtterm` on macOS — it requires Windows. (Type-checking with `-p:EnableWindowsTargeting=true` works fine; running does not.)
-- Using MAUI or .NET for VirtAnd — it is Kotlin/Android like ClonesApp.
+- Assuming toolchains are on the same drive as the repo — Go, JDK, and Android SDK are on the system install paths above.
 - Building `:app` without `local.properties` pointing at the SDK.
 - Using JDK 21+ or JDK 8 for VirtAnd/ClonesApp — use JDK 17.
-- Using a .NET SDK older than 8 for GUI work — use 8.0.203 (or newer 8.x with `rollForward`).

@@ -1,6 +1,6 @@
 # VirtBBS
 
-**VirtBBS** is a modern, from-scratch rewrite of the classic PCBoard BBS system. The server is written entirely in Go. It replaces modem-based dial-up access with Telnet and SSH servers, migrates all data to SQLite, and provides a cross-platform sysop GUI built with .NET / Avalonia UI.
+**VirtBBS** is a modern, from-scratch rewrite of the classic PCBoard BBS system. The server is written entirely in Go. It replaces modem-based dial-up access with Telnet and SSH servers, migrates all data to SQLite, and provides a full sysop administration interface in the built-in web UI.
 
 ---
 
@@ -21,14 +21,15 @@ PCBoard was one of the most influential Bulletin Board Systems (BBS) of its era,
 | **File areas** | Per-directory file listings, upload/download tracking |
 | **File catalog tools** | Sysop directory scan (registers disk files, flags missing ones, pulls `FILE_ID.DIZ` from ZIPs), `[E]dit desc`, and a daily `LOCALFIL.ZIP` (SLDIR-style master listing) |
 | **Stats** | `[S]tats` main-menu screen and PPL `GETSTATS` — session/account/system counters (see `ppe/stats.md`) |
-| **Zmodem transfer** | Pure-Go Zmodem implementation (no external `sz`/`rz` binaries) — Telnet/SSH only; not yet wired into VirtTerm/VirtTermMac (see their READMEs) |
+| **Zmodem transfer** | Pure-Go Zmodem implementation (no external `sz`/`rz` binaries) — Telnet/SSH and web |
 | **PPL interpreter** | Tree-walking interpreter for PCBoard Programming Language `.PPS` source files |
 | **ANSI colour** | Full ANSI escape sequence rendering for menus and displays |
 | **Multi-node** | Node status tracking via SQLite (replaces PCBoard's `USERNET.XXX`) |
 | **Callers log** | Compatible 64-byte record format |
-| **Remote sysop GUI** | .NET / Avalonia UI GUI (`VirtBBS.GUI`) connects over JSON/TCP API |
+| **Web interface** | Browser-based BBS UI (`internal/web`) — login, messages, files, QWK, full sysop admin |
+| **Sysop admin (web)** | `/admin/*` — users, nodes, config, conferences, FidoNet, callers, API tokens |
 | **FidoNet mail** | BinkP poll/server, toss/scan, AreaFix/FileFix, orphan-mail holding, multi-network support |
-| **QWK offline mail** | Real QWK/REP packets via `internal/qwk`; BBS `[O]ffline (QWK)` menu; VirtTerm/VirtTermMac graphical reader; VirtAnd sync |
+| **QWK offline mail** | Real QWK/REP packets via `internal/qwk`; BBS `[O]ffline (QWK)` menu; web `/qwk`; VirtAnd sync |
 | **Config** | TOML format `VirtBBS.DAT` (replaces PCBoard's line-oriented `PCBOARD.DAT`) |
 
 ---
@@ -38,15 +39,10 @@ PCBoard was one of the most influential Bulletin Board Systems (BBS) of its era,
 ```
 VirtBBS/
 ├── cmd/
-│   └── virtbbs/           # BBS server (Telnet + SSH + API + userapi + virtterm)
-├── gui-dotnet/
-│   └── VirtBBS.GUI/       # Sysop console (.NET / Avalonia UI)
-├── dotnet-virtterm/
-│   └── VirtTerm/          # Graphical terminal client (.NET / WinForms, Windows only) — own TLS protocol
-├── dotnet-virttermmac/
-│   └── VirtTermMac/       # Same client, ported to Avalonia UI (macOS/Linux/Windows)
+│   └── virtbbs/           # BBS server (Telnet + SSH + API + userapi + web)
 ├── android/
 │   └── VirtAnd/           # Android point client (Kotlin) — offline-first, QWK/REP sync
+├── www/                   # Web UI templates and static assets (seeded from internal/web/defaults)
 ├── internal/
 │   ├── ansi/              # ANSI escape sequence helpers
 │   ├── api/               # JSON-over-TCP sysop management API
@@ -68,10 +64,10 @@ VirtBBS/
 │   ├── sshsrv/            # SSH server
 │   ├── telnet/            # Telnet server + IAC negotiation
 │   ├── transfer/          # Pure-Go Zmodem file transfer
-│   ├── userapi/           # Token-authenticated JSON-over-TCP API (VirtAnd/VirtTerm)
+│   ├── userapi/           # Token-authenticated JSON-over-TCP API (VirtAnd)
 │   ├── users/             # User store + PCBoard USERS importer
 │   ├── version/           # Version constant
-│   └── virtterm/          # TLS terminal-transport listener for VirtTerm
+│   └── web/               # Browser-based BBS UI (HTTP)
 ├── pkg/
 │   └── pcbformat/         # PCBoard binary format decoders
 │       ├── dates.go       # YYMMDD / HHMM helpers
@@ -90,19 +86,15 @@ VirtBBS/
 
 ## Architecture
 
-### Two Executables
+### Server executable
 
 **`virtbbs`** — The BBS server. Runs as a headless daemon:
 - Listens for Telnet connections (port 2323) and SSH connections (port 3232)
 - Serves one goroutine per connected user
 - Maintains multi-node status in SQLite
-- Exposes a JSON-over-TCP management API (port 9999)
+- Exposes a JSON-over-TCP management API (port 9999) for scripts and automation
+- Serves the browser-based BBS and sysop admin UI (port 8081)
 - `--init-sysop` flag bootstraps the first sysop account
-
-**`VirtBBS.GUI`** — The sysop console. A cross-platform .NET / Avalonia UI app:
-- Connects to any VirtBBS server over the network (local or remote) via the JSON/TCP management API
-- Tabs: Nodes · Users · Messages · Conferences · Callers · Config · FidoNet
-- Host/port/credentials entered at connect time
 
 ### Network Ports (defaults)
 
@@ -111,6 +103,8 @@ VirtBBS/
 | Telnet | 2323 |
 | SSH | 3232 |
 | Sysop API | 9999 |
+| User API (VirtAnd) | 9998 |
+| Web UI (HTTP) | 8081 |
 
 All ports are configurable in `VirtBBS.DAT`.
 
@@ -146,9 +140,8 @@ VirtBBS interprets PCBoard Programming Language (`.PPS`) source files directly u
 | SSH | `golang.org/x/crypto/ssh` |
 | Config | `github.com/BurntSushi/toml` |
 | Passwords | `golang.org/x/crypto/bcrypt` |
-| GUI | .NET 8 + Avalonia UI 12, CommunityToolkit.Mvvm |
 
-The server binary (`virtbbs`) requires **no cgo** and cross-compiles cleanly for macOS, Linux, and Windows. The GUI (`VirtBBS.GUI`) is a .NET 8 / Avalonia UI application and runs anywhere the .NET 8 runtime is available (macOS, Linux, Windows).
+The server binary (`virtbbs`) requires **no cgo** and cross-compiles cleanly for macOS, Linux, and Windows.
 
 ---
 
@@ -166,10 +159,6 @@ GOOS=linux GOARCH=amd64 GOPATH=/Volumes/JohnDovey/go go build -o virtbbs-linux-a
 
 # Cross-compile server for Windows amd64
 GOOS=windows GOARCH=amd64 GOPATH=/Volumes/JohnDovey/go go build -o virtbbs-windows-amd64.exe ./cmd/virtbbs
-
-# Build the sysop GUI (requires .NET 8 SDK)
-cd gui-dotnet/VirtBBS.GUI
-dotnet build
 ```
 
 ---
@@ -188,9 +177,8 @@ See [Installation.md](Installation.md) for full instructions.
 # 3. Connect via Telnet
 telnet localhost 2323
 
-# 4. Open the sysop console (GUI)
-cd gui-dotnet/VirtBBS.GUI
-dotnet run
+# 4. Open the web UI (user or sysop admin)
+open http://localhost:8081/
 ```
 
 ---
@@ -203,7 +191,7 @@ dotnet run
 | Minor (x.**N**.0) | Bumped on significant feature additions |
 | Major (**N**.0.0) | Bumped on explicit request |
 
-Current version: **1.1.0**
+Current version: **1.2.0**
 
 ---
 

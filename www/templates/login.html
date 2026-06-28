@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{.BBSName}} — VirtBBS Web</title>
+  <title>{{.BBSName}} — {{t .Locale "app.title"}}</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -22,8 +22,9 @@
   <p class="meta"><a href="/register">{{t .Locale "login.new_user"}}</a></p>
   <form method="post" action="/set-locale" style="margin-top:1rem">
     <select name="lang" onchange="this.form.submit()">
-      <option value="en" {{if eq .Locale "en"}}selected{{end}}>English</option>
-      <option value="es" {{if eq .Locale "es"}}selected{{end}}>Español</option>
+      <option value="en" {{if eq .Locale "en"}}selected{{end}}>{{t .Locale "lang.en"}}</option>
+      <option value="es" {{if eq .Locale "es"}}selected{{end}}>{{t .Locale "lang.es"}}</option>
+      <option value="af" {{if eq .Locale "af"}}selected{{end}}>{{t .Locale "lang.af"}}</option>
     </select>
   </form>
 </div>

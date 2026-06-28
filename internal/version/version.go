@@ -239,8 +239,7 @@
 //                        holding_dir; per-network default mail directories
 //                        (fido/<Name>_inbound etc.) auto-created on config.save;
 //                        fido.network.rename API + sysop GUI network name/rename.
-//                        QWK offline mail: graphical reader in VirtTermMac and
-//                        VirtTerm (Mail menu), BBS Messages [O]ffline (QWK)
+//                        QWK offline mail: web `/qwk` UI, BBS Messages [O]ffline (QWK)
 //                        Zmodem menu, VirtAnd queue/compose/detail enhancements.
 //                        Sysop GUI: scrollable edit panes, FidoNet tab fix,
 //                        VirtNet secondary-network null-safe editing.
@@ -255,8 +254,7 @@
 //                        node capability flags editor, local nodelist editor with
 //                        import/export and NODEDIFF commit, FidoNet nodelist fetch
 //                        scoped to primary network only, BinkP poll EOF fix for
-//                        peers that close TCP after send, VirtTermMac (Avalonia
-//                        terminal client), VirtTerm (WinForms), and VirtAnd
+//                        peers that close TCP after send, and VirtAnd
 //                        (Android QWK/offline client).
 //   v1.0.1  2026-06-28  Browser-based BBS web UI (internal/web, www/ templates):
 //                        login with display-file bulletins, message read/post with
@@ -270,6 +268,9 @@
 //                        www/README feature checklist.
 //   v1.1.0  2026-06-28  Web UI Tier 3: forgot/reset password, address book, netmail SPA,
 //                        SSE notify stream, sysop admin (users/nodes/BinkP), i18n (en/es).
+//   v1.2.0  2026-06-28  Web-only sysop UI (remove .NET GUI and VirtTerm clients); Afrikaans
+//                        i18n; ^ALANG kludge and user locale; real name and echo From-name
+//                        policy; profile editing; sysop Fido raw-source view for netmail/echo.
 // ============================================================================
 
 // Package version holds the VirtBBS version number.
@@ -280,4 +281,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "1.1.0"
+const Version = "1.2.0"

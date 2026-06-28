@@ -1,0 +1,30 @@
+{{define "admin_tokens.html"}}
+{{template "header" .}}
+<div class="panel sysop-panel">
+  <h2>{{t .Locale "admin_tokens.title"}}</h2>
+  <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
+  <table>
+    <thead><tr><th>{{t .Locale "common.user"}}</th><th>{{t .Locale "common.device"}}</th><th>{{t .Locale "common.created"}}</th><th>{{t .Locale "common.status"}}</th><th></th></tr></thead>
+    <tbody>
+    {{range .Tokens}}
+    <tr>
+      <td>{{.UserName}}</td>
+      <td>{{.DeviceLabel}}</td>
+      <td class="meta">{{.CreatedAt}}</td>
+      <td>{{if .RevokedAt}}{{t $.Locale "admin_tokens.status_revoked"}}{{else}}{{t $.Locale "admin_tokens.status_active"}}{{end}}</td>
+      <td>
+        {{if not .RevokedAt}}
+        <form method="post" action="/admin/tokens" style="display:inline">
+          <input type="hidden" name="action" value="revoke">
+          <input type="hidden" name="id" value="{{.ID}}">
+          <button type="submit" class="btn-link" onclick="return confirm('{{t $.Locale "admin_tokens.confirm_revoke"}}')">{{t $.Locale "common.revoke"}}</button>
+        </form>
+        {{end}}
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "footer" .}}
+{{end}}

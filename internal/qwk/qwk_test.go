@@ -222,7 +222,7 @@ func TestParseRepAndPostReplies(t *testing.T) {
 		t.Fatalf("unexpected body: %q", r.Body)
 	}
 
-	posted, err := PostReplies(msgStore, "RealUser", replies)
+	posted, err := PostReplies(msgStore, confStore, &users.User{Name: "RealUser", RealName: "Real User"}, replies)
 	if err != nil {
 		t.Fatalf("PostReplies: %v", err)
 	}

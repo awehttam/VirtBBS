@@ -2,7 +2,8 @@
 
 CREATE TABLE IF NOT EXISTS users (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    name            TEXT    NOT NULL UNIQUE,         -- full name (up to 25 chars)
+    name            TEXT    NOT NULL UNIQUE,         -- BBS handle (up to 25 chars)
+    real_name       TEXT    NOT NULL DEFAULT '',     -- FidoNet real name (echomail)
     city            TEXT    NOT NULL DEFAULT '',
     password_hash   TEXT    NOT NULL,                -- bcrypt
     phone_business  TEXT    NOT NULL DEFAULT '',
@@ -24,6 +25,7 @@ CREATE TABLE IF NOT EXISTS users (
     xfer_protocol   TEXT    NOT NULL DEFAULT 'Z',   -- default file transfer protocol
     ansi            INTEGER NOT NULL DEFAULT 1,
     full_screen_editor INTEGER NOT NULL DEFAULT 0,
+    locale          TEXT    NOT NULL DEFAULT 'en',     -- UI / ^ALANG kludge (en, es, af)
     deleted         INTEGER NOT NULL DEFAULT 0,
     sysop           INTEGER NOT NULL DEFAULT 0,
     created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -42,7 +44,7 @@ CREATE INDEX IF NOT EXISTS idx_users_name ON users(name);
 CREATE INDEX IF NOT EXISTS idx_users_deleted ON users(deleted);
 
 -- User-generated API tokens for the new user-facing JSON/TCP API (internal/userapi),
--- used by VirtAnd (Android point client) and VirtTerm (.NET terminal client).
+-- used by VirtAnd (Android point client).
 -- Hash-only storage, same spirit as the bcrypt password_hash column above.
 CREATE TABLE IF NOT EXISTS user_api_tokens (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,

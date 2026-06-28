@@ -1,26 +1,29 @@
 {{define "register.html"}}
 {{template "header" .}}
 <div class="login-box panel register-box">
-  <h2>New User Registration — {{.BBSName}}</h2>
-  <p class="meta">Same as typing <strong>NEW</strong> at the Telnet login prompt. Your security level is set by the sysop (<code>new_user_security</code> in VirtBBS.DAT).</p>
+  <h2>{{t .Locale "register.title"}} — {{.BBSName}}</h2>
+  <p class="meta">{{t .Locale "register.help"}}</p>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form method="post" action="/register">
     <div class="hp-field" aria-hidden="true">
-      <label for="website">Leave blank</label>
+      <label for="website">{{t .Locale "register.honeypot"}}</label>
       <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
     </div>
-    <label for="name">Full name</label>
-    <input type="text" id="name" name="name" value="{{.Name}}" maxlength="25" required autofocus autocomplete="name">
-    <p class="meta">Up to 25 characters (PCBoard-style handle).</p>
-    <label for="city">City / State</label>
+    <label for="name">{{t .Locale "register.full_name"}}</label>
+    <input type="text" id="name" name="name" value="{{.Name}}" maxlength="25" required autofocus autocomplete="username">
+    <p class="meta">{{t .Locale "register.handle_hint"}}</p>
+    <label for="real_name">{{t .Locale "register.real_name"}}</label>
+    <input type="text" id="real_name" name="real_name" value="{{.RealName}}" maxlength="36" required autocomplete="name">
+    <p class="meta">{{t .Locale "register.real_name_help"}}</p>
+    <label for="city">{{t .Locale "register.city"}}</label>
     <input type="text" id="city" name="city" value="{{.City}}" autocomplete="address-level2">
-    <label for="password">Choose a password</label>
+    <label for="password">{{t .Locale "register.password"}}</label>
     <input type="password" id="password" name="password" required autocomplete="new-password">
-    <label for="password_confirm">Confirm password</label>
+    <label for="password_confirm">{{t .Locale "register.password_confirm"}}</label>
     <input type="password" id="password_confirm" name="password_confirm" required autocomplete="new-password">
-    <button type="submit">Create account</button>
+    <button type="submit">{{t .Locale "register.submit"}}</button>
   </form>
-  <p class="meta" style="margin-top:1.5rem">Already have an account? <a href="/login">Log in</a></p>
+  <p class="meta" style="margin-top:1.5rem">{{t .Locale "register.have_account"}} <a href="/login">{{t .Locale "register.log_in"}}</a></p>
 </div>
 {{template "footer" .}}
 {{end}}

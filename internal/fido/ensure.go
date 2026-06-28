@@ -106,6 +106,9 @@ func EnsureEchoConference(confStore *conferences.Store, name, network, tag strin
 		if !c.Echo || c.EchoTag != tag {
 			c.Echo = true
 			c.EchoTag = tag
+			if c.EchoFromName == "" {
+				c.EchoFromName = conferences.EchoFromReal
+			}
 			if err := confStore.Update(c); err != nil {
 				return nil, err
 			}
@@ -113,15 +116,16 @@ func EnsureEchoConference(confStore *conferences.Store, name, network, tag strin
 		return c, nil
 	}
 	c = &conferences.Conference{
-		Name:        name,
-		Description: name + " (auto-created)",
-		Public:      true,
-		ReadSec:     0,
-		WriteSec:    0,
-		SysopSec:    100,
-		Echo:        true,
-		EchoTag:     tag,
-		Network:     network,
+		Name:         name,
+		Description:  name + " (auto-created echomail)",
+		Public:       true,
+		ReadSec:      0,
+		WriteSec:     0,
+		SysopSec:     100,
+		Echo:         true,
+		EchoTag:      tag,
+		EchoFromName: conferences.EchoFromReal,
+		Network:      network,
 	}
 	if err := confStore.Create(c); err != nil {
 		return nil, err

@@ -1,21 +1,21 @@
 {{define "menu.html"}}
 {{template "header" .}}
 <div class="panel welcome-panel">
-  <h2>Welcome, {{.User.Name}}</h2>
+  <h2>{{tf .Locale "menu.welcome" .User.Name}}</h2>
   <p class="meta">
-    Security level {{.User.SecurityLevel}}{{if .User.Sysop}} · <span class="sysop-badge">Sysop</span>{{end}}
-    · Last login {{.User.LastLoginDate}} {{.User.LastLoginTime}}
-    · Times on {{.User.TimesOnline}}
+    {{t .Locale "menu.security_level"}} {{.User.SecurityLevel}}{{if .User.Sysop}} · <span class="sysop-badge">{{t .Locale "menu.sysop"}}</span>{{end}}
+    · {{t .Locale "menu.last_login"}} {{.User.LastLoginDate}} {{.User.LastLoginTime}}
+    · {{t .Locale "menu.times_on"}} {{.User.TimesOnline}}
   </p>
 </div>
 
 {{if gt .Stats.NewMsgsTotal 0}}
 <div class="panel alert-panel">
-  <h2>New Messages</h2>
-  <p><strong>{{.Stats.NewMsgsTotal}}</strong> new message(s) waiting</p>
+  <h2>{{t .Locale "menu.new_messages"}}</h2>
+  <p><strong>{{tf .Locale "menu.new_waiting" .Stats.NewMsgsTotal}}</strong></p>
   <ul class="compact-list">
   {{range .NewMessages}}
-    <li><a href="/messages?conf={{.ConferenceID}}">{{.Name}}</a> — {{.Count}} new</li>
+    <li><a href="/messages?conf={{.ConferenceID}}">{{.Name}}</a> — {{tf $.Locale "menu.new_in_area" .Count}}</li>
   {{end}}
   </ul>
 </div>
@@ -23,35 +23,35 @@
 
 {{if gt .NetmailCount 0}}
 <div class="panel alert-panel">
-  <p><a href="/netmail"><strong>{{.NetmailCount}}</strong> netmail message(s)</a></p>
+  <p><a href="/netmail"><strong>{{tf .Locale "menu.netmail_waiting" .NetmailCount}}</strong></a></p>
 </div>
 {{end}}
 
 {{if .LogonHTML}}
 <div class="panel">
-  <h2>Logon Message</h2>
+  <h2>{{t .Locale "menu.logon_message"}}</h2>
   <div class="ansi-screen">{{safeHTML .LogonHTML}}</div>
 </div>
 {{end}}
 
 <div class="panel">
-  <h2>BBS Statistics</h2>
+  <h2>{{t .Locale "menu.bbs_statistics"}}</h2>
   <div class="stats-grid">
-    <div class="stat-card"><span class="stat-value">{{.Stats.OnlineNodes}}</span><span class="stat-label">Online now</span></div>
-    <div class="stat-card"><span class="stat-value">{{.Stats.BBSCallsToday}}</span><span class="stat-label">Calls today</span></div>
-    <div class="stat-card"><span class="stat-value">{{.Stats.BBSUniqueToday}}</span><span class="stat-label">Unique today</span></div>
-    <div class="stat-card"><span class="stat-value">{{.Stats.BBSMsgTotal}}</span><span class="stat-label">Total messages</span></div>
-    <div class="stat-card"><span class="stat-value">{{.Stats.BBSConfCount}}</span><span class="stat-label">Conferences</span></div>
-    <div class="stat-card"><span class="stat-value">{{.Stats.BBSFileTotal}}</span><span class="stat-label">Files</span></div>
-    <div class="stat-card"><span class="stat-value">{{.Stats.BBSFileToday}}</span><span class="stat-label">Files today</span></div>
-    <div class="stat-card"><span class="stat-value">{{.Stats.NewMsgsTotal}}</span><span class="stat-label">Your new mail</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.OnlineNodes}}</span><span class="stat-label">{{t .Locale "menu.stat.online_now"}}</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.BBSCallsToday}}</span><span class="stat-label">{{t .Locale "menu.stat.calls_today"}}</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.BBSUniqueToday}}</span><span class="stat-label">{{t .Locale "menu.stat.unique_today"}}</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.BBSMsgTotal}}</span><span class="stat-label">{{t .Locale "menu.stat.total_messages"}}</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.BBSConfCount}}</span><span class="stat-label">{{t .Locale "menu.stat.conferences"}}</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.BBSFileTotal}}</span><span class="stat-label">{{t .Locale "menu.stat.files"}}</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.BBSFileToday}}</span><span class="stat-label">{{t .Locale "menu.stat.files_today"}}</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.NewMsgsTotal}}</span><span class="stat-label">{{t .Locale "menu.stat.your_new_mail"}}</span></div>
   </div>
-  <p class="meta"><a href="/stats">Full statistics →</a> · <a href="/online">Who's online →</a></p>
+  <p class="meta"><a href="/stats">{{t .Locale "menu.full_stats"}}</a> · <a href="/online">{{t .Locale "menu.whos_online"}}</a></p>
 </div>
 
 {{if .Bulletins}}
 <div class="panel">
-  <h2>Bulletins</h2>
+  <h2>{{t .Locale "menu.bulletins"}}</h2>
   <ul class="compact-list">
   {{range .Bulletins}}
     {{if ne .Name "LOGON"}}
@@ -59,58 +59,59 @@
     {{end}}
   {{end}}
   </ul>
-  <p class="meta"><a href="/bulletins">All bulletins →</a></p>
+  <p class="meta"><a href="/bulletins">{{t .Locale "menu.all_bulletins"}}</a></p>
 </div>
 {{end}}
 
 {{if .User.Sysop}}
 <div class="panel sysop-panel">
-  <h2>Sysop</h2>
-  <p class="meta">You have sysop access. Full sysop administration is available via the terminal session or VirtBBS Sysop GUI (management API).</p>
+  <h2>{{t .Locale "menu.sysop_panel"}}</h2>
+  <p class="meta">{{t .Locale "menu.sysop_help"}}</p>
   <ul class="compact-list">
-    <li><a href="/online">Node list / Who's online</a></li>
-    <li><a href="/stats">System statistics</a></li>
-    <li><a href="/messages">Message areas</a></li>
-    <li><a href="/files">File areas</a></li>
-    <li><a href="/nodelist">FidoNet nodelist</a></li>
+    <li><a href="/admin">{{t .Locale "nav.admin"}}</a></li>
+    <li><a href="/online">{{t .Locale "menu.sysop.online"}}</a></li>
+    <li><a href="/stats">{{t .Locale "menu.sysop.stats"}}</a></li>
+    <li><a href="/messages">{{t .Locale "menu.sysop.messages"}}</a></li>
+    <li><a href="/files">{{t .Locale "menu.sysop.files"}}</a></li>
+    <li><a href="/nodelist">{{t .Locale "menu.sysop.nodelist"}}</a></li>
   </ul>
 </div>
 {{end}}
 
 <div class="panel">
-  <h2>Main Menu</h2>
+  <h2>{{t .Locale "menu.main"}}</h2>
   <div class="menu-grid">
     <div class="menu-card">
-      <a href="/messages">Message Areas</a>
-      <p>Read and post conference messages</p>
+      <a href="/messages">{{t .Locale "menu.card.messages"}}</a>
+      <p>{{t .Locale "menu.card.messages_desc"}}</p>
     </div>
     <div class="menu-card">
-      <a href="/netmail">Netmail{{if gt .NetmailCount 0}}<span class="badge">{{.NetmailCount}}</span>{{end}}</a>
-      <p>Private FidoNet mail</p>
+      <a href="/netmail">{{t .Locale "menu.card.netmail"}}{{if gt .NetmailCount 0}}<span class="badge">{{.NetmailCount}}</span>{{end}}</a>
+      <p>{{t .Locale "menu.card.netmail_desc"}}</p>
     </div>
     <div class="menu-card">
-      <a href="/files">File Areas</a>
-      <p>Browse and download files</p>
+      <a href="/files">{{t .Locale "menu.card.files"}}</a>
+      <p>{{t .Locale "menu.card.files_desc"}}</p>
     </div>
     <div class="menu-card">
-      <a href="/search">Search</a>
-      <p>Find messages and files</p>
+      <a href="/search">{{t .Locale "menu.card.search"}}</a>
+      <p>{{t .Locale "menu.card.search_desc"}}</p>
     </div>
     <div class="menu-card">
-      <a href="/qwk">QWK / REP</a>
-      <p>Offline mail packets</p>
+      <a href="/qwk">{{t .Locale "menu.card.qwk"}}</a>
+      <p>{{t .Locale "menu.card.qwk_desc"}}</p>
     </div>
     <div class="menu-card">
-      <a href="/subscriptions">Echo Areas</a>
-      <p>Subscribe to echomail conferences</p>
+      <a href="/subscriptions">{{t .Locale "menu.card.echo"}}</a>
+      <p>{{t .Locale "menu.card.echo_desc"}}</p>
     </div>
     <div class="menu-card">
-      <a href="/nodelist">Nodelist</a>
-      <p>Search FidoNet nodes</p>
+      <a href="/nodelist">{{t .Locale "menu.card.nodelist"}}</a>
+      <p>{{t .Locale "menu.card.nodelist_desc"}}</p>
     </div>
     <div class="menu-card">
-      <a href="/profile">Your Profile</a>
-      <p>Account statistics</p>
+      <a href="/profile">{{t .Locale "menu.card.profile"}}</a>
+      <p>{{t .Locale "menu.card.profile_desc"}}</p>
     </div>
   </div>
 </div>

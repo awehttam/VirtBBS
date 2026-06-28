@@ -62,6 +62,7 @@ const (
 	StatusChat      = "chat"
 	StatusDoor      = "door"
 	StatusLogoff    = "logoff"
+	StatusWeb       = "web"
 )
 
 // NodeInfo holds the current state of a single BBS node.

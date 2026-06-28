@@ -3,9 +3,9 @@
 <div class="panel">
   <h2>{{.Dir.Name}}</h2>
   <p class="meta">{{.Dir.Description}}</p>
-  <p><a href="/files">← All file areas</a></p>
+  <p><a href="/files">{{t .Locale "common.all_files_back"}}</a></p>
   <table>
-    <thead><tr><th>File</th><th>Size</th><th>Description</th><th>Downloads</th><th></th></tr></thead>
+    <thead><tr><th>{{t .Locale "common.file"}}</th><th>{{t .Locale "common.size"}}</th><th>{{t .Locale "common.description"}}</th><th>{{t .Locale "files_browse.col.downloads"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Files}}
     <tr>
@@ -13,29 +13,29 @@
       <td class="meta">{{.Size}}</td>
       <td>{{.Description}}</td>
       <td class="meta">{{.Downloads}}</td>
-      <td><a href="/files/download?dir={{$.Dir.ID}}&amp;file={{.Filename}}">Download</a>
+      <td><a href="/files/download?dir={{$.Dir.ID}}&amp;file={{.Filename}}">{{t $.Locale "common.download"}}</a>
         <form method="post" action="/share/create" style="display:inline;margin-left:0.5rem">
           <input type="hidden" name="kind" value="file">
           <input type="hidden" name="dir" value="{{$.Dir.ID}}">
           <input type="hidden" name="file" value="{{.Filename}}">
-          <button type="submit" class="btn-link">Share</button>
+          <button type="submit" class="btn-link">{{t $.Locale "common.share"}}</button>
         </form>
       </td>
     </tr>
     {{else}}
-    <tr><td colspan="5">No files in this area.</td></tr>
+    <tr><td colspan="5">{{t .Locale "files_browse.empty"}}</td></tr>
     {{end}}
     </tbody>
   </table>
   {{if .CanUpload}}
-  <h2 style="margin-top:1.5rem">Upload</h2>
+  <h2 style="margin-top:1.5rem">{{t .Locale "common.upload"}}</h2>
   <form method="post" action="/files/upload" enctype="multipart/form-data">
     <input type="hidden" name="dir" value="{{.Dir.ID}}">
-    <label for="file">File</label>
+    <label for="file">{{t .Locale "common.file"}}</label>
     <input type="file" id="file" name="file" required>
-    <label for="description">Description</label>
+    <label for="description">{{t .Locale "common.description"}}</label>
     <input type="text" id="description" name="description">
-    <button type="submit">Upload</button>
+    <button type="submit">{{t .Locale "common.upload"}}</button>
   </form>
   {{end}}
 </div>

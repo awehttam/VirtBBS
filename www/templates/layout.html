@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#12121f">
-  <title>{{.BBSName}} — VirtBBS Web</title>
+  <title>{{.BBSName}} — {{t .Locale "app.title"}}</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -35,6 +35,7 @@
     <select name="lang" onchange="document.getElementById('lang-next').value=location.pathname+location.search;this.form.submit()">
       <option value="en" {{if eq .Locale "en"}}selected{{end}}>{{t .Locale "lang.en"}}</option>
       <option value="es" {{if eq .Locale "es"}}selected{{end}}>{{t .Locale "lang.es"}}</option>
+      <option value="af" {{if eq .Locale "af"}}selected{{end}}>{{t .Locale "lang.af"}}</option>
     </select>
   </form>
 </header>

@@ -1,18 +1,18 @@
 {{define "files.html"}}
 {{template "header" .}}
 <div class="panel">
-  <h2>File Areas</h2>
+  <h2>{{t .Locale "files.title"}}</h2>
   <table>
-    <thead><tr><th>Area</th><th>Description</th><th></th></tr></thead>
+    <thead><tr><th>{{t .Locale "common.area"}}</th><th>{{t .Locale "common.description"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Dirs}}
     <tr>
       <td>{{.Name}}</td>
       <td>{{.Description}}</td>
-      <td><a href="/files/browse?dir={{.ID}}">Browse</a></td>
+      <td><a href="/files/browse?dir={{.ID}}">{{t $.Locale "common.browse"}}</a></td>
     </tr>
     {{else}}
-    <tr><td colspan="3">No file areas available.</td></tr>
+    <tr><td colspan="3">{{t .Locale "files.empty"}}</td></tr>
     {{end}}
     </tbody>
   </table>

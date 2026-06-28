@@ -1,18 +1,18 @@
 {{define "messages.html"}}
 {{template "header" .}}
 <div class="panel">
-  <h2>Message Areas</h2>
+  <h2>{{t .Locale "messages.title"}}</h2>
   <table>
-    <thead><tr><th>Area</th><th>Description</th><th></th></tr></thead>
+    <thead><tr><th>{{t .Locale "common.area"}}</th><th>{{t .Locale "common.description"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Conferences}}
     <tr>
-      <td>{{.Name}}{{if .Echo}} <span class="meta">[echo]</span>{{end}}</td>
+      <td>{{.Name}}{{if .Echo}} <span class="meta">{{t $.Locale "common.echo_tag"}}</span>{{end}}</td>
       <td>{{.Description}}</td>
-      <td><a href="/messages?conf={{.ID}}">Enter</a></td>
+      <td><a href="/messages?conf={{.ID}}">{{t $.Locale "common.enter"}}</a></td>
     </tr>
     {{else}}
-    <tr><td colspan="3">No message areas available.</td></tr>
+    <tr><td colspan="3">{{t .Locale "messages.empty"}}</td></tr>
     {{end}}
     </tbody>
   </table>

@@ -5,8 +5,6 @@
   api_bind = "0.0.0.0"
   userapi_port = 9998
   userapi_bind = "0.0.0.0"
-  virtterm_port = 6323
-  virtterm_bind = "0.0.0.0"
   web_port = 8081
   web_bind = "0.0.0.0"
 

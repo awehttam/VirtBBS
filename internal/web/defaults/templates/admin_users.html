@@ -1,31 +1,32 @@
 {{define "admin_users.html"}}
 {{template "header" .}}
 <div class="panel sysop-panel">
-  <h2>{{t .Locale "admin.users"}}</h2>
-  <p><a href="/admin">← Admin</a></p>
+  <h2>{{t .Locale "admin_users.title"}}</h2>
+  <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
   <table>
-    <thead><tr><th>Name</th><th>City</th><th>Sec</th><th>Calls</th><th>Reset password</th><th></th></tr></thead>
+    <thead><tr><th>{{t .Locale "admin_users.col.name"}}</th><th>{{t .Locale "admin_users.col.city"}}</th><th>{{t .Locale "admin_users.col.sec"}}</th><th>{{t .Locale "admin_users.col.calls"}}</th><th>{{t .Locale "common.edit"}}</th><th>{{t .Locale "admin_users.col.reset"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Users}}
     <tr>
-      <td>{{.Name}}{{if .Sysop}} <span class="sysop-badge">SYSOP</span>{{end}}</td>
+      <td>{{.Name}}{{if .Sysop}} <span class="sysop-badge">{{t $.Locale "common.sysop_badge"}}</span>{{end}}</td>
       <td>{{.City}}</td>
       <td>{{.SecurityLevel}}</td>
       <td>{{.TimesOnline}}</td>
+      <td><a href="/admin/users/edit?id={{.ID}}">{{t $.Locale "common.edit"}}</a></td>
       <td>
         <form method="post" action="/admin/users" class="inline-form">
           <input type="hidden" name="action" value="password">
           <input type="hidden" name="id" value="{{.ID}}">
-          <input type="password" name="password" placeholder="new password" required>
-          <button type="submit" class="btn-sm">Set</button>
+          <input type="password" name="password" placeholder="{{t $.Locale "admin_users.password_placeholder"}}" required>
+          <button type="submit" class="btn-sm">{{t $.Locale "common.set"}}</button>
         </form>
       </td>
       <td>
         {{if not .Sysop}}
-        <form method="post" action="/admin/users" style="display:inline" onsubmit="return confirm('Delete user?');">
+        <form method="post" action="/admin/users" style="display:inline" onsubmit="return confirm('{{t $.Locale "admin_users.confirm_delete"}}');">
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="id" value="{{.ID}}">
-          <button type="submit" class="btn-link">Delete</button>
+          <button type="submit" class="btn-link">{{t $.Locale "common.delete"}}</button>
         </form>
         {{end}}
       </td>

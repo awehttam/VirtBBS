@@ -162,6 +162,6 @@ Requires a rebuilt server after `GETSTATS` was added (`go build ./cmd/virtbbs`).
 
 ## Related sysop views
 
-The sysop menu and `VirtBBS.GUI` expose overlapping data (callers log,
+The sysop menu and web **Admin** panel expose overlapping data (callers log,
 user list, message areas). `GETSTATS` is the end-user/PPE-facing slice of the
 same underlying counters — not a separate stats database.

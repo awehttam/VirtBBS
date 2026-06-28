@@ -41,7 +41,7 @@ func (s *Server) handleQWK(w http.ResponseWriter, r *http.Request) {
 		Flash       string
 		Error       string
 	}{
-		pageData:    pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData:    s.page(r),
 		Conferences: readable,
 	}
 	if r.Method == http.MethodPost {
@@ -85,13 +85,13 @@ func (s *Server) handleQWK(w http.ResponseWriter, r *http.Request) {
 			return
 		case "upload":
 			if err := r.ParseMultipartForm(8 << 20); err != nil {
-				data.Error = "Invalid upload"
+				data.Error = tr(data.Locale, "qwk.error.upload")
 				s.render(w, "qwk.html", data)
 				return
 			}
 			f, _, err := r.FormFile("rep")
 			if err != nil {
-				data.Error = "Missing REP file"
+				data.Error = tr(data.Locale, "qwk.error.missing_rep")
 				s.render(w, "qwk.html", data)
 				return
 			}
@@ -118,13 +118,13 @@ func (s *Server) handleQWK(w http.ResponseWriter, r *http.Request) {
 					allowed = append(allowed, rep)
 				}
 			}
-			posted, err := qwk.PostReplies(s.Deps.Messages, u.Name, allowed)
+			posted, err := qwk.PostReplies(s.Deps.Messages, s.Deps.Conferences, u, allowed)
 			if err != nil {
 				data.Error = err.Error()
 				s.render(w, "qwk.html", data)
 				return
 			}
-			data.Flash = fmt.Sprintf("Posted %d reply message(s).", posted)
+			data.Flash = trf(data.Locale, "qwk.flash.posted", posted)
 		}
 	}
 	s.render(w, "qwk.html", data)
@@ -169,7 +169,7 @@ func (s *Server) handleSubscriptions(w http.ResponseWriter, r *http.Request) {
 		pageData
 		Rows []row
 	}{
-		pageData: pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Rows:     rows,
 	}
 	s.render(w, "subscriptions.html", data)
@@ -219,7 +219,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		Messages []msgHit
 		Files    []*files.File
 	}{
-		pageData: pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Query:    query,
 		Messages: msgHits,
 		Files:    fileHits,
@@ -274,7 +274,7 @@ func (s *Server) handleShareCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleShareCreated(w http.ResponseWriter, r *http.Request) {
-	u, ok := s.requireUser(w, r)
+	_, ok := s.requireUser(w, r)
 	if !ok {
 		return
 	}
@@ -289,7 +289,7 @@ func (s *Server) handleShareCreated(w http.ResponseWriter, r *http.Request) {
 		Key string
 		URL string
 	}{
-		pageData: pageData{BBSName: config.Get().BBS.Name, User: u},
+		pageData: s.page(r),
 		Key:      key,
 		URL:      url,
 	}
@@ -330,7 +330,7 @@ func (s *Server) handleShared(w http.ResponseWriter, r *http.Request) {
 			Message    *messages.Message
 			Expires    time.Time
 		}{
-			pageData:   pageData{BBSName: config.Get().BBS.Name},
+			pageData:   s.page(r),
 			Conference: c,
 			Message:    msg,
 			Expires:    sh.ExpiresAt,
@@ -389,7 +389,7 @@ func (s *Server) handleManifest(w http.ResponseWriter, r *http.Request) {
 	manifest := map[string]any{
 		"name":             cfg.BBS.Name,
 		"short_name":       cfg.BBS.Name,
-		"description":      "VirtBBS Web — browser BBS client",
+		"description":      tr(localeFromRequest(r), "pwa.description"),
 		"start_url":        "/menu",
 		"display":          "standalone",
 		"background_color": "#0a0a12",

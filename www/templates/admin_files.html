@@ -1,0 +1,44 @@
+{{define "admin_files.html"}}
+{{template "header" .}}
+<div class="panel sysop-panel">
+  <h2>{{t .Locale "admin_files.title"}}</h2>
+  <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
+  <table>
+    <thead><tr><th>{{t .Locale "common.id"}}</th><th>{{t .Locale "common.name"}}</th><th>{{t .Locale "common.path"}}</th><th>{{t .Locale "common.sec_ru"}}</th><th>{{t .Locale "common.active"}}</th></tr></thead>
+    <tbody>
+    {{range .Dirs}}
+    <tr>
+      <td>{{.ID}}</td>
+      <td>{{.Name}}</td>
+      <td>{{.Path}}</td>
+      <td>{{.ReadSec}}/{{.UploadSec}}</td>
+      <td>{{if .Active}}{{t $.Locale "common.yes"}}{{else}}{{t $.Locale "common.no"}}{{end}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  <h3>{{t .Locale "admin_files.create_section"}}</h3>
+  <form method="post" action="/admin/files" class="admin-form">
+    <input type="hidden" name="action" value="create">
+    <label>{{t .Locale "common.name"}} <input name="name" required></label>
+    <label>{{t .Locale "common.description"}} <input name="description"></label>
+    <label>{{t .Locale "common.path"}} <input name="path" placeholder="{{t .Locale "admin_files.path_placeholder"}}"></label>
+    <label>{{t .Locale "common.read_sec"}} <input type="number" name="read_sec" value="10"></label>
+    <label>{{t .Locale "common.upload_sec"}} <input type="number" name="upload_sec" value="10"></label>
+    <button type="submit">{{t .Locale "common.create"}}</button>
+  </form>
+  <h3>{{t .Locale "admin_files.update_section"}}</h3>
+  <form method="post" action="/admin/files" class="admin-form">
+    <input type="hidden" name="action" value="update">
+    <label>{{t .Locale "common.id"}} <input type="number" name="id" required></label>
+    <label>{{t .Locale "common.name"}} <input name="name"></label>
+    <label>{{t .Locale "common.description"}} <input name="description"></label>
+    <label>{{t .Locale "common.path"}} <input name="path"></label>
+    <label>{{t .Locale "common.read_sec"}} <input type="number" name="read_sec"></label>
+    <label>{{t .Locale "common.upload_sec"}} <input type="number" name="upload_sec"></label>
+    <label><input type="checkbox" name="active" value="1" checked> {{t .Locale "common.active"}}</label>
+    <button type="submit">{{t .Locale "common.update"}}</button>
+  </form>
+</div>
+{{template "footer" .}}
+{{end}}

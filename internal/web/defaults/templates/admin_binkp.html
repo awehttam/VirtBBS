@@ -1,20 +1,20 @@
 {{define "admin_binkp.html"}}
 {{template "header" .}}
 <div class="panel sysop-panel">
-  <h2>{{t .Locale "admin.binkp"}}</h2>
+  <h2>{{t .Locale "admin_binkp.title"}}</h2>
   {{if .Flash}}<p class="flash">{{.Flash}}</p>{{end}}
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form method="post" action="/admin/binkp">
-    <label>Network</label>
+    <label>{{t .Locale "common.network"}}</label>
     <select name="network">
     {{range .Networks}}<option value="{{.}}">{{.}}</option>{{end}}
     </select>
-    <button type="submit" class="btn">Poll uplink now</button>
+    <button type="submit" class="btn">{{t .Locale "admin_binkp.poll"}}</button>
   </form>
   {{if .Stats}}
-  <h3>Today's stats</h3>
+  <h3>{{t .Locale "admin_binkp.stats_today"}}</h3>
   <table>
-    <thead><tr><th>Network</th><th>Up</th><th>Down</th></tr></thead>
+    <thead><tr><th>{{t .Locale "common.network"}}</th><th>{{t .Locale "admin_binkp.col.up"}}</th><th>{{t .Locale "admin_binkp.col.down"}}</th></tr></thead>
     <tbody>
     {{range .Stats.Networks}}
     <tr><td>{{.Network}}</td><td>{{.PollClientFilesSent}} / {{.PollServerUplinkSent}}</td><td>{{.PollClientFilesRecv}} / {{.PollServerDownlinkRecv}}</td></tr>
@@ -22,7 +22,7 @@
     </tbody>
   </table>
   {{end}}
-  <h3>Recent log ({{.LogPath}})</h3>
+  <h3>{{tf .Locale "admin_binkp.recent_log" .LogPath}}</h3>
   <pre class="log-tail">{{range .LogLines}}{{.}}
 {{end}}</pre>
 </div>

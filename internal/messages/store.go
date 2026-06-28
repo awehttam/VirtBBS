@@ -96,6 +96,7 @@ func (s *Store) migrate() error {
 		`ALTER TABLE messages ADD COLUMN fido_path TEXT`,
 		`ALTER TABLE messages ADD COLUMN fido_origin TEXT`,
 		`ALTER TABLE messages ADD COLUMN fido_exported_at TEXT`,
+		`ALTER TABLE fido_netmail ADD COLUMN author_lang TEXT NOT NULL DEFAULT 'en'`,
 	}
 	for _, stmt := range alters {
 		if _, err := s.db.Exec(stmt); err != nil {

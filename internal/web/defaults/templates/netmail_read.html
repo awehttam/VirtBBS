@@ -1,13 +1,16 @@
 {{define "netmail_read.html"}}
 {{template "header" .}}
 <div class="panel">
-  <p><a href="/netmail">← Netmail</a></p>
+  <p><a href="/netmail">{{t .Locale "common.netmail_back"}}</a></p>
   <h2>{{.Message.Subject}}</h2>
   <p class="meta">
-    From <strong>{{.Message.FromName}}</strong> to {{.Message.ToName}}
+    {{t .Locale "common.from"}} <strong>{{.Message.FromName}}</strong> {{t .Locale "read.to_prefix"}} {{.Message.ToName}}
     · {{.Message.DatePosted.Format "2006-01-02 15:04"}}
   </p>
-  <div class="msg-body">{{.Message.Body}}</div>
+  {{if .Message.FidoOrigin}}
+  <p class="meta fido-source-hint">{{t .Locale "read.fido_origin"}} {{.Message.FidoOrigin}}</p>
+  {{end}}
+  <div class="msg-body">{{.DisplayBody}}</div>
 </div>
 {{template "footer" .}}
 {{end}}

@@ -352,8 +352,10 @@ type SearchResult struct {
 
 // Search returns a page of nodes matching a query string (matched against
 // sysop, name, location, or exact address like "1:234/567").
+// An empty query or "*" matches all nodes in the network.
 // pageSize = 0 defaults to 25.
 func (ndb *NodelistDB) Search(network, query string, page, pageSize int) (*SearchResult, error) {
+	query = NormalizeSearchQuery(query)
 	if pageSize <= 0 {
 		pageSize = 25
 	}
@@ -362,9 +364,11 @@ func (ndb *NodelistDB) Search(network, query string, page, pageSize int) (*Searc
 	}
 	offset := (page - 1) * pageSize
 
-	// Try to parse as an address first.
-	if a, err := ParseAddr(query); err == nil {
-		return ndb.searchByAddr(network, a, page, pageSize, offset)
+	// Try to parse as an address first (non-empty query only).
+	if query != "" {
+		if a, err := ParseAddr(query); err == nil {
+			return ndb.searchByAddr(network, a, page, pageSize, offset)
+		}
 	}
 
 	like := "%" + query + "%"
@@ -403,6 +407,58 @@ func (ndb *NodelistDB) Search(network, query string, page, pageSize int) (*Searc
 
 	pages := (total + pageSize - 1) / pageSize
 	return &SearchResult{Nodes: nodes, Total: total, Page: page, Pages: pages}, nil
+}
+
+// NormalizeSearchQuery treats blank and "*" as match-all.
+func NormalizeSearchQuery(query string) string {
+	query = strings.TrimSpace(query)
+	if query == "*" {
+		return ""
+	}
+	return query
+}
+
+// SearchAll returns every node matching query (no pagination).
+func (ndb *NodelistDB) SearchAll(network, query string) ([]NodeEntry, error) {
+	query = NormalizeSearchQuery(query)
+	if query != "" {
+		if a, err := ParseAddr(query); err == nil {
+			e, err := ndb.LookupAddr(network, a)
+			if err != nil {
+				return nil, err
+			}
+			if e == nil {
+				return nil, nil
+			}
+			return []NodeEntry{*e}, nil
+		}
+	}
+	like := "%" + query + "%"
+	networkCond := ""
+	args := []any{like, like, like, like}
+	if network != "" {
+		networkCond = " AND network=?"
+		args = append(args, network)
+	}
+	querySQL := `SELECT id, network, zone, net, node_num, point, name, location, sysop, phone, baud, flags, node_type, is_active
+		FROM fido_nodes
+		WHERE (sysop LIKE ? OR name LIKE ? OR location LIKE ? OR flags LIKE ?)` +
+		networkCond +
+		` ORDER BY zone, net, node_num`
+	rows, err := ndb.db.Query(querySQL, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	ptrs, err := scanNodes(rows)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]NodeEntry, len(ptrs))
+	for i, p := range ptrs {
+		out[i] = *p
+	}
+	return out, nil
 }
 
 func (ndb *NodelistDB) searchByAddr(network string, a Addr, page, pageSize, offset int) (*SearchResult, error) {

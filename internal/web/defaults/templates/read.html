@@ -4,19 +4,28 @@
   <p><a href="/messages?conf={{.Conference.ID}}">← {{.Conference.Name}}</a></p>
   <h2>{{.Message.Subject}}</h2>
   <p class="meta">
-    From <strong>{{.Message.FromName}}</strong> to {{.Message.ToName}}
+    {{t .Locale "common.from"}} <strong>{{.Message.FromName}}</strong> {{t .Locale "read.to_prefix"}} {{.Message.ToName}}
     · {{.Message.DatePosted.Format "2006-01-02 15:04"}}
     · #{{.Message.MsgNumber}}
   </p>
-  <div class="msg-body">{{.Message.Body}}</div>
+  {{if .ShowSourceToggle}}
+  <p class="meta">
+    {{if .ShowSource}}
+    <a href="/messages/read?conf={{.Conference.ID}}&amp;num={{.Message.MsgNumber}}">{{t .Locale "read.hide_source"}}</a>
+    {{else}}
+    <a href="/messages/read?conf={{.Conference.ID}}&amp;num={{.Message.MsgNumber}}&amp;source=1">{{t .Locale "read.show_source"}}</a>
+    {{end}}
+  </p>
+  {{end}}
+  <div class="msg-body">{{.DisplayBody}}</div>
   {{if .CanWrite}}
   <p>
-    <a class="btn" href="/messages/post?conf={{.Conference.ID}}&amp;reply={{.Message.MsgNumber}}">Reply</a>
+    <a class="btn" href="/messages/post?conf={{.Conference.ID}}&amp;reply={{.Message.MsgNumber}}">{{t .Locale "common.reply"}}</a>
     <form method="post" action="/share/create" style="display:inline;margin-left:0.5rem">
       <input type="hidden" name="kind" value="message">
       <input type="hidden" name="conf" value="{{.Conference.ID}}">
       <input type="hidden" name="num" value="{{.Message.MsgNumber}}">
-      <button type="submit" class="btn btn-sm">Share link</button>
+      <button type="submit" class="btn btn-sm">{{t .Locale "common.share"}}</button>
     </form>
   </p>
   {{end}}

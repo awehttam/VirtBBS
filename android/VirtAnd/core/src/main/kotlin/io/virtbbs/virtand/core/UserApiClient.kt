@@ -1,7 +1,7 @@
 // VirtAnd — UserApiClient.kt
 //
 // JSON-over-TCP client for VirtBBS's internal/userapi — the same
-// token-authenticated API VirtTerm's Net/UserApiClient.cs talks to. There's
+// token-authenticated API used by VirtAnd. There's
 // no HTTP server on the BBS side, just a raw newline-delimited-JSON socket
 // protocol (see internal/userapi/server.go), so this opens a plain
 // java.net.Socket per call rather than using an HTTP client library.
@@ -24,8 +24,7 @@ class UserApiException(message: String) : Exception(message)
 /**
  * One JSON/TCP call against internal/userapi. Opens a fresh connection,
  * sends one newline-delimited JSON request, reads one newline-delimited
- * JSON response line, and closes — mirroring the structurally identical
- * .NET client (Net/UserApiClient.cs) used by VirtTerm.
+ * JSON response line, and closes.
  */
 class UserApiClient(
     var host: String = "127.0.0.1",

@@ -71,7 +71,9 @@ import (
 	"time"
 
 	"github.com/virtbbs/virtbbs/internal/conferences"
+	"github.com/virtbbs/virtbbs/internal/fido"
 	"github.com/virtbbs/virtbbs/internal/messages"
+	"github.com/virtbbs/virtbbs/internal/postname"
 	"github.com/virtbbs/virtbbs/internal/users"
 )
 
@@ -416,13 +418,19 @@ func ParseRep(data []byte) ([]*ReplyMsg, error) {
 
 // filepath.Ext is the only thing we need from path/filepath.
 
-// PostReplies posts each parsed reply via messages.Store.Post, attributing
-// authorship to fromName (the uploading user's BBS name, overriding
-// whatever the REP file's own From line says, so a user can't forge another
-// caller's name). Returns the number successfully posted.
-func PostReplies(msgStore *messages.Store, fromName string, replies []*ReplyMsg) (int, error) {
+// PostReplies posts each parsed reply via messages.Store.Post using the
+// conference echomail FromName policy for the uploading user.
+func PostReplies(msgStore *messages.Store, confStore *conferences.Store, u *users.User, replies []*ReplyMsg) (int, error) {
 	posted := 0
 	for _, r := range replies {
+		conf, err := confStore.Get(r.ConferenceID)
+		if err != nil {
+			return posted, fmt.Errorf("qwk: conference %d: %w", r.ConferenceID, err)
+		}
+		if err := postname.ValidateEchoPost(conf, u); err != nil {
+			return posted, fmt.Errorf("qwk: conference %d: %w", r.ConferenceID, err)
+		}
+		fromName := postname.ForConference(conf, u)
 		m := &messages.Message{
 			ConferenceID: r.ConferenceID,
 			FromName:     fromName,
@@ -430,7 +438,19 @@ func PostReplies(msgStore *messages.Store, fromName string, replies []*ReplyMsg)
 			Subject:      r.Subject,
 			Body:         r.Body,
 			DatePosted:   time.Now(),
+			Echo:         conf != nil && conf.Echo,
 		}
+		var replyTo *messages.Message
+		if r.RefNum > 0 {
+			if orig, err := msgStore.Get(r.ConferenceID, r.RefNum); err == nil {
+				replyTo = orig
+			}
+		}
+		lang := "en"
+		if u != nil && strings.TrimSpace(u.Locale) != "" {
+			lang = fido.NormalizeLangCode(u.Locale)
+		}
+		fido.ApplyLocalEchoMeta(m, conf, postname.EchoOrigAddr(conf), lang, replyTo)
 		if err := msgStore.Post(m); err != nil {
 			return posted, fmt.Errorf("qwk: post reply to conference %d: %w", r.ConferenceID, err)
 		}

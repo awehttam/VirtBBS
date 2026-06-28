@@ -1,7 +1,7 @@
 # VirtAnd
 
 A Kotlin/Android "point" client for VirtBBS, modeled on classic FidoNet
-point software — Phase 4 of the VirtAnd/VirtTerm plan. Runs mostly
+point software for VirtBBS. Runs mostly
 offline: syncs new mail via real QWK/REP packets, lets the user browse a
 previously-synced file catalog and queue downloads/uploads, and only talks
 to the network during an explicit "synchronize" (manual, or a best-effort
@@ -30,8 +30,7 @@ blind the way the whole project would otherwise have to be.
 ## What it does
 
 - **`core/UserApiClient.kt`** — JSON-over-TCP client for
-  `internal/userapi`, structurally identical to VirtTerm's
-  `Net/UserApiClient.cs`: one fresh socket per call, newline-delimited
+  `internal/userapi`: one fresh socket per call, newline-delimited
   JSON request/response, token auth.
 - **`core/QwkPacket.kt`** — `parseQwkPacket()` decodes a downloaded QWK
   packet's `MESSAGES.DAT` (128-byte header records, soft-CR-wrapped body

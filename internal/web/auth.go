@@ -17,6 +17,7 @@ const (
 
 type sessionEntry struct {
 	userID    int64
+	nodeID    int
 	expiresAt time.Time
 }
 
@@ -45,6 +46,25 @@ func (s *SessionStore) Create(userID int64) (string, error) {
 func (s *SessionStore) Delete(token string) {
 	s.mu.Lock()
 	delete(s.sessions, token)
+	s.mu.Unlock()
+}
+
+func (s *SessionStore) NodeID(token string) int {
+	s.mu.RLock()
+	e, ok := s.sessions[token]
+	s.mu.RUnlock()
+	if !ok {
+		return 0
+	}
+	return e.nodeID
+}
+
+func (s *SessionStore) SetNodeID(token string, nodeID int) {
+	s.mu.Lock()
+	if e, ok := s.sessions[token]; ok {
+		e.nodeID = nodeID
+		s.sessions[token] = e
+	}
 	s.mu.Unlock()
 }
 
@@ -103,6 +123,7 @@ func (s *Server) currentUser(r *http.Request) (*users.User, bool) {
 	if err != nil || u.Deleted {
 		return nil, false
 	}
+	s.touchWebNode(token, u, r.URL.Path)
 	return u, true
 }
 

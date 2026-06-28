@@ -581,7 +581,7 @@ func readHexFrame(br *bufio.Reader) (byte, []byte, byte, error) {
 		// ZFILE's filename/size payload was never actually extracted for
 		// any hex-framed transfer, which is the only kind this package
 		// sends. Caught via a Go<->C# Zmodem interop test while building
-		// VirtTerm/VirtTermMac's client-side Zmodem support: ReceiveFile's
+		// client-side Zmodem support: ReceiveFile's
 		// upload path would have silently failed to read the uploaded
 		// file's name from a real Zmodem-sending client.
 		for {
@@ -658,7 +658,7 @@ func readBinFrame(br *bufio.Reader, use32 bool) (byte, []byte, byte, error) {
 // reading them as two raw bytes (as this function's CRC-reading call sites
 // used to do) only happens to work when neither CRC byte's value happens
 // to need escaping, which is true most of the time but not always. Caught
-// via a Go<->C# Zmodem interop test while building VirtTerm/VirtTermMac's
+// via Zmodem interop tests.
 // client-side Zmodem support, on a CRC value matching ZDLE's own byte.
 func readEscapedByte(br *bufio.Reader) (byte, error) {
 	b, err := br.ReadByte()

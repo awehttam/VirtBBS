@@ -1,0 +1,48 @@
+{{define "admin_fido_join.html"}}
+{{template "header" .}}
+<div class="panel sysop-panel">
+  <h2>{{t .Locale "admin_fido_join.title"}}</h2>
+  <p><a href="/admin/fido">{{t .Locale "common.fido_back"}}</a></p>
+  {{if .Flash}}<p class="flash">{{.Flash}}</p>{{end}}
+  {{if .ApprovedPassword}}<p class="flash">{{tf .Locale "admin_fido_join.password_flash" .ApprovedPassword}}</p>{{end}}
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="get" class="inline-form">
+    <label>{{t .Locale "common.network"}} <select name="network" onchange="this.form.submit()">{{range .Networks}}<option {{if eq $.Network .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+  </form>
+  <table>
+    <thead><tr><th>{{t .Locale "common.id"}}</th><th>{{t .Locale "common.bbs"}}</th><th>{{t .Locale "nodelist.col.sysop"}}</th><th>{{t .Locale "common.requested"}}</th><th>{{t .Locale "common.status"}}</th><th>{{t .Locale "admin_fido_join.col.approve"}}</th></tr></thead>
+    <tbody>
+    {{range .Pending}}
+    <tr>
+      <td>{{.ID}}</td>
+      <td>{{.BBSName}}</td>
+      <td>{{.SysopName}}</td>
+      <td class="meta">{{with .RequestedNet}}{{.}}{{else}}—{{end}}</td>
+      <td>{{.Status}}</td>
+      <td>
+        <form method="post" class="inline-form">
+          <input type="hidden" name="network" value="{{$.Network}}">
+          <input type="hidden" name="action" value="approve">
+          <input type="hidden" name="id" value="{{.ID}}">
+          <input type="number" name="net" placeholder="{{t $.Locale "admin_fido_join.placeholder.net"}}" style="width:4rem">
+          <input type="number" name="node" placeholder="{{t $.Locale "admin_fido_join.placeholder.node"}}" style="width:4rem">
+          <label><input type="checkbox" name="is_host" value="1"> {{t $.Locale "common.host"}}</label>
+          <input name="password" placeholder="{{t $.Locale "admin_fido_join.placeholder.password"}}" style="width:8rem">
+          <button type="submit">{{t $.Locale "common.approve"}}</button>
+        </form>
+        <form method="post" style="display:inline">
+          <input type="hidden" name="network" value="{{$.Network}}">
+          <input type="hidden" name="action" value="deny">
+          <input type="hidden" name="id" value="{{.ID}}">
+          <button type="submit" class="btn-link">{{t $.Locale "common.deny"}}</button>
+        </form>
+      </td>
+    </tr>
+    {{else}}
+    <tr><td colspan="6">{{t .Locale "admin_fido_join.empty"}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "footer" .}}
+{{end}}

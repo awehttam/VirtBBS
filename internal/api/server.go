@@ -29,7 +29,7 @@
 //   v0.0.2  2026-06-24  Phase 10: Implement node.kick and node.broadcast endpoints
 //   v0.0.5  2026-06-24  Phase 14: callers.search, callers.stats endpoints
 //   v0.9.0  2026-06-26  Sysop GUI gap-fill: tokens.list/tokens.revoke for
-//                        administering VirtAnd/VirtTerm API tokens remotely
+//                        administering VirtAnd API tokens remotely
 // ============================================================================
 
 // Package api provides a JSON-over-TCP management API for remote sysop access.
@@ -412,7 +412,7 @@ func (s *Server) dispatch(req Request) (any, error) {
 		}
 		return fido.ImportFile(s.Deps.Messages.DB(), p.Path, p.Network)
 
-	// ── API token administration (VirtAnd/VirtTerm device tokens) ───────────
+	// ── API token administration (VirtAnd device tokens) ───────────
 
 	case "tokens.list":
 		return s.Deps.Users.ListAllAPITokens()

@@ -154,7 +154,7 @@ func (s *session) uploadRepPacket() {
 			allowed = append(allowed, r)
 		}
 	}
-	posted, err := qwk.PostReplies(s.deps.Messages, s.user.Name, allowed)
+	posted, err := qwk.PostReplies(s.deps.Messages, s.deps.Conferences, s.user, allowed)
 	if err != nil {
 		s.writeln(ansi.Colorize(ansi.Red, fmt.Sprintf("Posted %d, then error: %s", posted, err.Error())))
 		return

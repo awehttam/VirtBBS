@@ -1,0 +1,31 @@
+{{define "admin_callers.html"}}
+{{template "header" .}}
+<div class="panel sysop-panel">
+  <h2>{{t .Locale "admin_callers.title"}}</h2>
+  <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
+  {{if .StatsText}}<p class="meta">{{.StatsText}}</p>{{end}}
+  <form method="get" action="/admin/callers" class="inline-form">
+    <input name="q" value="{{.Query}}" placeholder="{{t .Locale "admin_callers.search_placeholder"}}">
+    <button type="submit">{{t .Locale "common.search"}}</button>
+    {{if .Query}}<a href="/admin/callers">{{t .Locale "common.clear"}}</a>{{end}}
+  </form>
+  <table>
+    <thead><tr><th>{{t .Locale "common.time"}}</th><th>{{t .Locale "common.user"}}</th><th>{{t .Locale "common.city"}}</th><th>{{t .Locale "common.node"}}</th><th>{{t .Locale "common.action"}}</th><th>{{t .Locale "common.duration"}}</th></tr></thead>
+    <tbody>
+    {{range .Entries}}
+    <tr>
+      <td class="meta">{{.Timestamp.Format "01-02 15:04"}}</td>
+      <td>{{.UserName}}</td>
+      <td>{{.City}}</td>
+      <td>{{.Node}}</td>
+      <td>{{.Action}}</td>
+      <td>{{if .DurationSecs}}{{.DurationSecs}}s{{end}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="6">{{t .Locale "admin_callers.empty"}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "footer" .}}
+{{end}}

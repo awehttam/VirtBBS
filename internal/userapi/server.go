@@ -42,7 +42,7 @@
 
 // Package userapi provides a token-authenticated JSON-over-TCP API for
 // end-user client applications (VirtAnd, the Android point client, and
-// VirtTerm, the .NET graphical terminal client). It is deliberately a
+// VirtAnd, the Android point client). It is deliberately a
 // separate package and port from the sysop-only internal/api, reusing the
 // same Request/Response shape for consistency but with a completely
 // different trust boundary: callers authenticate with a per-device API
@@ -150,7 +150,7 @@ func (s *Server) handle(c net.Conn) {
 func (s *Server) dispatch(req Request, u *users.User) (any, error) {
 	switch req.Method {
 
-	// session.whoami lets a client (VirtTerm, VirtTermMac, VirtAnd) show
+	// session.whoami lets a client (VirtAnd) show
 	// the logged-in user's name and the BBS's name — e.g. in a window
 	// title bar — without needing to scrape it out of the terminal byte
 	// stream. No params; identity comes entirely from the auth token.
@@ -362,7 +362,7 @@ func (s *Server) dispatch(req Request, u *users.User) (any, error) {
 				allowed = append(allowed, r)
 			}
 		}
-		posted, err := qwk.PostReplies(s.Deps.Messages, u.Name, allowed)
+		posted, err := qwk.PostReplies(s.Deps.Messages, s.Deps.Conferences, u, allowed)
 		if err != nil {
 			return nil, err
 		}

@@ -1,25 +1,25 @@
 {{define "online.html"}}
 {{template "header" .}}
 <div class="panel">
-  <p><a href="/menu">← Dashboard</a></p>
-  <h2>Who's Online</h2>
+  <p><a href="/menu">{{t .Locale "common.dashboard_back"}}</a></p>
+  <h2>{{t .Locale "online.title"}}</h2>
   {{if .Nodes}}
   <table>
-    <thead><tr><th>Node</th><th>Status</th><th>User</th><th>City</th><th>Activity</th></tr></thead>
+    <thead><tr><th>{{t .Locale "common.node"}}</th><th>{{t .Locale "common.status"}}</th><th>{{t .Locale "common.user"}}</th><th>{{t .Locale "common.city"}}</th><th>{{t .Locale "common.activity"}}</th></tr></thead>
     <tbody>
     {{range .Nodes}}
     <tr>
       <td>{{.ID}}</td>
-      <td>{{.Status}}</td>
-      <td>{{if .UserName}}{{.UserName}}{{else}}(logging in){{end}}</td>
+      <td>{{if eq .Status "web"}}{{t $.Locale "status.web"}}{{else}}{{.Status}}{{end}}</td>
+      <td>{{if .UserName}}{{.UserName}}{{else}}{{t $.Locale "online.logging_in"}}{{end}}</td>
       <td>{{.City}}</td>
-      <td>{{.Operation}}</td>
+      <td>{{webOp $.Locale .Operation}}</td>
     </tr>
     {{end}}
     </tbody>
   </table>
   {{else}}
-  <p class="meta">No active nodes.</p>
+  <p class="meta">{{t .Locale "online.empty"}}</p>
   {{end}}
 </div>
 {{template "footer" .}}

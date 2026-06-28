@@ -3,10 +3,21 @@
   var paneEl = document.getElementById('netmail-pane');
   if (!listEl || !paneEl) return;
 
+  var i18nEl = document.getElementById('netmail-i18n');
+  var i18n = { empty: 'No netmail.', from: 'From %s · #%d', queued: 'Queued for next poll.', sendFailed: 'Send failed.' };
+  if (i18nEl) {
+    try { i18n = JSON.parse(i18nEl.textContent); } catch (e) {}
+  }
+
   function esc(s) {
     var d = document.createElement('div');
     d.textContent = s || '';
     return d.innerHTML;
+  }
+
+  function formatFrom(name, num) {
+    var tpl = i18n.from || 'From %s · #%d';
+    return tpl.replace('%s', name || '').replace('%d', String(num));
   }
 
   function loadList() {
@@ -14,7 +25,7 @@
       .then(function (r) { return r.json(); })
       .then(function (msgs) {
         if (!msgs.length) {
-          listEl.innerHTML = '<p class="meta">No netmail.</p>';
+          listEl.innerHTML = '<p class="meta">' + esc(i18n.empty) + '</p>';
           return;
         }
         var html = '<ul class="netmail-items">';
@@ -38,8 +49,8 @@
       .then(function (r) { return r.json(); })
       .then(function (m) {
         paneEl.innerHTML = '<h3>' + esc(m.Subject) + '</h3>' +
-          '<p class="meta">From ' + esc(m.FromName) + ' · #' + m.MsgNumber + '</p>' +
-          '<div class="msg-body">' + esc(m.Body) + '</div>';
+          '<p class="meta">' + esc(formatFrom(m.FromName, m.MsgNumber)) + '</p>' +
+          '<div class="msg-body">' + esc(m.DisplayBody || m.Body) + '</div>';
       });
   }
 
@@ -62,10 +73,10 @@
         if (!r.ok) throw new Error('send failed');
         return r.json();
       }).then(function () {
-        status.textContent = 'Queued for next poll.';
+        status.textContent = i18n.queued;
         form.reset();
       }).catch(function () {
-        status.textContent = 'Send failed.';
+        status.textContent = i18n.sendFailed;
       });
     });
   }

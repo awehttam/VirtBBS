@@ -18,7 +18,7 @@ In `VirtBBS.DAT`:
   www = "www"
 ```
 
-Also configurable in the Sysop GUI **Config** tab (Web Port, Web Bind, Web Root).
+Also configurable in **Admin → BBS config** (`/admin/config`).
 
 Default URL: **http://localhost:8081/**
 
@@ -35,36 +35,38 @@ will be re-seeded from the new defaults.
 To customise the UI, edit files in your install `www/templates/` and
 `www/static/` directly.
 
-### Tier 2 routes (v1.0.2+)
+### User routes
 
 | Route | Purpose |
 |-------|---------|
-| `/qwk` | Download QWK packet, upload REP replies |
-| `/subscriptions` | Subscribe/unsubscribe echo conferences |
-| `/search?q=` | Search messages and files |
-| `/share/create` | POST — create 7-day public share link |
-| `/shared/{key}` | Public shared message or file download |
-| `/api/notify` | JSON unread counts (nav badge polling) |
-| `/manifest.webmanifest` | PWA manifest |
-| `/register` | New user signup (Telnet **NEW** equivalent) |
-| `/register/welcome` | Post-registration NEWUSER display |
+| `/login`, `/logout` | Session login |
+| `/register` | New user signup |
+| `/menu` | Dashboard |
+| `/messages`, `/files`, `/profile`, `/online` | Core BBS |
+| `/qwk`, `/subscriptions`, `/search` | Extended features |
+| `/netmail/app`, `/addressbook` | FidoNet user tools |
+| `/nodelist` | Nodelist search and export |
 
-### Tier 3 routes (v1.1.0+)
+### Sysop admin routes (`/admin/*`)
 
 | Route | Purpose |
 |-------|---------|
-| `/forgot-password` | Request password reset link |
-| `/reset-password?token=` | Set new password |
-| `/addressbook` | Personal FTN/contact address book |
-| `/netmail/app` | Netmail SPA (list, read, compose) |
-| `/api/netmail` | JSON netmail list/read |
-| `/api/netmail/compose` | POST — queue outbound netmail |
-| `/api/stream` | SSE unread notification stream |
-| `/admin` | Sysop admin hub |
+| `/admin` | Admin hub |
+| `/admin/users`, `/admin/users/edit` | User list, edit, password, delete |
+| `/admin/nodes` | Online nodes, kick, broadcast |
+| `/admin/conferences` | Conference CRUD |
+| `/admin/messages` | Message moderation (delete) |
+| `/admin/files` | File area CRUD |
+| `/admin/callers` | Callers log, search, daily stats |
+| `/admin/config` | BBS config (ports, paths, session) |
+| `/admin/tokens` | VirtAnd API token revoke |
+| `/admin/fido` | FidoNet admin hub |
+| `/admin/fido/ops` | Toss, scan, poll, nodelist, netmail |
+| `/admin/fido/networks` | Per-network Fido config |
+| `/admin/fido/routing` | Routes, members, import/export |
+| `/admin/fido/join` | Hub join approve/deny |
+| `/admin/fido/tools` | Ping, trace, AreaFix, FileFix |
 | `/admin/binkp` | BinkP poll, stats, log |
-| `/admin/users` | User list, password reset, delete |
-| `/admin/nodes` | Online nodes, kick |
-| `/set-locale` | Language preference (en/es) |
 
 ## Feature checklist
 
@@ -78,47 +80,49 @@ Legend: `[x]` done · `[ ]` not yet implemented
 - [x] File areas: browse, download
 - [x] User profile (`/profile`)
 - [x] Who's online (`/online`)
-- [x] LOGON display + bulletins list/view (`/bulletins`, `/bulletins/view`)
+- [x] LOGON display + bulletins list/view
 - [x] Stats summary on dashboard + `/stats` page
-- [x] Sysop panel on dashboard (links, not full admin)
-- [x] WriteHeader/render fix (buffered template output)
-- [x] Reply quoting on post (prefill `Re:` subject + quoted body)
+- [x] Sysop panel on dashboard + full `/admin/*` web admin
+- [x] Reply quoting on post
 
 ### Tier 2 — Extended web features
 
-- [x] QWK web UI (`/qwk` — download QWK, upload REP)
-- [x] Echo subscriptions / area management (`/subscriptions`)
-- [x] Shared message/file links (public `/shared/{key}` URLs, 7-day expiry)
-- [x] Full-text message search (`/search` — messages + files)
-- [x] Unread notification badges (nav badges via `/api/notify` polling)
-- [x] PWA (manifest + service worker for static asset cache)
-- [x] New user self-registration (`/register` — same as Telnet **NEW**)
+- [x] QWK web UI (`/qwk`)
+- [x] Echo subscriptions (`/subscriptions`)
+- [x] Shared message/file links (`/shared/{key}`)
+- [x] Full-text search (`/search`)
+- [x] Unread notification badges (`/api/notify`, `/api/stream`)
+- [x] PWA manifest + service worker
+- [x] New user self-registration (`/register`)
 
-### Tier 3 — Extended (partial)
+### Tier 3 — Extended
 
-- [x] Forgot / reset password (`/forgot-password`, `/reset-password`)
+- [x] Forgot / reset password
 - [x] Address book (`/addressbook`)
-- [x] Dedicated netmail SPA (`/netmail/app`)
-- [x] Realtime SSE notifications (`/api/stream`)
-- [x] BinkP admin web panel (`/admin/binkp`)
-- [x] Sysop admin web panel — users, nodes, hub (`/admin/*`; full config via GUI)
-- [x] i18n — English + Spanish (`/set-locale`, nav strings)
+- [x] Netmail SPA (`/netmail/app`)
+- [x] BinkP admin (`/admin/binkp`)
+- [x] Full sysop admin web panel (replaces former VirtBBS.GUI)
+- [x] i18n — English + Spanish
 
-### Tier 3 — Still out of scope
+### Former GUI parity (web admin)
+
+- [x] Nodes: list, kick, broadcast
+- [x] Users: list, edit, password, delete
+- [x] Messages: list by conference, delete
+- [x] Conferences: create, update, delete
+- [x] File areas: create, update
+- [x] Callers: recent, search, daily stats
+- [x] BBS config editor
+- [x] API tokens: list, revoke
+- [x] FidoNet: networks, toss/scan/poll, nodelist, routing, join, tools
+
+### Still out of scope (terminal-only or future)
 
 - [ ] Doors / games (WebDoor, DOS, xterm)
-- [ ] Chat rooms
-- [ ] Shoutbox / polls
-- [ ] Credits / economy
-- [ ] PGP / keyserver
-- [ ] AI assistant / MCP / bots
-- [ ] PacketBBS / mesh
-- [ ] Interests onboarding
-- [ ] Ads / broadcasting
-- [ ] Multiple themes / appearance editor
+- [ ] Chat rooms, shoutbox, polls, credits, PGP, AI/MCP, PacketBBS, ads
 
 ## Related docs
 
 - `BUILDING.md` — build instructions and default ports
 - `VirtBBS.DAT.example` — sample configuration
-- Terminal parity reference: `internal/session/session.go` (login flow, stats, bulletins)
+- Terminal parity reference: `internal/session/session.go`

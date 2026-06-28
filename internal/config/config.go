@@ -29,8 +29,6 @@
 //   v0.0.5  2026-06-24  Phase 12/14: added Doors []door.Config and CallerLogPath
 //   v0.6.0  2026-06-26  Phase 0 (VirtAnd/VirtTerm): NetworkConfig.UserAPIPort/UserAPIBind
 //                        for the new token-authenticated internal/userapi listener
-//   v0.8.0  2026-06-26  Phase 2 (VirtTerm): NetworkConfig.VirtTermPort/VirtTermBind for
-//                        the new TLS terminal-transport listener (internal/virtterm)
 //   v0.13.0 2026-06-28  Web UI: NetworkConfig.WebPort/WebBind, PathsConfig.WWW
 // ============================================================================
 
@@ -72,10 +70,8 @@ type NetworkConfig struct {
 	SSHPort      int    `toml:"ssh_port"       json:"ssh_port"`
 	APIPort      int    `toml:"api_port"       json:"api_port"`
 	APIBind      string `toml:"api_bind"       json:"api_bind"`
-	UserAPIPort  int    `toml:"userapi_port"   json:"userapi_port"` // VirtAnd/VirtTerm token-authenticated API
+	UserAPIPort  int    `toml:"userapi_port"   json:"userapi_port"` // VirtAnd token-authenticated API
 	UserAPIBind  string `toml:"userapi_bind"   json:"userapi_bind"`
-	VirtTermPort int    `toml:"virtterm_port"  json:"virtterm_port"` // VirtTerm TLS terminal transport
-	VirtTermBind string `toml:"virtterm_bind"  json:"virtterm_bind"`
 	WebPort      int    `toml:"web_port"       json:"web_port"`      // browser-based BBS UI (internal/web)
 	WebBind      string `toml:"web_bind"       json:"web_bind"`
 }
@@ -154,8 +150,6 @@ func defaults() *Config {
 			APIBind:      "0.0.0.0",
 			UserAPIPort:  9998,
 			UserAPIBind:  "0.0.0.0",
-			VirtTermPort: 6323,
-			VirtTermBind: "0.0.0.0",
 			WebPort:      8081,
 			WebBind:      "0.0.0.0",
 		},

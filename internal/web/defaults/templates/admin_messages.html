@@ -1,0 +1,41 @@
+{{define "admin_messages.html"}}
+{{template "header" .}}
+<div class="panel sysop-panel">
+  <h2>{{t .Locale "admin_messages.title"}}</h2>
+  <p><a href="/admin">{{t .Locale "common.admin_back"}}</a></p>
+  <form method="get" action="/admin/messages" class="inline-form">
+    <label>{{t .Locale "admin_messages.conference"}}
+      <select name="conf" onchange="this.form.submit()">
+        <option value="">{{t .Locale "common.select"}}</option>
+        {{range .Conferences}}<option value="{{.ID}}" {{if eq $.ConfID .ID}}selected{{end}}>{{.ID}}: {{.Name}}</option>{{end}}
+      </select>
+    </label>
+  </form>
+  {{if gt .ConfID 0}}
+  <table>
+    <thead><tr><th>{{t .Locale "messages_list.col.num"}}</th><th>{{t .Locale "common.from"}}</th><th>{{t .Locale "common.subject"}}</th><th>{{t .Locale "common.date"}}</th><th></th></tr></thead>
+    <tbody>
+    {{range .Messages}}
+    <tr>
+      <td>{{.MsgNumber}}</td>
+      <td>{{.FromName}}</td>
+      <td>{{.Subject}}</td>
+      <td class="meta">{{.DatePosted.Format "2006-01-02"}}</td>
+      <td>
+        <form method="post" action="/admin/messages" style="display:inline">
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="id" value="{{.ID}}">
+          <input type="hidden" name="conf" value="{{$.ConfID}}">
+          <button type="submit" class="btn-link" onclick="return confirm('{{t $.Locale "admin_messages.confirm_delete"}}')">{{t $.Locale "common.delete"}}</button>
+        </form>
+      </td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5">{{t .Locale "admin_messages.empty"}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{end}}
+</div>
+{{template "footer" .}}
+{{end}}

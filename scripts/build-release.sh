@@ -1,11 +1,10 @@
 #!/bin/zsh
-# Build VirtBBS release packages (server, GUI, VirtTermMac, VirtTerm, VirtAnd, source).
+# Build VirtBBS release packages (server, VirtAnd, source).
 set -euo pipefail
 
 VERSION="${1:-$(grep 'const Version' internal/version/version.go | sed 's/.*"\(.*\)".*/\1/')}"
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="${RELEASE_DIR:-/tmp/virtbbs-release-${VERSION}}"
-DOTNET="${DOTNET:-/usr/local/share/dotnet/dotnet}"
 
 cd "$REPO"
 rm -rf "$OUT"
@@ -34,33 +33,6 @@ pack_server darwin amd64 darwin-amd64
 pack_server darwin arm64 darwin-arm64
 pack_server linux amd64 linux-amd64
 pack_server windows amd64 windows-amd64
-
-publish_gui() {
-  local proj=$1 pkg=$2 rid=$3 zip_label=$4
-  local name="${pkg}-${VERSION}-${zip_label}"
-  local dir="${OUT}/${name}"
-  echo "  ${pkg} ${zip_label}"
-  "$DOTNET" publish "$proj" -c Release -r "$rid" --self-contained true \
-    -p:PublishSingleFile=false -o "${dir}/publish"
-  (cd "$OUT" && zip -rq "${name}.zip" "$name")
-}
-
-publish_gui gui-dotnet/VirtBBS.GUI VirtBBS.GUI osx-arm64 macos-arm64
-publish_gui gui-dotnet/VirtBBS.GUI VirtBBS.GUI osx-x64 macos-x64
-publish_gui gui-dotnet/VirtBBS.GUI VirtBBS.GUI linux-x64 linux-x64
-publish_gui gui-dotnet/VirtBBS.GUI VirtBBS.GUI win-x64 windows-x64
-
-publish_gui dotnet-virttermmac/VirtTermMac VirtTermMac osx-arm64 macos-arm64
-publish_gui dotnet-virttermmac/VirtTermMac VirtTermMac osx-x64 macos-x64
-publish_gui dotnet-virttermmac/VirtTermMac VirtTermMac linux-x64 linux-x64
-publish_gui dotnet-virttermmac/VirtTermMac VirtTermMac win-x64 windows-x64
-
-echo "  VirtTerm windows-x64"
-VTERM_DIR="${OUT}/VirtTerm-${VERSION}-windows-x64"
-"$DOTNET" publish dotnet-virtterm/VirtTerm/VirtTerm.csproj -c Release -r win-x64 \
-  --self-contained true -p:EnableWindowsTargeting=true \
-  -p:PublishSingleFile=false -o "${VTERM_DIR}/publish"
-(cd "$OUT" && zip -rq "VirtTerm-${VERSION}-windows-x64.zip" "VirtTerm-${VERSION}-windows-x64")
 
 echo "  VirtAnd APK"
 export JAVA_HOME="${JAVA_HOME:-/usr/local/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home}"

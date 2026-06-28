@@ -30,10 +30,6 @@
 //   v0.0.5  2026-06-24  Phase 12/14: doors config, CallerLog path from config
 //   v0.6.0  2026-06-26  Phase 0 (VirtAnd/VirtTerm): start internal/userapi listener
 //                        on cfg.Network.UserAPIBind:UserAPIPort
-//   v0.8.0  2026-06-26  Phase 2 (VirtTerm): start internal/virtterm TLS listener on
-//                        cfg.Network.VirtTermBind:VirtTermPort, reusing session.Run
-//                        exactly like the Telnet handler (self-signed cert at
-//                        data/virtterm_cert.pem / data/virtterm_key.pem)
 //   v0.12.0 2026-06-27  Detect a vanished underlying volume (USB/external
 //                        drive ejected while running) via a watchVolume
 //                        goroutine and exit gracefully instead of spinning.
@@ -74,7 +70,6 @@ import (
 	"github.com/virtbbs/virtbbs/internal/userapi"
 	"github.com/virtbbs/virtbbs/internal/users"
 	"github.com/virtbbs/virtbbs/internal/version"
-	"github.com/virtbbs/virtbbs/internal/virtterm"
 	"github.com/virtbbs/virtbbs/internal/web"
 )
 
@@ -314,22 +309,6 @@ func main() {
 		}
 	}()
 
-	// Start the VirtTerm TLS terminal-transport listener — same session.Run
-	// experience as Telnet/SSH, just over a TLS socket with simpler framing.
-	go func() {
-		addr := fmt.Sprintf("%s:%d", cfg.Network.VirtTermBind, cfg.Network.VirtTermPort)
-		log.Printf("VirtTerm (TLS) listening on %s", addr)
-		srv := &virtterm.Server{
-			Addr:     addr,
-			CertFile: "data/virtterm_cert.pem",
-			KeyFile:  "data/virtterm_key.pem",
-			Handler:  telnetHandler, // echoInput=true — same as Telnet, no IAC negotiation either
-		}
-		if err := srv.ListenAndServe(); err != nil {
-			log.Printf("VirtTerm error: %v", err)
-		}
-	}()
-
 	files.StartDailyLocalFile(fileStore)
 
 	// Start the automatic FidoNet poll/toss scheduler (one goroutine per
@@ -362,7 +341,7 @@ func main() {
 	}
 	apiSrv := &api.Server{Addr: apiAddr, Deps: apiDeps}
 
-	// Start the user-facing API (VirtAnd, VirtTerm) — token-authenticated,
+	// Start the user-facing API (VirtAnd) — token-authenticated,
 	// separate port/trust-boundary from the sysop-only management API above.
 	userAPIAddr := fmt.Sprintf("%s:%d", cfg.Network.UserAPIBind, cfg.Network.UserAPIPort)
 	log.Printf("User API listening on %s", userAPIAddr)

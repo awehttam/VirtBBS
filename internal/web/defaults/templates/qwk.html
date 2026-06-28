@@ -1,28 +1,28 @@
 {{define "qwk.html"}}
 {{template "header" .}}
 <div class="panel">
-  <h2>Offline Mail (QWK / REP)</h2>
-  <p>Download a QWK packet for your offline reader, or upload a REP file with replies.</p>
+  <h2>{{t .Locale "qwk.title"}}</h2>
+  <p>{{t .Locale "qwk.intro"}}</p>
   {{if .Flash}}<p class="flash">{{.Flash}}</p>{{end}}
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
 
-  <h3>Download QWK</h3>
+  <h3>{{t .Locale "qwk.download"}}</h3>
   <form method="post" action="/qwk">
     <input type="hidden" name="action" value="download">
-    <p>Select conferences (leave all unchecked for all readable areas):</p>
+    <p>{{t .Locale "qwk.download_help"}}</p>
     <ul class="check-list">
     {{range .Conferences}}
-      <li><label><input type="checkbox" name="conf_{{.ID}}"> {{.Name}}{{if .Echo}} <span class="tag">echo</span>{{end}}</label></li>
+      <li><label><input type="checkbox" name="conf_{{.ID}}"> {{.Name}}{{if .Echo}} <span class="tag">{{t $.Locale "common.echo_label"}}</span>{{end}}</label></li>
     {{end}}
     </ul>
-    <p><button type="submit" class="btn">Download QWK packet</button></p>
+    <p><button type="submit" class="btn">{{t .Locale "qwk.download_btn"}}</button></p>
   </form>
 
-  <h3>Upload REP</h3>
+  <h3>{{t .Locale "qwk.upload"}}</h3>
   <form method="post" action="/qwk" enctype="multipart/form-data">
     <input type="hidden" name="action" value="upload">
     <p><input type="file" name="rep" accept=".rep,.REP" required></p>
-    <p><button type="submit" class="btn">Upload replies</button></p>
+    <p><button type="submit" class="btn">{{t .Locale "qwk.upload_btn"}}</button></p>
   </form>
 </div>
 {{template "footer" .}}

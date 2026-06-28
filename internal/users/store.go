@@ -43,6 +43,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -56,6 +57,7 @@ var schema string
 type User struct {
 	ID              int64
 	Name            string
+	RealName        string
 	City            string
 	PasswordHash    string
 	PhoneBusiness   string
@@ -80,6 +82,7 @@ type User struct {
 	EditorType      string // "simple" or "full" (see internal/editor package)
 	Deleted         bool
 	Sysop           bool
+	Locale          string // UI language: en, es, af (also ^ALANG kludge on outbound mail)
 }
 
 // Store wraps a SQLite database for user operations.
@@ -104,6 +107,8 @@ func Open(db *sql.DB) (*Store, error) {
 func (s *Store) migrate() error {
 	alters := []string{
 		`ALTER TABLE users ADD COLUMN editor_type TEXT NOT NULL DEFAULT 'simple'`,
+		`ALTER TABLE users ADD COLUMN real_name TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE users ADD COLUMN locale TEXT NOT NULL DEFAULT 'en'`,
 	}
 	for _, stmt := range alters {
 		if _, err := s.db.Exec(stmt); err != nil {
@@ -138,11 +143,11 @@ func (s *Store) Create(u *User, plainPassword string) error {
 	}
 	u.PasswordHash = string(hash)
 	res, err := s.db.Exec(`
-		INSERT INTO users (name, city, password_hash, phone_business, phone_home,
+		INSERT INTO users (name, real_name, city, password_hash, phone_business, phone_home,
 		    security_level, page_length, expert_mode, xfer_protocol, ansi,
 		    full_screen_editor, editor_type, sysop, comment1, comment2, expiration_date)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		u.Name, u.City, u.PasswordHash, u.PhoneBusiness, u.PhoneHome,
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		u.Name, u.RealName, u.City, u.PasswordHash, u.PhoneBusiness, u.PhoneHome,
 		u.SecurityLevel, u.PageLength, boolInt(u.ExpertMode), u.XferProtocol,
 		boolInt(u.ANSI), boolInt(u.FullScreenEditor), u.EditorType, boolInt(u.Sysop),
 		u.Comment1, u.Comment2, u.ExpirationDate,
@@ -204,20 +209,31 @@ func (s *Store) List() ([]*User, error) {
 // Update saves changed fields for an existing user.
 func (s *Store) Update(u *User) error {
 	_, err := s.db.Exec(`
-		UPDATE users SET city=?, phone_business=?, phone_home=?, security_level=?,
+		UPDATE users SET city=?, real_name=?, phone_business=?, phone_home=?, security_level=?,
 		    page_length=?, expert_mode=?, xfer_protocol=?, ansi=?, full_screen_editor=?,
 		    editor_type=?, sysop=?, comment1=?, comment2=?, expiration_date=?, deleted=?,
 		    times_online=?, uploads=?, downloads=?, bytes_uploaded=?, bytes_downloaded=?,
-		    elapsed_time=?, updated_at=?
+		    elapsed_time=?, locale=?, updated_at=?
 		WHERE id=?`,
-		u.City, u.PhoneBusiness, u.PhoneHome, u.SecurityLevel,
+		u.City, u.RealName, u.PhoneBusiness, u.PhoneHome, u.SecurityLevel,
 		u.PageLength, boolInt(u.ExpertMode), u.XferProtocol, boolInt(u.ANSI),
 		boolInt(u.FullScreenEditor), u.EditorType, boolInt(u.Sysop), u.Comment1, u.Comment2,
 		u.ExpirationDate, boolInt(u.Deleted),
 		u.TimesOnline, u.Uploads, u.Downloads, u.BytesUploaded, u.BytesDownloaded,
-		u.ElapsedTime, time.Now().Format("2006-01-02 15:04:05"),
+		u.ElapsedTime, u.Locale, time.Now().Format("2006-01-02 15:04:05"),
 		u.ID,
 	)
+	return err
+}
+
+// SetLocale stores the user's UI / ^ALANG language preference.
+func (s *Store) SetLocale(id int64, locale string) error {
+	locale = strings.TrimSpace(locale)
+	if locale == "" {
+		locale = "en"
+	}
+	_, err := s.db.Exec(`UPDATE users SET locale=?, updated_at=? WHERE id=?`,
+		locale, time.Now().Format("2006-01-02 15:04:05"), id)
 	return err
 }
 
@@ -255,21 +271,22 @@ type scanner interface {
 	Scan(...any) error
 }
 
-const userCols = `id, name, city, password_hash, phone_business, phone_home,
+const userCols = `id, name, real_name, city, password_hash, phone_business, phone_home,
 	last_login_date, last_login_time, security_level, times_online, page_length,
 	uploads, downloads, bytes_uploaded, bytes_downloaded, comment1, comment2,
 	elapsed_time, expiration_date, expert_mode, xfer_protocol, ansi,
-	full_screen_editor, editor_type, deleted, sysop`
+	full_screen_editor, editor_type, deleted, sysop, locale`
 
 func scanUser(sc scanner) (*User, error) {
 	var u User
 	var expertMode, ansi, fullScreen, deleted, sysop int
 	err := sc.Scan(
-		&u.ID, &u.Name, &u.City, &u.PasswordHash, &u.PhoneBusiness, &u.PhoneHome,
+		&u.ID, &u.Name, &u.RealName, &u.City, &u.PasswordHash, &u.PhoneBusiness, &u.PhoneHome,
 		&u.LastLoginDate, &u.LastLoginTime, &u.SecurityLevel, &u.TimesOnline, &u.PageLength,
 		&u.Uploads, &u.Downloads, &u.BytesUploaded, &u.BytesDownloaded,
 		&u.Comment1, &u.Comment2, &u.ElapsedTime, &u.ExpirationDate,
 		&expertMode, &u.XferProtocol, &ansi, &fullScreen, &u.EditorType, &deleted, &sysop,
+		&u.Locale,
 	)
 	if err != nil {
 		return nil, err
@@ -281,6 +298,9 @@ func scanUser(sc scanner) (*User, error) {
 	u.Sysop = sysop != 0
 	if u.EditorType == "" {
 		u.EditorType = "simple"
+	}
+	if u.Locale == "" {
+		u.Locale = "en"
 	}
 	return &u, nil
 }
@@ -385,7 +405,7 @@ func boolInt(b bool) int {
 	return 0
 }
 
-// ── API tokens (internal/userapi: VirtAnd, VirtTerm) ──────────────────────────
+// ── API tokens (internal/userapi: VirtAnd) ──────────────────────────
 
 // APIToken describes a user-issued API token (the raw token value is never
 // stored — only its SHA-256 hash, in the same spirit as the bcrypt password hash).
