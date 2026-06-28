@@ -341,6 +341,8 @@ API — updates config and SQLite references (routes, members, subscriptions).
 
 ## 8. AreaFix
 
+> See also: [`AreaFix FileFix TIC.md`](AreaFix%20FileFix%20TIC.md) for a focused guide to the three robots.
+
 VirtBBS implements AreaFix in both directions: **responding** to subscription
 requests from your downlinks, and **requesting** areas from your own uplink.
 
@@ -434,12 +436,15 @@ subscriptions.
 
 ### 8.6 Limitations
 
-- AreaFix admin (add/remove downlinks, view subscriptions) is currently **in-BBS sysop menu only** — not yet exposed through the management API or the .NET GUI.
-- AreaFix works for every enabled network, not just primary — pick which one in the `[A]reaFix` menu (§8.5) when more than one is configured.
+- Downlink maintenance is available in the **web admin** at `/admin/fido/downlinks` as well as the in-BBS sysop AreaFix menu. The .NET GUI does not yet expose this.
+- Removing a downlink clears AreaFix subscriptions but **not** FileFix subscriptions (see [`AreaFix FileFix TIC.md`](AreaFix%20FileFix%20TIC.md)).
+- AreaFix works for every enabled network, not just primary — pick which one in the `[A]reaFix` menu (§8.5) or web network selector when more than one is configured.
 
 ---
 
 ## 9. FileFix — file-area subscriptions
+
+> Details: [`AreaFix FileFix TIC.md`](AreaFix%20FileFix%20TIC.md) § FileFix and § TIC.
 
 FileFix is the file-echo equivalent of AreaFix (§8), with the identical
 command protocol (`+TAG`/`-TAG`/`%LIST`/`%QUERY`/`%HELP`, password-first),

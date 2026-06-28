@@ -109,6 +109,7 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc("/admin/fido/networks", s.handleAdminFidoNetworks)
 	mux.HandleFunc("/admin/fido/routing", s.handleAdminFidoRouting)
 	mux.HandleFunc("/admin/fido/join", s.handleAdminFidoJoin)
+	mux.HandleFunc("/admin/fido/downlinks", s.handleAdminFidoDownlinks)
 	mux.HandleFunc("/admin/fido/tools", s.handleAdminFidoTools)
 	mux.HandleFunc("/admin/fido/import", s.handleAdminFidoImportUpload)
 	mux.HandleFunc("/admin/fido/nodelist", s.handleAdminFidoNodelist)

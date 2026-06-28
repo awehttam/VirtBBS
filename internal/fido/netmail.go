@@ -297,24 +297,24 @@ func RouteAddr(db *sql.DB, m *NetmailMsg, nd *NetworkDef) (Addr, error) {
 	}
 
 	if m.Crash {
-		// Crash netmail: go directly to the boss (strip point).
+		// Crash netmail: go directly to the boss (strip point), unless the
+		// nodelist marks the destination Hold/Down — then queue via uplink.
 		boss := Addr{Zone: dest.Zone, Net: dest.Net, Node: dest.Node}
-		return boss, nil
-	}
-
-	if dl := nd.DownlinkByAddr(dest); dl != nil {
+		if !NodelistShouldDeferDelivery(db, nd, boss) {
+			return boss, nil
+		}
+	} else if dl := nd.DownlinkByAddr(dest); dl != nil {
 		// Already a direct, known member — no need to route further.
 		return Addr{Zone: dest.Zone, Net: dest.Net, Node: dest.Node}, nil
-	}
-
-	if db != nil {
+	} else if db != nil {
 		if hop, ok, err := RouteFor(db, nd.Name, dest); err == nil && ok {
-			return hop, nil
+			if !NodelistShouldDeferDelivery(db, nd, hop) {
+				return hop, nil
+			}
 		}
 	}
 
-	// No direct match, no route: fall back to the uplink (unchanged
-	// pre-routing-table behavior).
+	// No direct match, deferred Hold/Down, or no route: use the uplink.
 	uplink := nd.UplinkAddr()
 	if uplink.Zone == 0 {
 		return Addr{}, fmt.Errorf("no uplink configured for network %s", nd.Name)

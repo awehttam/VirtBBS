@@ -76,6 +76,48 @@ func saveNetworkDownlink(networkName string, dl fido.Downlink) error {
 	return fmt.Errorf("network %q not found", networkName)
 }
 
+func updateNetworkDownlinks(networkName string, mutate func([]fido.Downlink) []fido.Downlink) error {
+	cfg := config.Get()
+	merged := *cfg
+	if strings.EqualFold(networkName, cfg.Fido.EffectivePrimaryName()) {
+		merged.Fido.Downlinks = mutate(append([]fido.Downlink{}, cfg.Fido.Downlinks...))
+		return config.Save(&merged)
+	}
+	merged.Fido.Networks = append([]fido.NetworkDef{}, cfg.Fido.Networks...)
+	for i := range merged.Fido.Networks {
+		if strings.EqualFold(merged.Fido.Networks[i].Name, networkName) {
+			merged.Fido.Networks[i].Downlinks = mutate(
+				append([]fido.Downlink{}, merged.Fido.Networks[i].Downlinks...))
+			return config.Save(&merged)
+		}
+	}
+	return fmt.Errorf("network %q not found", networkName)
+}
+
+func removeNetworkDownlink(db *sql.DB, networkName, addr string) (bool, error) {
+	removed := false
+	err := updateNetworkDownlinks(networkName, func(cur []fido.Downlink) []fido.Downlink {
+		var kept []fido.Downlink
+		for _, dl := range cur {
+			if strings.EqualFold(dl.Address, addr) {
+				removed = true
+				continue
+			}
+			kept = append(kept, dl)
+		}
+		return kept
+	})
+	if err != nil || !removed {
+		return removed, err
+	}
+	areafixDB := fido.OpenAreaFixDB(db)
+	tags, _ := areafixDB.SubscriptionsFor(networkName, addr)
+	for _, tag := range tags {
+		_ = areafixDB.Unsubscribe(networkName, addr, tag)
+	}
+	return true, nil
+}
+
 func saveNetworkNodeFlags(networkName string, flags []string, binkpHost string) error {
 	cfg := config.Get()
 	merged := *cfg

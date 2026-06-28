@@ -1,6 +1,9 @@
 # Local config (contains sysop password hash / fido credentials) — see VirtBBS.DAT.example
 /VirtBBS.DAT
 
+# Local SQLite database (runtime data)
+/VirtBBS.db
+
 # Build artifacts
 /virtbbs
 /releases/

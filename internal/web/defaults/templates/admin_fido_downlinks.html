@@ -1,0 +1,66 @@
+{{define "admin_fido_downlinks.html"}}
+{{template "header" .}}
+<div class="card mb-3 sysop-panel">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_fido_downlinks.title"}}</h2></div>
+  <div class="card-body">
+  <p><a href="/admin/fido">{{t .Locale "common.fido_back"}}</a></p>
+  <p class="text-muted">{{t .Locale "admin_fido_downlinks.intro"}}</p>
+  {{if .Flash}}<p class="alert alert-success">{{.Flash}}</p>{{end}}
+  {{if .Error}}<p class="alert alert-danger">{{.Error}}</p>{{end}}
+  <form method="get" class="inline-form mb-3">
+    <label>{{t .Locale "common.network"}} <select class="form-select" name="network" onchange="this.form.submit()">{{range .Networks}}<option {{if eq $.Network .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+  </form>
+  <div class="table-responsive">
+  <table class="table table-dark table-striped table-hover align-middle mb-0">
+    <thead><tr>
+      <th>{{t .Locale "common.bbs"}}</th>
+      <th>{{t .Locale "admin_fido_downlinks.col.address"}}</th>
+      <th>{{t .Locale "common.password"}}</th>
+      <th>{{t .Locale "admin_fido_downlinks.col.nodelist_type"}}</th>
+      <th>{{t .Locale "admin_fido_networks.areafix_subs"}}</th>
+      <th></th>
+    </tr></thead>
+    <tbody>
+    {{range $i, $dl := .Downlinks}}
+    <tr>
+      <td>
+        <form method="post" id="dl-{{$i}}">
+          <input type="hidden" name="network" value="{{$.Network}}">
+          <input type="hidden" name="action" value="update">
+          <input type="hidden" name="address" value="{{$dl.Address}}">
+          <input class="form-control form-control-sm" name="name" value="{{$dl.Name}}">
+        </form>
+      </td>
+      <td class="mono">{{$dl.Address}}</td>
+      <td><input class="form-control form-control-sm" form="dl-{{$i}}" name="password" value="{{$dl.Password}}" placeholder="{{t $.Locale "admin_fido_downlinks.password_keep"}}"></td>
+      <td>{{if $dl.NodelistType}}{{$dl.NodelistType}}{{else}}—{{end}}</td>
+      <td>{{if $dl.Areas}}{{range $dl.Areas}}<span class="badge bg-secondary me-1">{{.}}</span>{{end}}{{else}}—{{end}}</td>
+      <td class="text-nowrap">
+        <button class="btn btn-sm btn-primary" type="submit" form="dl-{{$i}}">{{t $.Locale "common.save"}}</button>
+        <form method="post" class="d-inline" onsubmit="return confirm('{{t $.Locale "admin_fido_downlinks.confirm_remove"}}');">
+          <input type="hidden" name="network" value="{{$.Network}}">
+          <input type="hidden" name="action" value="remove">
+          <input type="hidden" name="address" value="{{$dl.Address}}">
+          <button class="btn btn-sm btn-outline-danger" type="submit">{{t $.Locale "common.remove"}}</button>
+        </form>
+      </td>
+    </tr>
+    {{else}}
+    <tr><td colspan="6">{{t .Locale "admin_fido_downlinks.empty"}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  <h3 class="h6 mt-4">{{t .Locale "admin_fido_downlinks.add_heading"}}</h3>
+  <form method="post" class="admin-form">
+    <input type="hidden" name="network" value="{{.Network}}">
+    <input type="hidden" name="action" value="add">
+    <label>{{t .Locale "common.bbs"}} <input class="form-control" name="name" required></label>
+    <label>{{t .Locale "admin_fido_downlinks.col.address"}} <input class="form-control" name="address" placeholder="227:1/100" required></label>
+    <label>{{t .Locale "common.password"}} <input class="form-control" name="password" placeholder="{{t .Locale "admin_fido_join.placeholder.password"}}"></label>
+    <button class="btn btn-primary" type="submit">{{t .Locale "admin_fido_downlinks.add_btn"}}</button>
+  </form>
+  </div>
+</div>
+{{template "footer" .}}
+{{end}}
