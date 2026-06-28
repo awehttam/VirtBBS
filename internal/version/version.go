@@ -258,6 +258,12 @@
 //                        peers that close TCP after send, VirtTermMac (Avalonia
 //                        terminal client), VirtTerm (WinForms), and VirtAnd
 //                        (Android QWK/offline client).
+//   v1.0.1  2026-06-28  Browser-based BBS web UI (internal/web, www/ templates):
+//                        login with display-file bulletins, message read/post with
+//                        quoted reply fix, file areas, netmail, stats, online users,
+//                        and sysop dashboard; display/list.go for bulletin discovery;
+//                        web_port/web_bind and paths.www config + sysop GUI fields;
+//                        WriteHeader fix for template responses; scripts/build-release.sh.
 // ============================================================================
 
 // Package version holds the VirtBBS version number.
@@ -268,4 +274,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "1.0.0"
+const Version = "1.0.1"

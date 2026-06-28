@@ -1,0 +1,26 @@
+{{define "online.html"}}
+{{template "header" .}}
+<div class="panel">
+  <p><a href="/menu">← Dashboard</a></p>
+  <h2>Who's Online</h2>
+  {{if .Nodes}}
+  <table>
+    <thead><tr><th>Node</th><th>Status</th><th>User</th><th>City</th><th>Activity</th></tr></thead>
+    <tbody>
+    {{range .Nodes}}
+    <tr>
+      <td>{{.ID}}</td>
+      <td>{{.Status}}</td>
+      <td>{{if .UserName}}{{.UserName}}{{else}}(logging in){{end}}</td>
+      <td>{{.City}}</td>
+      <td>{{.Operation}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="meta">No active nodes.</p>
+  {{end}}
+</div>
+{{template "footer" .}}
+{{end}}

@@ -1,0 +1,22 @@
+{{define "netmail.html"}}
+{{template "header" .}}
+<div class="panel">
+  <h2>Netmail</h2>
+  <table>
+    <thead><tr><th>#</th><th>From</th><th>Subject</th><th>Date</th></tr></thead>
+    <tbody>
+    {{range .Messages}}
+    <tr>
+      <td>{{.MsgNumber}}</td>
+      <td>{{.FromName}}</td>
+      <td><a href="/netmail/read?num={{.MsgNumber}}">{{.Subject}}</a></td>
+      <td class="meta">{{.DatePosted.Format "2006-01-02 15:04"}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="4">No netmail.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "footer" .}}
+{{end}}

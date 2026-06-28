@@ -1,0 +1,21 @@
+{{define "messages.html"}}
+{{template "header" .}}
+<div class="panel">
+  <h2>Message Areas</h2>
+  <table>
+    <thead><tr><th>Area</th><th>Description</th><th></th></tr></thead>
+    <tbody>
+    {{range .Conferences}}
+    <tr>
+      <td>{{.Name}}{{if .Echo}} <span class="meta">[echo]</span>{{end}}</td>
+      <td>{{.Description}}</td>
+      <td><a href="/messages?conf={{.ID}}">Enter</a></td>
+    </tr>
+    {{else}}
+    <tr><td colspan="3">No message areas available.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "footer" .}}
+{{end}}

@@ -1,0 +1,21 @@
+{{define "files.html"}}
+{{template "header" .}}
+<div class="panel">
+  <h2>File Areas</h2>
+  <table>
+    <thead><tr><th>Area</th><th>Description</th><th></th></tr></thead>
+    <tbody>
+    {{range .Dirs}}
+    <tr>
+      <td>{{.Name}}</td>
+      <td>{{.Description}}</td>
+      <td><a href="/files/browse?dir={{.ID}}">Browse</a></td>
+    </tr>
+    {{else}}
+    <tr><td colspan="3">No file areas available.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "footer" .}}
+{{end}}

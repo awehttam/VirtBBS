@@ -130,6 +130,8 @@ public class NetworkSection
     [JsonPropertyName("userapi_bind")]  public string UserApiBind  { get; set; } = "";
     [JsonPropertyName("virtterm_port")] public int    VirtTermPort { get; set; }
     [JsonPropertyName("virtterm_bind")] public string VirtTermBind { get; set; } = "";
+    [JsonPropertyName("web_port")]      public int    WebPort      { get; set; }
+    [JsonPropertyName("web_bind")]      public string WebBind      { get; set; } = "";
 }
 
 public class PathsSection
@@ -138,6 +140,7 @@ public class PathsSection
     [JsonPropertyName("files")]      public string Files     { get; set; } = "";
     [JsonPropertyName("logs")]       public string Logs      { get; set; } = "";
     [JsonPropertyName("caller_log")] public string CallerLog { get; set; } = "";
+    [JsonPropertyName("www")]        public string Www       { get; set; } = "";
 }
 
 public class SessionSection

@@ -37,6 +37,7 @@
 //   v0.12.0 2026-06-27  Detect a vanished underlying volume (USB/external
 //                        drive ejected while running) via a watchVolume
 //                        goroutine and exit gracefully instead of spinning.
+//   v0.13.0 2026-06-28  Start internal/web HTTP listener on WebBind:WebPort
 // ============================================================================
 
 // virtbbs is the VirtBBS server — Telnet + SSH BBS with a built-in management API.
@@ -74,6 +75,7 @@ import (
 	"github.com/virtbbs/virtbbs/internal/users"
 	"github.com/virtbbs/virtbbs/internal/version"
 	"github.com/virtbbs/virtbbs/internal/virtterm"
+	"github.com/virtbbs/virtbbs/internal/web"
 )
 
 func main() {
@@ -101,7 +103,7 @@ func main() {
 	}
 
 	// Ensure data directories exist
-	for _, dir := range []string{"data", cfg.Paths.Files, cfg.Paths.Logs} {
+	for _, dir := range []string{"data", cfg.Paths.Files, cfg.Paths.Logs, cfg.Paths.WWW} {
 		_ = os.MkdirAll(dir, 0755)
 	}
 
@@ -374,6 +376,24 @@ func main() {
 	go func() {
 		if err := userAPISrv.ListenAndServe(); err != nil {
 			log.Printf("User API error: %v", err)
+		}
+	}()
+
+	// Start the browser-based BBS web UI (templates/static from paths.www).
+	webAddr := fmt.Sprintf("%s:%d", cfg.Network.WebBind, cfg.Network.WebPort)
+	log.Printf("Web UI listening on %s (www: %s)", webAddr, cfg.Paths.WWW)
+	webDeps := web.Deps{
+		Users:       userStore,
+		Messages:    msgStore,
+		Conferences: confStore,
+		Files:       fileStore,
+		Nodes:       nodeStore,
+		Callers:     callersLog,
+	}
+	webSrv := &web.Server{Addr: webAddr, Root: cfg.Paths.WWW, Deps: webDeps}
+	go func() {
+		if err := webSrv.ListenAndServe(); err != nil {
+			log.Printf("Web UI error: %v", err)
 		}
 	}()
 

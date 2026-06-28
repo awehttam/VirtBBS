@@ -1,0 +1,18 @@
+{{define "post.html"}}
+{{template "header" .}}
+<div class="panel">
+  <p><a href="/messages?conf={{.Conference.ID}}">← {{.Conference.Name}}</a></p>
+  <h2>Post Message</h2>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="post" action="/messages/post?conf={{.Conference.ID}}{{if .ReplyNum}}&amp;reply={{.ReplyNum}}{{end}}">
+    <label for="to">To</label>
+    <input type="text" id="to" name="to" value="{{.ToName}}">
+    <label for="subject">Subject</label>
+    <input type="text" id="subject" name="subject" value="{{.Subject}}" required>
+    <label for="body">Message</label>
+    <textarea id="body" name="body" required>{{.Body}}</textarea>
+    <button type="submit">Post</button>
+  </form>
+</div>
+{{template "footer" .}}
+{{end}}

@@ -1,0 +1,36 @@
+{{define "files_browse.html"}}
+{{template "header" .}}
+<div class="panel">
+  <h2>{{.Dir.Name}}</h2>
+  <p class="meta">{{.Dir.Description}}</p>
+  <p><a href="/files">← All file areas</a></p>
+  <table>
+    <thead><tr><th>File</th><th>Size</th><th>Description</th><th>Downloads</th><th></th></tr></thead>
+    <tbody>
+    {{range .Files}}
+    <tr>
+      <td>{{.Filename}}</td>
+      <td class="meta">{{.Size}}</td>
+      <td>{{.Description}}</td>
+      <td class="meta">{{.Downloads}}</td>
+      <td><a href="/files/download?dir={{$.Dir.ID}}&amp;file={{.Filename}}">Download</a></td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5">No files in this area.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{if .CanUpload}}
+  <h2 style="margin-top:1.5rem">Upload</h2>
+  <form method="post" action="/files/upload" enctype="multipart/form-data">
+    <input type="hidden" name="dir" value="{{.Dir.ID}}">
+    <label for="file">File</label>
+    <input type="file" id="file" name="file" required>
+    <label for="description">Description</label>
+    <input type="text" id="description" name="description">
+    <button type="submit">Upload</button>
+  </form>
+  {{end}}
+</div>
+{{template "footer" .}}
+{{end}}

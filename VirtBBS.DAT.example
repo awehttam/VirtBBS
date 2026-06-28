@@ -3,12 +3,19 @@
   ssh_port = 3232
   api_port = 9999
   api_bind = "0.0.0.0"
+  userapi_port = 9998
+  userapi_bind = "0.0.0.0"
+  virtterm_port = 6323
+  virtterm_bind = "0.0.0.0"
+  web_port = 8081
+  web_bind = "0.0.0.0"
 
 [paths]
   db          = "data/virtbbs.db"
   files       = "files"
   logs        = "logs"
   caller_log  = "logs/CALLERS.LOG"
+  www         = "www"
 
 [sysop]
   name = "Sysop"

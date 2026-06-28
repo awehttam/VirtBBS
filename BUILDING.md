@@ -27,6 +27,7 @@ dotnet run
 
 - **Telnet**: `telnet localhost 2323`  (or SyncTerm, NetRunner, etc.)
 - **SSH**: `ssh -p 3232 username@localhost`
+- **Web UI**: open `http://localhost:8081/` in a browser (login with your BBS username/password)
 - **Sysop GUI**: launch `VirtBBS.GUI` (`dotnet run` from `gui-dotnet/VirtBBS.GUI`), set host/port/credentials in the connection bar
 
 ## Importing from PCBoard 15.3
@@ -63,8 +64,14 @@ The .NET GUI is cross-platform by default — `dotnet build`/`dotnet run` work u
 | Sysop API | 9999 |
 | User API (VirtAnd/VirtTerm) | 9998 |
 | VirtTerm TLS | 6323 |
+| Web UI (HTTP) | 8081 |
 | BinkP (FidoNet, per network) | 24554 |
 
 Change Telnet/SSH/API ports in `VirtBBS.DAT` under `[network]`. FidoNet
 mail directories (`fido/inbound`, `fido/<Name>_inbound`, etc.) are created
 automatically when config is saved.
+
+Web UI templates and CSS live under `paths.www` (default `www/`, relative to
+the install directory where you launch `virtbbs`). On first start, built-in
+defaults are copied into that folder if missing; edit them there to customise
+the look and layout without rebuilding the server.

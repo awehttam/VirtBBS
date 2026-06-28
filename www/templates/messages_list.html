@@ -1,0 +1,27 @@
+{{define "messages_list.html"}}
+{{template "header" .}}
+<div class="panel">
+  <h2>{{.Conference.Name}}</h2>
+  <p class="meta">{{.Conference.Description}}</p>
+  <p>
+    <a href="/messages">← All areas</a>
+    {{if .CanWrite}} · <a href="/messages/post?conf={{.Conference.ID}}">Post new message</a>{{end}}
+  </p>
+  <table>
+    <thead><tr><th>#</th><th>From</th><th>Subject</th><th>Date</th></tr></thead>
+    <tbody>
+    {{range .Messages}}
+    <tr>
+      <td>{{.MsgNumber}}</td>
+      <td>{{.FromName}}</td>
+      <td><a href="/messages/read?conf={{$.Conference.ID}}&amp;num={{.MsgNumber}}">{{.Subject}}</a></td>
+      <td class="meta">{{.DatePosted.Format "2006-01-02 15:04"}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="4">No messages in this area.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "footer" .}}
+{{end}}

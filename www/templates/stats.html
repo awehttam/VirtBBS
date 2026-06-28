@@ -1,0 +1,48 @@
+{{define "stats.html"}}
+{{template "header" .}}
+<div class="panel">
+  <p><a href="/menu">← Dashboard</a></p>
+  <h2>BBS Statistics</h2>
+  <h3 class="section-head">Your Account — {{.User.Name}}</h3>
+  <table>
+    <tr><th>Times on</th><td>{{.User.TimesOnline}}</td></tr>
+    <tr><th>Last login</th><td>{{.User.LastLoginDate}} {{.User.LastLoginTime}}</td></tr>
+    <tr><th>Uploads</th><td>{{.User.Uploads}} ({{.User.BytesUploaded}} bytes)</td></tr>
+    <tr><th>Downloads</th><td>{{.User.Downloads}} ({{.User.BytesDownloaded}} bytes)</td></tr>
+    <tr><th>New mail</th><td>{{.Stats.NewMsgsTotal}}</td></tr>
+  </table>
+
+  <h3 class="section-head">System Today</h3>
+  <table>
+    <tr><th>Calls today</th><td>{{.Stats.BBSCallsToday}}</td></tr>
+    <tr><th>Unique users</th><td>{{.Stats.BBSUniqueToday}}</td></tr>
+    <tr><th>Nodes online</th><td>{{.Stats.OnlineNodes}}</td></tr>
+  </table>
+
+  <h3 class="section-head">Message Base</h3>
+  <table>
+    <tr><th>Conferences</th><td>{{.Stats.BBSConfCount}}</td></tr>
+    <tr><th>Total messages</th><td>{{.Stats.BBSMsgTotal}}</td></tr>
+  </table>
+
+  <h3 class="section-head">File Areas</h3>
+  <table>
+    <tr><th>Total files</th><td>{{.Stats.BBSFileTotal}}</td></tr>
+    <tr><th>Added today</th><td>{{.Stats.BBSFileToday}}</td></tr>
+    <tr><th>Last 30 days</th><td>{{.Stats.BBSFileMonth}}</td></tr>
+  </table>
+
+  {{if .NewMessages}}
+  <h3 class="section-head">New Messages by Area</h3>
+  <table>
+    <thead><tr><th>Area</th><th>New</th></tr></thead>
+    <tbody>
+    {{range .NewMessages}}
+    <tr><td><a href="/messages?conf={{.ConferenceID}}">{{.Name}}</a></td><td>{{.Count}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{end}}
+</div>
+{{template "footer" .}}
+{{end}}

@@ -1,0 +1,32 @@
+{{define "header"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.BBSName}} — VirtBBS Web</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+{{if .User}}
+<header>
+  <h1>{{.BBSName}}</h1>
+  <nav>
+    <a href="/menu">Menu</a>
+    <a href="/messages">Messages</a>
+    <a href="/netmail">Netmail</a>
+    <a href="/files">Files</a>
+    <a href="/nodelist">Nodelist</a>
+    <a href="/profile">Profile</a>
+    <a href="/logout">Logout</a>
+  </nav>
+</header>
+{{end}}
+<main>
+{{end}}
+
+{{define "footer"}}
+</main>
+</body>
+</html>
+{{end}}

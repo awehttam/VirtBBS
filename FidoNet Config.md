@@ -3,7 +3,7 @@
 This guide covers every FidoNet setting in `VirtBBS.DAT`, how echomail/netmail
 routing works, the BinkP server, how to add additional FidoNet-compatible
 networks, AreaFix, FileFix, the PING/TRACE test utilities, and automatic
-nodelist updates. It covers VirtBBS **1.0.0**.
+nodelist updates. It covers VirtBBS **1.0.1**.
 
 ---
 

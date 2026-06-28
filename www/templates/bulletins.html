@@ -1,0 +1,23 @@
+{{define "bulletins.html"}}
+{{template "header" .}}
+<div class="panel">
+  <p><a href="/menu">← Dashboard</a></p>
+  <h2>Bulletins</h2>
+  {{if .Bulletins}}
+  <table>
+    <thead><tr><th>Bulletin</th><th></th></tr></thead>
+    <tbody>
+    {{range .Bulletins}}
+    <tr>
+      <td>{{.Title}}</td>
+      <td><a href="/bulletins/view?name={{.Name}}">Read</a></td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="meta">No bulletin display files found in the display directory.</p>
+  {{end}}
+</div>
+{{template "footer" .}}
+{{end}}

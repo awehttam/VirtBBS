@@ -31,6 +31,7 @@
 //                        for the new token-authenticated internal/userapi listener
 //   v0.8.0  2026-06-26  Phase 2 (VirtTerm): NetworkConfig.VirtTermPort/VirtTermBind for
 //                        the new TLS terminal-transport listener (internal/virtterm)
+//   v0.13.0 2026-06-28  Web UI: NetworkConfig.WebPort/WebBind, PathsConfig.WWW
 // ============================================================================
 
 // Package config manages VirtBBS.DAT — the TOML configuration file.
@@ -75,6 +76,8 @@ type NetworkConfig struct {
 	UserAPIBind  string `toml:"userapi_bind"   json:"userapi_bind"`
 	VirtTermPort int    `toml:"virtterm_port"  json:"virtterm_port"` // VirtTerm TLS terminal transport
 	VirtTermBind string `toml:"virtterm_bind"  json:"virtterm_bind"`
+	WebPort      int    `toml:"web_port"       json:"web_port"`      // browser-based BBS UI (internal/web)
+	WebBind      string `toml:"web_bind"       json:"web_bind"`
 }
 
 type PathsConfig struct {
@@ -82,6 +85,7 @@ type PathsConfig struct {
 	Files     string `toml:"files"      json:"files"`
 	Logs      string `toml:"logs"       json:"logs"`
 	CallerLog string `toml:"caller_log" json:"caller_log"`
+	WWW       string `toml:"www"        json:"www"` // web UI templates and static files
 }
 
 type SysopConfig struct {
@@ -152,12 +156,15 @@ func defaults() *Config {
 			UserAPIBind:  "0.0.0.0",
 			VirtTermPort: 6323,
 			VirtTermBind: "0.0.0.0",
+			WebPort:      8081,
+			WebBind:      "0.0.0.0",
 		},
 		Paths: PathsConfig{
 			DB:        "./data/virtbbs.db",
 			Files:     "./files",
 			Logs:      "./logs",
 			CallerLog: "./logs/CALLERS.LOG",
+			WWW:       "www",
 		},
 		Sysop: SysopConfig{
 			Name: "Sysop",

@@ -33,6 +33,10 @@
             <NumericUpDown Value="{Binding VirtTermPort}" Minimum="1" Maximum="65535"/>
             <TextBlock Text="VirtTerm Bind:"/>
             <TextBox Text="{Binding VirtTermBind}"/>
+            <TextBlock Text="Web Port (HTTP):"/>
+            <NumericUpDown Value="{Binding WebPort}" Minimum="1" Maximum="65535"/>
+            <TextBlock Text="Web Bind:"/>
+            <TextBox Text="{Binding WebBind}"/>
 
             <TextBlock Text="Paths" FontWeight="Bold" Margin="0,12,0,0"/>
             <TextBlock Text="Database:"/>
@@ -41,6 +45,8 @@
             <TextBox Text="{Binding FilesPath}"/>
             <TextBlock Text="Logs:"/>
             <TextBox Text="{Binding LogsPath}"/>
+            <TextBlock Text="Web Root (www):"/>
+            <TextBox Text="{Binding WwwPath}"/>
 
             <TextBlock Text="Session" FontWeight="Bold" Margin="0,12,0,0"/>
             <TextBlock Text="Time Per Call (mins):"/>

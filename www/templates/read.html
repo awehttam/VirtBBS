@@ -1,0 +1,17 @@
+{{define "read.html"}}
+{{template "header" .}}
+<div class="panel">
+  <p><a href="/messages?conf={{.Conference.ID}}">← {{.Conference.Name}}</a></p>
+  <h2>{{.Message.Subject}}</h2>
+  <p class="meta">
+    From <strong>{{.Message.FromName}}</strong> to {{.Message.ToName}}
+    · {{.Message.DatePosted.Format "2006-01-02 15:04"}}
+    · #{{.Message.MsgNumber}}
+  </p>
+  <div class="msg-body">{{.Message.Body}}</div>
+  {{if .CanWrite}}
+  <p><a class="btn" href="/messages/post?conf={{.Conference.ID}}&amp;reply={{.Message.MsgNumber}}">Reply</a></p>
+  {{end}}
+</div>
+{{template "footer" .}}
+{{end}}

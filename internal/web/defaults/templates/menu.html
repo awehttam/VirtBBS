@@ -1,0 +1,106 @@
+{{define "menu.html"}}
+{{template "header" .}}
+<div class="panel welcome-panel">
+  <h2>Welcome, {{.User.Name}}</h2>
+  <p class="meta">
+    Security level {{.User.SecurityLevel}}{{if .User.Sysop}} · <span class="sysop-badge">Sysop</span>{{end}}
+    · Last login {{.User.LastLoginDate}} {{.User.LastLoginTime}}
+    · Times on {{.User.TimesOnline}}
+  </p>
+</div>
+
+{{if gt .Stats.NewMsgsTotal 0}}
+<div class="panel alert-panel">
+  <h2>New Messages</h2>
+  <p><strong>{{.Stats.NewMsgsTotal}}</strong> new message(s) waiting</p>
+  <ul class="compact-list">
+  {{range .NewMessages}}
+    <li><a href="/messages?conf={{.ConferenceID}}">{{.Name}}</a> — {{.Count}} new</li>
+  {{end}}
+  </ul>
+</div>
+{{end}}
+
+{{if gt .NetmailCount 0}}
+<div class="panel alert-panel">
+  <p><a href="/netmail"><strong>{{.NetmailCount}}</strong> netmail message(s)</a></p>
+</div>
+{{end}}
+
+{{if .LogonHTML}}
+<div class="panel">
+  <h2>Logon Message</h2>
+  <div class="ansi-screen">{{safeHTML .LogonHTML}}</div>
+</div>
+{{end}}
+
+<div class="panel">
+  <h2>BBS Statistics</h2>
+  <div class="stats-grid">
+    <div class="stat-card"><span class="stat-value">{{.Stats.OnlineNodes}}</span><span class="stat-label">Online now</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.BBSCallsToday}}</span><span class="stat-label">Calls today</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.BBSUniqueToday}}</span><span class="stat-label">Unique today</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.BBSMsgTotal}}</span><span class="stat-label">Total messages</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.BBSConfCount}}</span><span class="stat-label">Conferences</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.BBSFileTotal}}</span><span class="stat-label">Files</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.BBSFileToday}}</span><span class="stat-label">Files today</span></div>
+    <div class="stat-card"><span class="stat-value">{{.Stats.NewMsgsTotal}}</span><span class="stat-label">Your new mail</span></div>
+  </div>
+  <p class="meta"><a href="/stats">Full statistics →</a> · <a href="/online">Who's online →</a></p>
+</div>
+
+{{if .Bulletins}}
+<div class="panel">
+  <h2>Bulletins</h2>
+  <ul class="compact-list">
+  {{range .Bulletins}}
+    {{if ne .Name "LOGON"}}
+    <li><a href="/bulletins/view?name={{.Name}}">{{.Title}}</a></li>
+    {{end}}
+  {{end}}
+  </ul>
+  <p class="meta"><a href="/bulletins">All bulletins →</a></p>
+</div>
+{{end}}
+
+{{if .User.Sysop}}
+<div class="panel sysop-panel">
+  <h2>Sysop</h2>
+  <p class="meta">You have sysop access. Full sysop administration is available via the terminal session or VirtBBS Sysop GUI (management API).</p>
+  <ul class="compact-list">
+    <li><a href="/online">Node list / Who's online</a></li>
+    <li><a href="/stats">System statistics</a></li>
+    <li><a href="/messages">Message areas</a></li>
+    <li><a href="/files">File areas</a></li>
+    <li><a href="/nodelist">FidoNet nodelist</a></li>
+  </ul>
+</div>
+{{end}}
+
+<div class="panel">
+  <h2>Main Menu</h2>
+  <div class="menu-grid">
+    <div class="menu-card">
+      <a href="/messages">Message Areas</a>
+      <p>Read and post conference messages</p>
+    </div>
+    <div class="menu-card">
+      <a href="/netmail">Netmail{{if gt .NetmailCount 0}}<span class="badge">{{.NetmailCount}}</span>{{end}}</a>
+      <p>Private FidoNet mail</p>
+    </div>
+    <div class="menu-card">
+      <a href="/files">File Areas</a>
+      <p>Browse and download files</p>
+    </div>
+    <div class="menu-card">
+      <a href="/nodelist">Nodelist</a>
+      <p>Search FidoNet nodes</p>
+    </div>
+    <div class="menu-card">
+      <a href="/profile">Your Profile</a>
+      <p>Account statistics</p>
+    </div>
+  </div>
+</div>
+{{template "footer" .}}
+{{end}}
