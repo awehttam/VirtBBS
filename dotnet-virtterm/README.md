@@ -25,6 +25,11 @@ VirtBBS's own TLS protocol (`internal/virtterm` on the server, default port
 - Nodelist "has it changed" polling (`Nodelist/NodelistSyncService.cs`)
   against `fido.nodelist.version`, once per connection, for whichever
   networks are listed in Settings.
+- Graphical offline QWK mail reader (`Qwk/`, `Forms/OfflineMailForm.cs`,
+  `Forms/ComposeMessageForm.cs`) — TitanMail-style 3-pane UI for browsing
+  conferences/messages, composing replies, and saving/uploading REP packets.
+  Opens from **Mail → Offline Mail Reader** with no live connection required;
+  optional BBS download/upload via the User API when logged in.
 
 ## Building
 
@@ -71,8 +76,10 @@ identically to a real DOS font.
   beyond the status bar — both acceptable gaps for a first working version.
 - Fixed 80x25 grid — no resize negotiation. VirtBBS's own session layer is
   hard-baked to this size, so there's nothing to negotiate.
-- No native UI for composing messages, browsing files, or any other
-  multi-step BBS flow — those are typed directly into the terminal pane.
+- No native UI for live BBS message browsing or other multi-step terminal
+  flows — those are typed directly into the terminal pane. Offline QWK mail
+  (Mail menu) is the exception: it reads local `.QWK` packets independently
+  of the terminal session.
 - The server's TLS certificate is self-signed with no CA, so
   `TerminalConnection` accepts any certificate (same trust-on-first-connect
   model as SSH host keys) rather than validating against a certificate

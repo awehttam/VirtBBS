@@ -34,6 +34,7 @@ public class MainForm : Form
     // signal available from a dumb-terminal byte stream. Reset on disconnect
     // so a fresh connection fetches whoami again.
     private bool _loggedIn;
+    private OfflineMailForm? _offlineMailForm;
 
     public MainForm()
     {
@@ -99,6 +100,7 @@ public class MainForm : Form
         _menuBuilder.LogoffRequested += () => _conn.Disconnect();
         _menuBuilder.HelpRequested += ShowHelp;
         _menuBuilder.AboutRequested += () => new AboutForm().ShowDialog(this);
+        _menuBuilder.OfflineMailRequested += ShowOfflineMail;
 
         var menuStrip = _menuBuilder.Build();
         _menuBuilder.SetSysopVisible(_settings.IsSysop);
@@ -211,8 +213,27 @@ public class MainForm : Form
             "The BBS menu (top) sends the same single keystroke as typing it\r\n" +
             "yourself, and is only enabled while the BBS is showing its main\r\n" +
             "\"Command:\" prompt — mid-flow prompts (composing a message, etc.)\r\n" +
-            "must be typed directly in the terminal pane.",
+            "must be typed directly in the terminal pane.\r\n\r\n" +
+            "Mail → Offline Mail Reader opens a graphical QWK offline\r\n" +
+            "mail client. It works without a live BBS connection — open a\r\n" +
+            ".QWK packet received via Zmodem or download from the BBS when\r\n" +
+            "connected, compose replies, and save/upload a REP packet.",
             "VirtTerm Help", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    private void ShowOfflineMail()
+    {
+        if (_offlineMailForm == null || _offlineMailForm.IsDisposed)
+        {
+            _offlineMailForm = new OfflineMailForm(_settings);
+            _offlineMailForm.FormClosed += (_, _) => _offlineMailForm = null;
+            _offlineMailForm.Show(this);
+        }
+        else
+        {
+            _offlineMailForm.BringToFront();
+            _offlineMailForm.Focus();
+        }
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)

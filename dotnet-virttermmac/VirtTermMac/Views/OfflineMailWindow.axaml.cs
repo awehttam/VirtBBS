@@ -14,6 +14,7 @@ public partial class OfflineMailWindow : Window
     private readonly AppSettings? _settings;
     private QwkMessage? _selectedMessage;
     private int? _selectedConferenceId;
+    private bool _updatingMessageList;
 
     public OfflineMailWindow() : this(null) { }
 
@@ -53,32 +54,53 @@ public partial class OfflineMailWindow : Window
 
         _selectedConferenceId = conf.Id;
         MessageHeader.Text = $"Messages — {conf.Name}";
-        MessageList.ItemsSource = _session.MessagesInConference(conf.Id).ToList();
+        _updatingMessageList = true;
+        try
+        {
+            MessageList.ItemsSource = _session.MessagesInConference(conf.Id).ToList();
+        }
+        finally
+        {
+            _updatingMessageList = false;
+        }
         ClearDetail();
     }
 
     private void OnMessageSelected()
     {
+        if (_updatingMessageList) return;
         if (MessageList.SelectedItem is not QwkMessage msg) return;
-        _selectedMessage = msg;
+
         _session.MarkRead(msg);
-        DetailFrom.Text = $"From: {msg.FromName}";
-        DetailTo.Text = $"To: {msg.ToName}";
-        DetailSubject.Text = msg.Subject;
-        DetailDate.Text = $"{msg.Date} {msg.Time}  (#{msg.MsgNumber})";
-        DetailBody.Text = msg.Body.Replace("\r", "");
+        _selectedMessage = _session.MessagesInConference(msg.ConferenceId)
+            .FirstOrDefault(m => m.MsgNumber == msg.MsgNumber) ?? msg;
+
+        DetailFrom.Text = $"From: {_selectedMessage.FromName}";
+        DetailTo.Text = $"To: {_selectedMessage.ToName}";
+        DetailSubject.Text = _selectedMessage.Subject;
+        DetailDate.Text = $"{_selectedMessage.Date} {_selectedMessage.Time}  (#{_selectedMessage.MsgNumber})";
+        DetailBody.Text = _selectedMessage.Body.Replace("\r", "");
         RefreshMessageList();
     }
 
     private void RefreshMessageList()
     {
         if (_selectedConferenceId is not int cid) return;
-        var selected = _selectedMessage;
-        MessageList.ItemsSource = _session.MessagesInConference(cid).ToList();
-        if (selected != null)
+
+        _updatingMessageList = true;
+        try
         {
-            MessageList.SelectedItem = _session.MessagesInConference(cid)
-                .FirstOrDefault(m => m.MsgNumber == selected.MsgNumber);
+            var selectedNum = _selectedMessage?.MsgNumber;
+            MessageList.ItemsSource = _session.MessagesInConference(cid).ToList();
+            if (selectedNum != null)
+            {
+                MessageList.SelectedItem = _session.MessagesInConference(cid)
+                    .FirstOrDefault(m => m.MsgNumber == selectedNum);
+            }
+        }
+        finally
+        {
+            _updatingMessageList = false;
         }
     }
 

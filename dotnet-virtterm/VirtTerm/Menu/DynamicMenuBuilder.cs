@@ -39,6 +39,9 @@ public class DynamicMenuBuilder
     /// <summary>Fired for the fixed About item.</summary>
     public event Action? AboutRequested;
 
+    /// <summary>Fired for Mail → Offline Mail Reader (no live connection required).</summary>
+    public event Action? OfflineMailRequested;
+
     private ToolStripMenuItem? _menuVirtBBS; // M/F/C/U/W/T/D/P/R/S/G submenu items, gated by prompt state
     private ToolStripMenuItem? _sysopItem;
     private ToolStripMenuItem? _logonItem;
@@ -89,6 +92,12 @@ public class DynamicMenuBuilder
         bbsMenu.DropDownItems.Add(new ToolStripMenuItem("&Goodbye", null, (_, _) => Keystroke?.Invoke((byte)'G')));
         strip.Items.Add(bbsMenu);
         _menuVirtBBS = bbsMenu;
+
+        // ── Mail menu: offline QWK reader (no live connection required) ─
+        var mailMenu = new ToolStripMenuItem("&Mail");
+        mailMenu.DropDownItems.Add(new ToolStripMenuItem("&Offline Mail Reader...", null,
+            (_, _) => OfflineMailRequested?.Invoke()));
+        strip.Items.Add(mailMenu);
 
         // ── Help menu (fixed: Help/About always present) ──────────────────
         var helpMenu = new ToolStripMenuItem("&Help");
