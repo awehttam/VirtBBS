@@ -102,8 +102,6 @@ CREATE INDEX IF NOT EXISTS idx_areafix_subs_downlink ON fido_areafix_subs(networ
 CREATE INDEX IF NOT EXISTS idx_areafix_subs_area     ON fido_areafix_subs(network, area_tag);
 
 -- FileFix subscriptions: which file areas each downlink receives from us.
--- See FidoNet Config.md for the current limitation (no TIC distribution
--- pipeline yet acts on these subscriptions).
 CREATE TABLE IF NOT EXISTS fido_filefix_subs (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     network       TEXT    NOT NULL DEFAULT 'FidoNet',
@@ -115,6 +113,15 @@ CREATE TABLE IF NOT EXISTS fido_filefix_subs (
 
 CREATE INDEX IF NOT EXISTS idx_filefix_subs_downlink ON fido_filefix_subs(network, downlink_addr);
 CREATE INDEX IF NOT EXISTS idx_filefix_subs_area     ON fido_filefix_subs(network, file_tag);
+
+-- TIC export tracking: local files already hatched/sent for a network.
+CREATE TABLE IF NOT EXISTS fido_file_exports (
+    network     TEXT    NOT NULL,
+    dir_id      INTEGER NOT NULL,
+    filename    TEXT    NOT NULL,
+    exported_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (network, dir_id, filename)
+);
 
 -- Nodelist version tracking: one row per successful import, written by
 -- fido.ImportFile (and therefore also fido.FetchAndImport). Lets clients

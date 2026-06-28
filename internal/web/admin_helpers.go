@@ -115,6 +115,11 @@ func removeNetworkDownlink(db *sql.DB, networkName, addr string) (bool, error) {
 	for _, tag := range tags {
 		_ = areafixDB.Unsubscribe(networkName, addr, tag)
 	}
+	filefixDB := fido.OpenFileFixDB(db)
+	ftags, _ := filefixDB.SubscriptionsFor(networkName, addr)
+	for _, tag := range ftags {
+		_ = filefixDB.Unsubscribe(networkName, addr, tag)
+	}
 	return true, nil
 }
 

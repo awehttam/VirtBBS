@@ -75,19 +75,20 @@ type TossResult struct {
 	EchomailHeld     int
 	OrphanNotes      []OrphanNote
 	Errors           []string
+	TICProcessed     int
 }
 
 // TossAll tosses every enabled network's inbound directory in turn,
 // aggregating the results. Disabled networks are skipped. Used wherever
 // "toss inbound mail" should mean *all* configured networks, not just the
 // primary one (sysop [T]oss menu, fido.toss API, -fido-toss CLI flag).
-func TossAll(cfg *Config, store *messages.Store, confStore *conferences.Store, sysopName string) *TossResult {
+func TossAll(cfg *Config, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea) *TossResult {
 	total := &TossResult{}
 	for _, nd := range cfg.AllNetworks() {
 		if !nd.Enabled {
 			continue
 		}
-		r, err := TossDir(&nd, store, confStore, sysopName)
+		r, err := TossDir(&nd, store, confStore, sysopName, fileArea)
 		if err != nil {
 			total.Errors = append(total.Errors, fmt.Sprintf("[%s] %v", nd.Name, err))
 			continue
@@ -96,6 +97,7 @@ func TossAll(cfg *Config, store *messages.Store, confStore *conferences.Store, s
 		total.Imported += r.Imported
 		total.Skipped += r.Skipped
 		total.Orphaned += r.Orphaned
+		total.TICProcessed += r.TICProcessed
 		total.OrphanNotes = append(total.OrphanNotes, r.OrphanNotes...)
 		for _, e := range r.Errors {
 			total.Errors = append(total.Errors, fmt.Sprintf("[%s] %s", nd.Name, e))
@@ -108,7 +110,7 @@ func TossAll(cfg *Config, store *messages.Store, confStore *conferences.Store, s
 // echomail messages, and moves processed packets to <inbound>/.tossed/.
 // confStore may be nil (AreaFix's %LIST falls back to nd.Areas and area
 // validation is skipped for tag existence checks).
-func TossDir(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string) (*TossResult, error) {
+func TossDir(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea) (*TossResult, error) {
 	if !nd.Enabled {
 		return nil, fmt.Errorf("network %s is disabled", nd.Name)
 	}
@@ -164,6 +166,13 @@ func TossDir(nd *NetworkDef, store *messages.Store, confStore *conferences.Store
 		}
 	}
 	RecordToss(nd.Name, result)
+	if fileArea != nil {
+		ticRes := ProcessInboundTICs(nd, store.DB(), fileArea)
+		result.TICProcessed = ticRes.Processed
+		for _, e := range ticRes.Errors {
+			result.Errors = append(result.Errors, "tic: "+e)
+		}
+	}
 	return result, nil
 }
 
@@ -218,7 +227,7 @@ func tossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Stor
 			// still stored as ordinary netmail below, so the sysop can
 			// audit what downlinks have requested.
 			if IsAreaFixRequest(pm.ToName) {
-				if err := ProcessAreaFixRequest(nd, store.DB(), confStore, nd.Name, pm); err != nil {
+				if err := ProcessAreaFixRequest(nd, store, confStore, nd.Name, "", pm); err != nil {
 					errs = append(errs, fmt.Sprintf("areafix: %v", err))
 				}
 			}

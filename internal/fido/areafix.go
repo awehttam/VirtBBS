@@ -25,6 +25,7 @@
 // DEALINGS IN THE SOFTWARE.
 //
 // Change History:
+//   v0.4.0  2026-06-28  %RESCAN backlog export, +TAG,R=N subscribe-with-rescan
 //   v0.2.0  2026-06-25  Initial implementation — AreaFix responder (for downlink
 //                        subscription requests) and request generator (for
 //                        subscribing to our own uplink as a downlink)
@@ -51,19 +52,23 @@ package fido
 // Command syntax (case-insensitive, one command per line, password first):
 //
 //	<password>
-//	+AREA_TAG       subscribe to AREA_TAG
+//	+AREA_TAG       subscribe to AREA_TAG (+TAG,R=N sends N old messages)
 //	-AREA_TAG       unsubscribe from AREA_TAG
 //	%LIST           list all areas available to subscribe to
 //	%QUERY          list areas currently subscribed to
+//	%RESCAN         rescan subscribed areas (or set rescan mode for +TAG lines)
+//	%RESCAN TAG     rescan backlog for subscribed area TAG
 //	%HELP           show this command summary
 
 import (
 	"database/sql"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/virtbbs/virtbbs/internal/conferences"
+	"github.com/virtbbs/virtbbs/internal/messages"
 )
 
 // AreaFixRobotName is the netmail ToName that triggers the responder.
@@ -159,9 +164,14 @@ func (a *AreaFixDB) AllDownlinkAddrs(network string) ([]string, error) {
 // ProcessAreaFixRequest handles an inbound netmail addressed to "AreaFix".
 // It validates the sender against the network's configured Downlinks list
 // and the password supplied as the first non-blank body line, applies any
-// +TAG/-TAG/%LIST/%QUERY/%HELP commands found in the remaining lines, and
-// writes an immediate netmail reply summarising the result.
-func ProcessAreaFixRequest(nd *NetworkDef, db *sql.DB, confStore *conferences.Store, networkName string, pm *Message) error {
+// +TAG/-TAG/%LIST/%QUERY/%RESCAN/%HELP commands found in the remaining lines,
+// and writes an immediate netmail reply summarising the result. When msgStore
+// is non-nil, rescan commands queue backlog .pkt files for the downlink.
+func ProcessAreaFixRequest(nd *NetworkDef, msgStore *messages.Store, confStore *conferences.Store, networkName, bbsName string, pm *Message) error {
+	if msgStore == nil {
+		return fmt.Errorf("areafix: message store required")
+	}
+	db := msgStore.DB()
 	our := nd.NodeAddr()
 	if our == (Addr{}) {
 		return fmt.Errorf("areafix: invalid local address %q", nd.Address)
@@ -211,8 +221,43 @@ func ProcessAreaFixRequest(nd *NetworkDef, db *sql.DB, confStore *conferences.St
 		writeAreaFixHelp(&out)
 	}
 
+	rescanMode := false
+
+	flushRescan := func(tags []string, maxMsgs int, prefix string) {
+		if msgStore == nil || len(tags) == 0 {
+			return
+		}
+		res, err := RescanEchoToDownlink(nd, msgStore, confStore, bbsName, downlinkAddr, tags, maxMsgs)
+		if err != nil {
+			fmt.Fprintf(&out, "  %srescan ERROR: %v\r\n", prefix, err)
+			return
+		}
+		for _, e := range res.Errors {
+			fmt.Fprintf(&out, "  %srescan WARNING: %s\r\n", prefix, e)
+		}
+		if res.Messages == 0 {
+			fmt.Fprintf(&out, "  %srescan — no messages to send\r\n", prefix)
+		} else {
+			fmt.Fprintf(&out, "  %srescan — %d message(s) queued\r\n", prefix, res.Messages)
+		}
+	}
+
+	subscribed := func(tag string) bool {
+		tags, err := areafixDB.SubscriptionsFor(networkName, downlinkAddr)
+		if err != nil {
+			return false
+		}
+		tag = strings.ToUpper(tag)
+		for _, t := range tags {
+			if t == tag {
+				return true
+			}
+		}
+		return false
+	}
+
 	for _, line := range cmdLines {
-		upper := strings.ToUpper(line)
+		upper := strings.ToUpper(strings.TrimSpace(line))
 		switch {
 		case upper == "%LIST" || upper == "LIST":
 			writeAreaFixList(&out, confStore, networkName)
@@ -220,11 +265,29 @@ func ProcessAreaFixRequest(nd *NetworkDef, db *sql.DB, confStore *conferences.St
 			writeAreaFixQuery(&out, areafixDB, networkName, downlinkAddr)
 		case upper == "%HELP" || upper == "HELP" || upper == "?":
 			writeAreaFixHelp(&out)
-		case strings.HasPrefix(line, "+"):
-			tag := strings.ToUpper(strings.TrimSpace(line[1:]))
-			if tag == "" {
+		case strings.HasPrefix(upper, "%RESCAN"):
+			tag, _ := parseAreaFixRescanLine(line)
+			if tag != "" {
+				if !subscribed(tag) {
+					fmt.Fprintf(&out, "  %-30s NOT SUBSCRIBED — not rescanned\r\n", tag)
+				} else {
+					flushRescan([]string{tag}, 0, "")
+				}
+			} else {
+				rescanMode = true
+				tags, err := areafixDB.SubscriptionsFor(networkName, downlinkAddr)
+				if err != nil || len(tags) == 0 {
+					out.WriteString("  %RESCAN — no subscribed areas (subsequent +TAG will rescan)\r\n")
+				} else {
+					flushRescan(tags, 0, "%RESCAN ")
+				}
+			}
+		case strings.HasPrefix(line, "+") || strings.HasPrefix(line, "="):
+			add, ok := parseAreaFixAddLine(line)
+			if !ok || add.tag == "" {
 				continue
 			}
+			tag := add.tag
 			if !areaFixTagExists(confStore, networkName, nd, tag) {
 				fmt.Fprintf(&out, "  +%-30s UNKNOWN AREA — not added\r\n", tag)
 				continue
@@ -234,6 +297,11 @@ func ProcessAreaFixRequest(nd *NetworkDef, db *sql.DB, confStore *conferences.St
 				continue
 			}
 			fmt.Fprintf(&out, "  +%-30s subscribed\r\n", tag)
+			if add.rescanMax >= 0 {
+				flushRescan([]string{tag}, add.rescanMax, "")
+			} else if rescanMode {
+				flushRescan([]string{tag}, 0, "")
+			}
 		case strings.HasPrefix(line, "-"):
 			tag := strings.ToUpper(strings.TrimSpace(line[1:]))
 			if tag == "" {
@@ -253,6 +321,55 @@ func ProcessAreaFixRequest(nd *NetworkDef, db *sql.DB, confStore *conferences.St
 	writeAreaFixQuery(&out, areafixDB, networkName, downlinkAddr)
 
 	return replyAreaFix(nd, our, pm, out.String())
+}
+
+// areaFixAddCmd holds a parsed +TAG subscribe line.
+type areaFixAddCmd struct {
+	tag       string
+	rescanMax int // -1 = no rescan; 0 = full backlog; N>0 = oldest N messages
+}
+
+// parseAreaFixAddLine parses +TAG or =TAG with optional ,R or ,R=N suffix.
+func parseAreaFixAddLine(line string) (areaFixAddCmd, bool) {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return areaFixAddCmd{}, false
+	}
+	if line[0] == '+' || line[0] == '=' {
+		line = line[1:]
+	}
+	parts := strings.Split(line, ",")
+	tag := strings.ToUpper(strings.TrimSpace(parts[0]))
+	cmd := areaFixAddCmd{tag: tag, rescanMax: -1}
+	for _, opt := range parts[1:] {
+		opt = strings.ToUpper(strings.TrimSpace(opt))
+		if opt == "R" {
+			cmd.rescanMax = 0
+			continue
+		}
+		if strings.HasPrefix(opt, "R=") {
+			n, err := strconv.Atoi(strings.TrimSpace(opt[2:]))
+			if err != nil || n < 0 {
+				cmd.rescanMax = 0
+			} else {
+				cmd.rescanMax = n
+			}
+		}
+	}
+	return cmd, tag != ""
+}
+
+// parseAreaFixRescanLine parses %RESCAN or %RESCAN TAG.
+func parseAreaFixRescanLine(line string) (tag string, ok bool) {
+	line = strings.TrimSpace(line)
+	if !strings.HasPrefix(strings.ToUpper(line), "%RESCAN") {
+		return "", false
+	}
+	rest := strings.TrimSpace(line[len("%RESCAN"):])
+	if rest == "" {
+		return "", true
+	}
+	return strings.ToUpper(rest), true
 }
 
 // areaFixTagExists reports whether tag is a valid, known echomail area —
@@ -305,11 +422,15 @@ func writeAreaFixQuery(out *strings.Builder, areafixDB *AreaFixDB, networkName, 
 
 func writeAreaFixHelp(out *strings.Builder) {
 	out.WriteString("Commands (one per line, after your password):\r\n")
-	out.WriteString("  +TAG     subscribe to area TAG\r\n")
-	out.WriteString("  -TAG     unsubscribe from area TAG\r\n")
-	out.WriteString("  %LIST    list all areas available\r\n")
-	out.WriteString("  %QUERY   list your current subscriptions\r\n")
-	out.WriteString("  %HELP    show this help\r\n\r\n")
+	out.WriteString("  +TAG         subscribe to area TAG\r\n")
+	out.WriteString("  +TAG,R=N     subscribe and send N old messages\r\n")
+	out.WriteString("  +TAG,R       subscribe and send full backlog\r\n")
+	out.WriteString("  -TAG         unsubscribe from area TAG\r\n")
+	out.WriteString("  %LIST        list all areas available\r\n")
+	out.WriteString("  %QUERY       list your current subscriptions\r\n")
+	out.WriteString("  %RESCAN      rescan all subscribed areas (+ sets rescan mode)\r\n")
+	out.WriteString("  %RESCAN TAG  rescan one subscribed area\r\n")
+	out.WriteString("  %HELP        show this help\r\n\r\n")
 }
 
 // replyAreaFix writes an immediate netmail reply from the AreaFix robot

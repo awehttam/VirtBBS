@@ -14,6 +14,7 @@ type downlinkRowView struct {
 	Password     string
 	NodelistType string
 	Areas        []string
+	FileAreas    []string
 }
 
 func (s *Server) handleAdminFidoDownlinks(w http.ResponseWriter, r *http.Request) {
@@ -131,10 +132,12 @@ func (s *Server) handleAdminFidoDownlinks(w http.ResponseWriter, r *http.Request
 func loadDownlinkRows(db *sql.DB, network string, dls []fido.Downlink) []downlinkRowView {
 	ndb := fido.OpenNodelistDB(db)
 	areafixDB := fido.OpenAreaFixDB(db)
+	filefixDB := fido.OpenFileFixDB(db)
 	var rows []downlinkRowView
 	for _, dl := range dls {
 		row := downlinkRowView{Name: dl.Name, Address: dl.Address, Password: dl.Password}
 		row.Areas, _ = areafixDB.SubscriptionsFor(network, dl.Address)
+		row.FileAreas, _ = filefixDB.SubscriptionsFor(network, dl.Address)
 		if addr, err := fido.ParseAddr(dl.Address); err == nil {
 			if entry, err := ndb.LookupAddr(network, addr); err == nil && entry != nil {
 				row.NodelistType = entry.Type

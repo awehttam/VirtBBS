@@ -78,7 +78,7 @@ func Start(store *messages.Store, confStore *conferences.Store, fileStore *files
 		}
 		name := nd.Name
 		if nd.Uplink != "" {
-			go runNetwork(name, store, confStore, stopCh)
+			go runNetwork(name, store, confStore, fileStore, stopCh)
 			if nd.NodelistFetchEnabled() {
 				go runNodelistFetch(name, store, stopCh)
 			} else {
@@ -148,7 +148,7 @@ func runDayRollover(networkName string, store *messages.Store, confStore *confer
 
 // runNetwork polls and tosses one network on its own ticker until stop is
 // closed, re-reading live config every tick.
-func runNetwork(networkName string, store *messages.Store, confStore *conferences.Store, stop <-chan struct{}) {
+func runNetwork(networkName string, store *messages.Store, confStore *conferences.Store, fileStore *files.Store, stop <-chan struct{}) {
 	nd := config.Get().Fido.NetworkByName(networkName)
 	if nd == nil {
 		return
@@ -178,7 +178,11 @@ func runNetwork(networkName string, store *messages.Store, confStore *conference
 				log.Printf("fido scheduler: %s — interval changed to %s", networkName, interval)
 			}
 
-			result := fido.PollAndToss(nd, store, confStore, config.Get().Sysop.Name)
+			var fileArea fido.FileArea
+			if fileStore != nil {
+				fileArea = fileStore
+			}
+			result := fido.PollAndToss(nd, store, confStore, config.Get().Sysop.Name, fileArea)
 			if result.Poll.Error != nil {
 				fido.LogBinkp(fmt.Sprintf("fido scheduler: %s poll error: %v", networkName, result.Poll.Error))
 				continue

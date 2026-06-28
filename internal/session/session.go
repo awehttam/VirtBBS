@@ -1042,18 +1042,18 @@ func (s *session) sysopFidoMenu() {
 			s.writeln("")
 		}
 		s.writeln(ansi.Color(ansi.BrightYellow) +
-			"  [T]oss inbound   [S]can outbound   [N]odelist   [L]oad nodelist now   [E]cho flags   [P]oll uplink" + ansi.Reset())
+			"  [T]oss inbound   [S]can outbound   [O] TIC file scan   [N]odelist   [L]oad nodelist now   [E]cho flags   [P]oll uplink" + ansi.Reset())
 		s.writeln(ansi.Color(ansi.BrightYellow) +
-			"  [I]Ping a node   [X]Trace a node   [A]reaFix   [F]ileFix   [J]oin reqs   [R]outing   [Q]uit" + ansi.Reset())
+			"  [I]Ping a node   [X]Trace a node   [A]reaFix   [F]ileFix   [J]oin reqs   [R]outing   [M] Rebuild maps   [Q]uit" + ansi.Reset())
 		s.write(ansi.Prompt("FidoNet command: "))
 		cmd := strings.ToUpper(strings.TrimSpace(s.readline()))
 		switch cmd {
 		case "T":
 			s.writeln(ansi.Colorize(ansi.White, "Tossing inbound packets (all networks)…"))
-			result := fido.TossAll(&cfg.Fido, s.deps.Messages, s.deps.Conferences, cfg.Sysop.Name)
+			result := fido.TossAll(&cfg.Fido, s.deps.Messages, s.deps.Conferences, cfg.Sysop.Name, s.deps.Files)
 			s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf(
-				"Toss complete: %d packet(s), %d imported, %d skipped, %d held for review.",
-				result.Packets, result.Imported, result.Skipped, result.Orphaned)))
+				"Toss complete: %d packet(s), %d imported, %d skipped, %d held, %d TIC file(s).",
+				result.Packets, result.Imported, result.Skipped, result.Orphaned, result.TICProcessed)))
 			for _, n := range result.OrphanNotes {
 				s.writeln(ansi.Colorize(ansi.Yellow, fmt.Sprintf(
 					"  Held [%s]: %s from %s — %s", n.Reason, n.Subject, n.From, n.File)))
@@ -1070,6 +1070,18 @@ func (s *session) sysopFidoMenu() {
 			}
 			s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf(
 				"Scan complete: %d message(s) in %d PKT file(s) exported.", result.Scanned, result.PKTFiles)))
+			for _, e := range result.Errors {
+				s.writeln(ansi.Colorize(ansi.Red, "  Error: "+e))
+			}
+		case "O":
+			s.writeln(ansi.Colorize(ansi.White, "Scanning file areas for outbound TIC…"))
+			result, err := fido.FileScanAll(&cfg.Fido, s.deps.Messages.DB(), config.Get().Paths.Files)
+			if err != nil {
+				s.writeln(ansi.Colorize(ansi.Red, "File scan error: "+err.Error()))
+				continue
+			}
+			s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf(
+				"File scan complete: %d file(s) in %d TIC ticket(s).", result.Files, result.TICFiles)))
 			for _, e := range result.Errors {
 				s.writeln(ansi.Colorize(ansi.Red, "  Error: "+e))
 			}
@@ -1093,6 +1105,8 @@ func (s *session) sysopFidoMenu() {
 			s.fidoJoinRequestsMenu()
 		case "R":
 			s.fidoRoutingTableMenu()
+		case "M":
+			s.fidoRebuildNetworkMaps()
 		case "Q", "":
 			return
 		}
@@ -1466,6 +1480,26 @@ func (s *session) fidoEditMemberInfo(target *fido.NetworkDef, mdb *fido.MembersD
 	s.writeln(ansi.Colorize(ansi.BrightGreen, "Member info updated."))
 }
 
+// fidoRebuildNetworkMaps regenerates VirtDiag.zip for a hosted hub network.
+func (s *session) fidoRebuildNetworkMaps() {
+	target := s.pickHubNetwork("rebuild network maps for")
+	if target == nil {
+		return
+	}
+	cfg := config.Get()
+	s.writeln(ansi.Colorize(ansi.White, fmt.Sprintf("Rebuilding network maps for %s…", target.Name)))
+	count, warns := fido.RebuildNetworkDiagrams(target, s.deps.Messages.DB(), s.deps.Files, cfg.BBS.Name, cfg.Sysop.Name)
+	if count == 0 && len(warns) > 0 {
+		s.writeln(ansi.Colorize(ansi.Red, strings.Join(warns, "; ")))
+		return
+	}
+	s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf(
+		"Network maps rebuilt: %d diagram(s) written to VirtDiag.zip.", count)))
+	for _, w := range warns {
+		s.writeln(ansi.Colorize(ansi.Yellow, "  Warning: "+w))
+	}
+}
+
 // pickHubNetwork is pickFidoNetwork, restricted to networks this BBS hosts
 // (NetworkDef.IsHub()) — the only ones with join requests/a routing table.
 func (s *session) pickHubNetwork(verb string) *fido.NetworkDef {
@@ -1610,7 +1644,12 @@ func (s *session) fidoRemoveDownlink(networkName string) {
 	for _, tag := range tags {
 		_ = areafixDB.Unsubscribe(networkName, addr, tag)
 	}
-	s.writeln(ansi.Colorize(ansi.BrightGreen, "Downlink removed and subscriptions cleared."))
+	filefixDB := fido.OpenFileFixDB(s.deps.Messages.DB())
+	ftags, _ := filefixDB.SubscriptionsFor(networkName, addr)
+	for _, tag := range ftags {
+		_ = filefixDB.Unsubscribe(networkName, addr, tag)
+	}
+	s.writeln(ansi.Colorize(ansi.BrightGreen, "Downlink removed and AreaFix/FileFix subscriptions cleared."))
 }
 
 // updateNetworkDownlinks loads the live config, applies mutate to the named
@@ -1678,12 +1717,6 @@ func (s *session) fidoFileFixMenu() {
 				s.writeln(fmt.Sprintf("  %-20s %-16s %s", dl.Name, dl.Address, strings.Join(tags, ", ")))
 			}
 		}
-		s.writeln("")
-		s.writeln(ansi.Colorize(ansi.Yellow,
-			"  Note: no TIC file-echo distribution pipeline exists yet — subscriptions"))
-		s.writeln(ansi.Colorize(ansi.Yellow,
-			"  are tracked but nothing currently sends files based on them."))
-		s.writeln("")
 		s.writeln(ansi.Color(ansi.BrightYellow) + "  [U]pstream request   [Q]uit" + ansi.Reset())
 		s.write(ansi.Prompt("FileFix command: "))
 		cmd := strings.ToUpper(strings.TrimSpace(s.readline()))
@@ -1985,7 +2018,7 @@ func (s *session) fidoPoll() {
 
 	s.writeln(ansi.Colorize(ansi.White, fmt.Sprintf("Polling %s uplink %s…", target.Name, target.Uplink)))
 
-	result := fido.PollAndToss(target, s.deps.Messages, s.deps.Conferences, config.Get().Sysop.Name)
+	result := fido.PollAndToss(target, s.deps.Messages, s.deps.Conferences, config.Get().Sysop.Name, s.deps.Files)
 	if result.Poll.Error != nil {
 		s.writeln(ansi.Colorize(ansi.Red, "Poll error: "+result.Poll.Error.Error()))
 		return

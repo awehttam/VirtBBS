@@ -328,7 +328,7 @@ func (s *Server) handleAdminBinkP(w http.ResponseWriter, r *http.Request) {
 		if nd == nil {
 			errMsg = tr(locale, "admin_binkp.error.network")
 		} else {
-			res := fido.PollAndToss(nd, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name)
+			res := fido.PollAndToss(nd, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name, s.Deps.Files)
 			if res.Poll.Error != nil {
 				errMsg = res.Poll.Error.Error()
 			} else {

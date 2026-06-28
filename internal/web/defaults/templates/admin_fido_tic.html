@@ -1,0 +1,28 @@
+{{define "admin_fido_tic.html"}}
+{{template "header" .}}
+<div class="card mb-3 sysop-panel">
+  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_fido_tic.title"}}</h2></div>
+  <div class="card-body">
+  <p><a href="/admin/fido">{{t .Locale "common.fido_back"}}</a></p>
+  <p class="text-muted">{{t .Locale "admin_fido_tic.intro"}}</p>
+  {{if .Flash}}<p class="alert alert-success">{{.Flash}}</p>{{end}}
+  {{if .Error}}<p class="alert alert-danger">{{.Error}}</p>{{end}}
+  <form method="get" class="inline-form mb-3">
+    <label>{{t .Locale "common.network"}} <select class="form-select" name="network" onchange="this.form.submit()">{{range .Networks}}<option {{if eq $.Network .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+  </form>
+  <p>{{tf .Locale "admin_fido_tic.export_count" .ExportCount}}</p>
+  {{if .FileAreas}}
+  <h3 class="h6">{{t .Locale "admin_fido_tic.file_areas"}}</h3>
+  <ul>{{range .FileAreas}}<li><code>{{.Tag}}</code> → dir {{.DirID}}</li>{{end}}</ul>
+  {{else}}
+  <p class="text-muted">{{t .Locale "admin_fido_tic.no_file_areas"}}</p>
+  {{end}}
+  <div class="d-flex flex-wrap gap-2 mt-3">
+    <form method="post"><input type="hidden" name="network" value="{{.Network}}"><input type="hidden" name="action" value="file_scan"><button class="btn btn-primary" type="submit">{{t .Locale "admin_fido_ops.file_scan"}}</button></form>
+    <form method="post"><input type="hidden" name="network" value="{{.Network}}"><input type="hidden" name="action" value="process_inbound"><button class="btn btn-secondary" type="submit">{{t .Locale "admin_fido_tic.process_inbound"}}</button></form>
+  </div>
+  <p class="meta mt-3">{{t .Locale "admin_fido_tic.poll_note"}}</p>
+  </div>
+</div>
+{{template "footer" .}}
+{{end}}

@@ -172,6 +172,8 @@ Log in with your BBS username and password. Sysops see **Admin** in the navigati
 | [Installation.md](Installation.md) | Fresh install, upgrade, ports, Graphviz |
 | [BUILDING.md](BUILDING.md) | Build, cross-compile, PCBoard import |
 | [FidoNet Config.md](FidoNet%20Config.md) | FidoNet, BinkP, AreaFix, nodelist |
+| [VirtNet Nodelist Processing.md](VirtNet%20Nodelist%20Processing.md) | Automatic nodelist fetch (FidoNet) and VirtNet hub generate/distribute/apply |
+| [AreaFix FileFix TIC.md](AreaFix%20FileFix%20TIC.md) | AreaFix, FileFix, TIC robots and file echo |
 | [www/README.md](www/README.md) | Web UI routes, seeding, feature checklist |
 | [CLAUDE.md](CLAUDE.md) | Notes for AI assistants and toolchain paths |
 | [android/VirtAnd/README.md](android/VirtAnd/README.md) | Android point client |
@@ -186,7 +188,7 @@ Log in with your BBS username and password. Sysops see **Admin** in the navigati
 | Minor (x.**N**.0) | Bumped on significant feature additions |
 | Major (**N**.0.0) | Bumped on explicit request |
 
-Current version: **1.5.2**
+Current version: **1.6.0**
 
 ---
 

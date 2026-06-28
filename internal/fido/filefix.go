@@ -35,16 +35,8 @@ package fido
 // Package fido — filefix.go
 //
 // Implements FileFix, the FidoNet convention (analogous to AreaFix) for
-// managing FILE ECHO area subscriptions by netmail. Structure mirrors
-// areafix.go exactly — see that file's doc comment for the general shape.
-//
-// LIMITATION: VirtBBS has no TIC (FTS-5005) file-echo distribution pipeline
-// — there is no "file scan" step that bundles new uploads into outbound TIC
-// announcements the way scan.go does for echomail. This file tracks FileFix
-// subscriptions (so the request/response protocol works end-to-end and the
-// data is there for a future distribution step to use) but nothing yet acts
-// on those subscriptions to actually send files to downlinks. See FidoNet
-// Config.md for details.
+// managing FILE ECHO area subscriptions by netmail. Outbound distribution
+// is handled by filescan.go / ticprocess.go (FTS-5006 TIC tickets).
 //
 // Command syntax is identical to AreaFix, but tags refer to file areas
 // (mapped to internal/files.Dir IDs via [fido.file_areas] /
@@ -112,9 +104,7 @@ func (a *FileFixDB) SubscriptionsFor(network, downlinkAddr string) ([]string, er
 }
 
 // SubscribedDownlinks returns the addresses of every downlink subscribed to
-// fileTag. Not yet consumed anywhere (no file-echo distribution pipeline
-// exists) — provided for a future scan-equivalent to use, mirroring
-// AreaFixDB.SubscribedDownlinks.
+// fileTag. Used by filescan.go to fan TIC distribution out to downlinks.
 func (a *FileFixDB) SubscribedDownlinks(network, fileTag string) ([]string, error) {
 	rows, err := a.db.Query(`SELECT downlink_addr FROM fido_filefix_subs
 		WHERE network=? AND file_tag=? ORDER BY downlink_addr`, network, fileTag)

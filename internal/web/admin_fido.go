@@ -40,6 +40,7 @@ func (s *Server) handleAdminFidoOps(w http.ResponseWriter, r *http.Request) {
 		pageData
 		Networks       []string
 		Network        string
+		IsHub          bool
 		LocalNodes     []fido.NodeEntry
 		VersionText    string
 		ImportPath     string
@@ -52,6 +53,9 @@ func (s *Server) handleAdminFidoOps(w http.ResponseWriter, r *http.Request) {
 		pageData: s.page(r),
 		Networks: fidoNetworkNamesList(),
 		Network:  network,
+	}
+	if nd := cfg.Fido.NetworkByName(network); nd != nil {
+		data.IsHub = nd.IsHub()
 	}
 	db := s.Deps.Messages.DB()
 	if nodes, err := fido.ListLocalNodes(db, network); err == nil {
@@ -71,14 +75,17 @@ func (s *Server) handleAdminFidoOps(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		network = selectedNetwork(r)
 		data.Network = network
+		if nd := cfg.Fido.NetworkByName(network); nd != nil {
+			data.IsHub = nd.IsHub()
+		}
 		action := r.FormValue("action")
 		switch action {
 		case "toss":
 			if !cfg.Fido.Enabled {
 				data.Error = "FidoNet not enabled"
 			} else {
-				res := fido.TossAll(&cfg.Fido, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name)
-				data.Flash = fmt.Sprintf("Toss complete — imported %d message(s)", res.Imported)
+				res := fido.TossAll(&cfg.Fido, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name, s.Deps.Files)
+				data.Flash = fmt.Sprintf("Toss complete — imported %d message(s), %d TIC file(s)", res.Imported, res.TICProcessed)
 			}
 		case "scan":
 			if !cfg.Fido.Enabled {
@@ -88,12 +95,35 @@ func (s *Server) handleAdminFidoOps(w http.ResponseWriter, r *http.Request) {
 			} else {
 				data.Flash = fmt.Sprintf("Scan complete — exported %d message(s), %d PKT file(s)", res.Scanned, res.PKTFiles)
 			}
+		case "file_scan":
+			if !cfg.Fido.Enabled {
+				data.Error = "FidoNet not enabled"
+			} else if res, err := fido.FileScanAll(&cfg.Fido, db, config.Get().Paths.Files); err != nil {
+				data.Error = err.Error()
+			} else {
+				data.Flash = fmt.Sprintf("File scan complete — %d file(s), %d TIC ticket(s)", res.Files, res.TICFiles)
+				if len(res.Errors) > 0 {
+					data.Error = strings.Join(res.Errors, "; ")
+				}
+			}
+		case "rebuild_maps":
+			nd := cfg.Fido.NetworkByName(network)
+			if nd == nil {
+				data.Error = "network not found"
+			} else if count, warns := fido.RebuildNetworkDiagrams(nd, db, s.Deps.Files, cfg.BBS.Name, cfg.Sysop.Name); count == 0 && len(warns) > 0 {
+				data.Error = strings.Join(warns, "; ")
+			} else {
+				data.Flash = fmt.Sprintf("Network maps rebuilt — %d diagram(s) in VirtDiag.zip", count)
+				if len(warns) > 0 {
+					data.Error = strings.Join(warns, "; ")
+				}
+			}
 		case "poll":
 			nd := cfg.Fido.NetworkByName(network)
 			if nd == nil {
 				data.Error = "network not found"
 			} else {
-				res := fido.PollAndToss(nd, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name)
+				res := fido.PollAndToss(nd, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name, s.Deps.Files)
 				if res.Poll.Error != nil {
 					data.Error = res.Poll.Error.Error()
 				} else {

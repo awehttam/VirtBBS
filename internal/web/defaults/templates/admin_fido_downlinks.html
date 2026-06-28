@@ -18,6 +18,7 @@
       <th>{{t .Locale "common.password"}}</th>
       <th>{{t .Locale "admin_fido_downlinks.col.nodelist_type"}}</th>
       <th>{{t .Locale "admin_fido_networks.areafix_subs"}}</th>
+      <th>{{t .Locale "admin_fido_tic.filefix_subs"}}</th>
       <th></th>
     </tr></thead>
     <tbody>
@@ -35,6 +36,7 @@
       <td><input class="form-control form-control-sm" form="dl-{{$i}}" name="password" value="{{$dl.Password}}" placeholder="{{t $.Locale "admin_fido_downlinks.password_keep"}}"></td>
       <td>{{if $dl.NodelistType}}{{$dl.NodelistType}}{{else}}—{{end}}</td>
       <td>{{if $dl.Areas}}{{range $dl.Areas}}<span class="badge bg-secondary me-1">{{.}}</span>{{end}}{{else}}—{{end}}</td>
+      <td>{{if $dl.FileAreas}}{{range $dl.FileAreas}}<span class="badge bg-info me-1">{{.}}</span>{{end}}{{else}}—{{end}}</td>
       <td class="text-nowrap">
         <button class="btn btn-sm btn-primary" type="submit" form="dl-{{$i}}">{{t $.Locale "common.save"}}</button>
         <form method="post" class="d-inline" onsubmit="return confirm('{{t $.Locale "admin_fido_downlinks.confirm_remove"}}');">
@@ -46,7 +48,7 @@
       </td>
     </tr>
     {{else}}
-    <tr><td colspan="6">{{t .Locale "admin_fido_downlinks.empty"}}</td></tr>
+    <tr><td colspan="7">{{t .Locale "admin_fido_downlinks.empty"}}</td></tr>
     {{end}}
     </tbody>
   </table>

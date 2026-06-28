@@ -25,6 +25,7 @@
 // DEALINGS IN THE SOFTWARE.
 //
 // Change History:
+//   v0.2.1  2026-06-28  RescanEchoToDownlink for AreaFix %RESCAN backlog export
 //   v0.0.3  2026-06-24  Phase 9: FidoNet scan — export messages to .PKT
 //   v0.0.6  2026-06-24  Multi-uplink bundling; per-conference uplink_addr override;
 //                        network-aware scanning via conferences.Store
@@ -64,6 +65,13 @@ import (
 type ScanResult struct {
 	Scanned  int // messages exported
 	PKTFiles int // distinct .pkt files written
+	Errors   []string
+}
+
+// RescanResult summarises an AreaFix-triggered backlog rescan to one downlink.
+type RescanResult struct {
+	Messages int    // echo messages written into the rescan PKT
+	PKTPath  string // path of the rescan .pkt file (empty when nothing to send)
 	Errors   []string
 }
 
@@ -229,6 +237,110 @@ func scanNetwork(cfg *Config, nd *NetworkDef, store *messages.Store, confStore *
 	}
 
 	return nil
+}
+
+// RescanEchoToDownlink exports historical echo messages in areaTags to a single
+// downlink-only .pkt file. Unlike ScanAll it includes already-exported messages
+// and does not call MarkExported, so uplink scan behaviour is unchanged.
+// maxMsgs 0 sends the full backlog per area.
+func RescanEchoToDownlink(nd *NetworkDef, store *messages.Store, confStore *conferences.Store,
+	bbsName, downlinkAddr string, areaTags []string, maxMsgs int) (*RescanResult, error) {
+
+	result := &RescanResult{}
+	if store == nil {
+		return result, fmt.Errorf("rescan: message store required")
+	}
+	if bbsName == "" {
+		bbsName = "VirtBBS"
+	}
+	orig := nd.NodeAddr()
+	if orig == (Addr{}) {
+		return result, fmt.Errorf("rescan: invalid local address %q", nd.Address)
+	}
+	dlAddr, err := ParseAddr(downlinkAddr)
+	if err != nil {
+		return result, fmt.Errorf("rescan: invalid downlink address %q: %w", downlinkAddr, err)
+	}
+	if nd.DownlinkByAddr(dlAddr) == nil {
+		return result, fmt.Errorf("rescan: %s is not a configured downlink", downlinkAddr)
+	}
+	if err := os.MkdirAll(nd.OutboundDir, 0755); err != nil {
+		return result, err
+	}
+
+	taglines := LoadTaglines(nd.TaglinesFile)
+	var pmsgs []*Message
+
+	for _, tag := range areaTags {
+		tag = strings.ToUpper(strings.TrimSpace(tag))
+		if tag == "" {
+			continue
+		}
+		confID, ok := areaFixConferenceID(confStore, nd.Name, nd, tag)
+		if !ok {
+			result.Errors = append(result.Errors, fmt.Sprintf("rescan: unknown area %s", tag))
+			continue
+		}
+		msgs, err := store.ListEchoRescan(confID, maxMsgs)
+		if err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("rescan %s: %v", tag, err))
+			continue
+		}
+		for _, m := range msgs {
+			var inSeenBy, inPath []string
+			if m.FidoSeenBy != "" {
+				inSeenBy = strings.Fields(m.FidoSeenBy)
+			}
+			if m.FidoPath != "" {
+				inPath = strings.Fields(m.FidoPath)
+			}
+			tagline := PickTagline(taglines)
+			body := buildEchoBody(tag, orig, bbsName, m.Body, tagline, m.FidoMsgID, m.FidoReply, m.FidoKludges, inSeenBy, inPath)
+			pmsgs = append(pmsgs, &Message{
+				OrigAddr: orig,
+				DestAddr: dlAddr,
+				DateTime: m.DatePosted.Format("02 Jan 06  15:04:05"),
+				ToName:   m.ToName,
+				FromName: m.FromName,
+				Subject:  m.Subject,
+				Body:     body,
+			})
+		}
+	}
+
+	if len(pmsgs) == 0 {
+		return result, nil
+	}
+
+	pktName := filepath.Join(nd.OutboundDir,
+		fmt.Sprintf("%s_%s_rescan_%s.pkt", nd.Name, sanitizeAddrForFilename(dlAddr), time.Now().Format("20060102150405.000000")))
+	f, err := os.Create(pktName)
+	if err != nil {
+		return result, err
+	}
+	if err := WritePacket(f, orig, dlAddr, nd.Password, pmsgs); err != nil {
+		f.Close()
+		return result, err
+	}
+	f.Close()
+	result.Messages = len(pmsgs)
+	result.PKTPath = pktName
+	return result, nil
+}
+
+// areaFixConferenceID resolves an echo area tag to a conference ID.
+func areaFixConferenceID(confStore *conferences.Store, networkName string, nd *NetworkDef, tag string) (int, bool) {
+	if confStore != nil {
+		if conf, err := confStore.GetByTag(tag, networkName); err == nil && conf != nil {
+			return conf.ID, true
+		}
+	}
+	if nd != nil {
+		if id, ok := nd.Areas[tag]; ok {
+			return id, true
+		}
+	}
+	return 0, false
 }
 
 // sanitizeAddrForFilename returns a filesystem-safe representation of addr

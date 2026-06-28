@@ -3,7 +3,7 @@
 This guide covers every FidoNet setting in `VirtBBS.DAT`, how echomail/netmail
 routing works, the BinkP server, how to add additional FidoNet-compatible
 networks, AreaFix, FileFix, the PING/TRACE test utilities, and automatic
-nodelist updates. It covers VirtBBS **1.5.0**.
+nodelist updates. It covers VirtBBS **1.6.0**.
 
 ---
 
@@ -195,12 +195,25 @@ Netmail is sent immediately at compose time (not via the scan step) — see
 the `[K]NetMail` option in the Messages menu, or `fido.netmail.send` via the
 API.
 
+### 5.1 File scan (TIC outbound)
+
+**File scan** exports unexported files from `[fido.file_areas]` as FTS-5006
+`.TIC` tickets plus payload copies in `outbound_dir`, fanning out to your
+uplink and FileFix-subscribed downlinks (§9.3). Tracked in `fido_file_exports`.
+
+Ways to trigger file scan:
+- **In-BBS:** Sysop menu → FidoNet → `[O]` TIC file scan
+- **CLI:** `virtbbs -fido-filescan`
+- **Web:** FidoNet → Operations → **File scan (TIC)**, or **TIC** page
+
+Run file scan after uploads land in a mapped file directory and before polling.
+
 ---
 
 ## 6. Polling your uplink (BinkP)
 
 "Polling" connects to your uplink over BinkP, sends any outbound `.pkt`
-files, and receives anything waiting for you. **Every poll is immediately
+files **and TIC/payload pairs**, and receives anything waiting for you. **Every poll is immediately
 followed by a toss of that network's inbound directory** — whether
 triggered manually, via the API, or by the automatic scheduler (§6.2) —
 so newly-received mail (and anything left over from a previous partial
@@ -428,17 +441,17 @@ Sysop menu → FidoNet → `[A]reaFix`:
 | Key | Action |
 |---|---|
 | `[D]` | Add a downlink (name, address, password) — saved to `VirtBBS.DAT`. |
-| `[R]` | Remove a downlink by address — also clears its subscriptions. |
+| `[R]` | Remove a downlink by address — clears AreaFix and FileFix subscriptions. |
 | `[U]` | Send an AreaFix subscribe/unsubscribe request to your own uplink. |
 
 The main listing shows each configured downlink alongside its current
 subscriptions.
 
-### 8.6 Limitations
+### 8.6 Downlinks on the web
 
-- Downlink maintenance is available in the **web admin** at `/admin/fido/downlinks` as well as the in-BBS sysop AreaFix menu. The .NET GUI does not yet expose this.
-- Removing a downlink clears AreaFix subscriptions but **not** FileFix subscriptions (see [`AreaFix FileFix TIC.md`](AreaFix%20FileFix%20TIC.md)).
-- AreaFix works for every enabled network, not just primary — pick which one in the `[A]reaFix` menu (§8.5) or web network selector when more than one is configured.
+Downlink maintenance is available at **`/admin/fido/downlinks`** (add/edit/remove, view AreaFix and FileFix subscriptions, nodelist type) as well as the in-BBS sysop AreaFix menu (`[D]`/`[R]`). Removing a downlink clears **both** AreaFix and FileFix subscription rows.
+
+AreaFix works for every enabled network — pick which one in the `[A]reaFix` menu (§8.5) or the web network selector.
 
 ---
 
@@ -467,8 +480,9 @@ the sysop Files menu or `files.list` API for IDs):
 Downlinks requesting file areas use the **same `[[fido.downlinks]]` list**
 AreaFix uses (§8.1) — there's no separate downlink list for FileFix, since
 it's the same remote system either way, just requesting a different kind
-of area. Add/remove downlinks via the `[A]reaFix` menu; manage their file
-subscriptions via the `[F]ileFix` menu.
+of area. Add/remove downlinks via the AreaFix menu, web **Downlinks** page,
+or the downlinks textarea on the Networks page; manage file subscriptions
+via the `[F]ileFix` menu or by having downlinks send FileFix netmail.
 
 ### 9.2 Sysop menu reference
 
@@ -478,25 +492,39 @@ Sysop menu → FidoNet → `[F]ileFix`:
 |---|---|
 | `[U]` | Send a FileFix subscribe/unsubscribe request to your own uplink. |
 
-The main listing shows each configured downlink (from the AreaFix list)
-alongside its current **file-area** subscriptions.
+The main listing shows each configured downlink alongside its current
+**file-area** subscriptions.
 
-### 9.3 TIC password and distribution limitation
+### 9.3 TIC — file distribution
+
+VirtBBS implements FTS-5006-style **TIC** file echo distribution. See
+[`AreaFix FileFix TIC.md`](AreaFix%20FileFix%20TIC.md) for full detail.
 
 Configure `tic_password` (under `[fido]` or `[[fido.networks]]`) for the
-password **this BBS sends** when requesting file transfers from its uplink's
-TIC processor — parallel to `areafix_password` and `filefix_password`.
-Downlinks use the same `password` in their `[[fido.downlinks]]` entry for
-AreaFix, FileFix, and TIC authentication.
+password **this BBS sends** on outbound TIC tickets to its uplink. Downlinks
+authenticate inbound TIC with the same `password` as AreaFix/FileFix in
+`[[fido.downlinks]]`.
 
-**FileFix subscriptions are tracked but no TIC distribution pipeline runs yet.**
-VirtBBS has no TIC (FTS-5005) file-echo distribution step — there is no
-"file scan" that bundles new uploads into outbound announcements the
-way `scan.go` does for echomail (§5/§8.3). The request/response protocol
-works end-to-end (a downlink can subscribe and get a confirmation reply),
-and the subscription data plus `tic_password` are ready for a future
-distribution step, but no files are actually sent based on these
-subscriptions today.
+**Outbound:** run **file scan** after new uploads appear in a mapped file
+area — sysop FidoNet `[O]`, web **Operations → File scan (TIC)**, web
+**TIC** page, or `virtbbs -fido-filescan`. Unexported files (tracked in
+`fido_file_exports`) are hatched as `.TIC` + payload pairs in
+`outbound_dir`, fanning out to the uplink and FileFix-subscribed downlinks.
+
+**Inbound:** `.TIC` files received via BinkP are processed automatically
+during toss/poll (same pass as `.PKT` netmail). Payloads are installed into
+the local directory mapped by the ticket's `Area` tag. Use web **TIC → Process
+inbound** or `-fido-toss` to run TIC processing alone.
+
+**BinkP:** outbound poll and inbound server sessions transfer `.tic` files
+and their referenced payloads using the same address-tag routing as echomail
+`.pkt` fan-out (§6).
+
+### 9.4 Limitations
+
+- Export tracking is per source file, not per destination (same simplification
+  as echomail scan §8.3).
+- File scan is manual/CLI — not scheduled automatically (mirrors echomail scan).
 
 ---
 
@@ -550,6 +578,11 @@ than just confirming receipt.
 
 VirtBBS can automatically keep each network's nodelist current, without
 any manual download/import step.
+
+For the full picture — including **VirtNet hub generation**, echomail
+distribution, inbound echo processing, and SQLite storage — see
+[`VirtNet Nodelist Processing.md`](VirtNet%20Nodelist%20Processing.md).
+This section covers **FidoNet HTTP fetch** only.
 
 ### 12.1 How it works
 

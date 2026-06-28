@@ -2,7 +2,8 @@
 
 This document explains how VirtBBS handles FidoNet **AreaFix** (echomail subscriptions),
 **FileFix** (file-echo subscriptions), and **TIC** (file distribution). It complements
-the broader FidoNet setup guide in [`FidoNet Config.md`](FidoNet%20Config.md).
+the broader FidoNet setup guide in [`FidoNet Config.md`](FidoNet%20Config.md) and
+nodelist automation in [`VirtNet Nodelist Processing.md`](VirtNet%20Nodelist%20Processing.md).
 
 Implementation lives mainly in:
 
@@ -12,7 +13,8 @@ Implementation lives mainly in:
 | FileFix responder/requester | `internal/fido/filefix.go` |
 | Toss integration (inbound netmail) | `internal/fido/toss.go` |
 | Scan fan-out to downlinks (echomail only) | `internal/fido/scan.go` |
-| Subscription storage | `internal/messages/schema.sql` (`fido_areafix_subs`, `fido_filefix_subs`) |
+| TIC inbound/outbound/file scan | `internal/fido/tic.go`, `ticprocess.go`, `filescan.go` |
+| Subscription storage | `internal/messages/schema.sql` (`fido_areafix_subs`, `fido_filefix_subs`, `fido_file_exports`) |
 
 ---
 
@@ -23,15 +25,15 @@ All three are part of classic FidoNet **hub/downlink** operation:
 | Robot | Purpose | VirtBBS status |
 |-------|---------|----------------|
 | **AreaFix** | Subscribe/unsubscribe to **echomail** areas by netmail | Fully implemented (responder + requester + scan fan-out) |
-| **FileFix** | Subscribe/unsubscribe to **file echo** areas by netmail | Responder + requester implemented; subscriptions stored |
-| **TIC** | Distribute actual **files** for subscribed file areas (FTS-5005) | **Not implemented** — `tic_password` is reserved for future use |
+| **FileFix** | Subscribe/unsubscribe to **file echo** areas by netmail | Responder + requester + TIC distribution via file scan |
+| **TIC** | Distribute actual **files** for subscribed file areas (FTS-5005/5006) | **Implemented** — inbound processor + outbound file scan + BinkP |
 
 VirtBBS plays two roles for each robot:
 
 1. **Responder (hub)** — downlinks send netmail to `AreaFix` or `FileFix` at *your* address; VirtBBS validates them and updates subscriptions.
 2. **Requester (downlink)** — *you* send netmail to your uplink's robot to request areas for yourself.
 
-There is no TIC responder or requester code yet. FileFix only records *who wants which file areas*; nothing scans uploads and ships `.TIC` announcements the way `scan.go` ships echomail packets.
+There is no separate TIC netmail robot — FileFix manages subscriptions; **TIC** (`.TIC` tickets + payload files) handles distribution over BinkP after **file scan**.
 
 ---
 
@@ -80,9 +82,13 @@ Both robots use the same netmail body format (case-insensitive, one command per 
 |---------|--------|
 | First non-blank line | Must match the downlink's configured `password` (or may be omitted if password is blank) |
 | `+TAG` | Subscribe to area `TAG` |
+| `+TAG,R=N` | Subscribe and queue rescan of oldest `N` messages |
+| `+TAG,R` | Subscribe and queue full backlog rescan |
 | `-TAG` | Unsubscribe from area `TAG` |
 | `%LIST` | List all areas available on this BBS |
 | `%QUERY` | List current subscriptions for the sender |
+| `%RESCAN` | Rescan all currently subscribed areas; also sets rescan mode for subsequent `+TAG` lines |
+| `%RESCAN TAG` | Rescan backlog for one subscribed area |
 | `%HELP` | Show command summary |
 
 AreaFix netmail is addressed to **ToName `AreaFix`**. FileFix uses **ToName `FileFix`**.
@@ -128,9 +134,10 @@ During **toss** (`internal/fido/toss.go`), inbound netmail with `ToName` matchin
 
 1. Confirms the sender's address matches a configured downlink (`NetworkDef.DownlinkByAddr`).
 2. Validates the password from the first body line.
-3. Applies `+TAG` / `-TAG` / `%LIST` / `%QUERY` / `%HELP`.
+3. Applies `+TAG` / `-TAG` / `%LIST` / `%QUERY` / `%RESCAN` / `%HELP` (and `+TAG,R=N` backlog rescan).
 4. Validates echomail tags against conference `EchoTag` values (or legacy `[fido.areas]` map).
 5. Writes an **immediate reply** netmail (`replyAreaFix`) to the outbound directory via `WritePKT` — **not** via the scan step. Subject is `AreaFix response`; routed via your uplink like any other netmail.
+6. When a rescan is requested (`%RESCAN`, `%RESCAN TAG`, `+TAG,R=N`, or `%RESCAN` mode before `+TAG`), writes a separate downlink-only `.pkt` via `RescanEchoToDownlink()` — includes already-exported messages and does **not** call `MarkExported`.
 
 Upstream requests (`RequestAreaFix`) use subject `AreaFix`, write a `.pkt` immediately, and likewise bypass scan.
 
@@ -200,24 +207,15 @@ Example file-area mapping:
 
 Directory IDs correspond to `internal/files.Dir.ID` (visible in the sysop Files menu or management API).
 
-### Distribution (not implemented)
+### Distribution (file scan)
 
-Unlike AreaFix, **no scan step consumes FileFix subscriptions today**. `FileFixDB.SubscribedDownlinks()` exists for a future file-echo pipeline but is not called anywhere.
-
-A downlink can subscribe, receive a confirmation reply, and you can view subscriptions — but **no files are automatically sent** to downlinks based on those subscriptions.
+Unlike echomail, file distribution uses **TIC** (see below), not netmail. After downlinks subscribe via FileFix, run **file scan** to hatch `.TIC` tickets for unexported files in mapped `[fido.file_areas]` directories. Subscribed downlinks receive copies via the same BinkP fan-out pattern as AreaFix echomail (`FileFixDB.SubscribedDownlinks` in `internal/fido/filescan.go`).
 
 ### Requester flow (your uplink)
 
-Set `filefix_password`, then:
+Set `filefix_password`, then use terminal `[F]ileFix` → `[U]` or web **Tools** to send FileFix netmail to your uplink (`RequestFileFix()`).
 
-- **Terminal:** Sysop menu → FidoNet → `[F]ileFix` → `[U]pstream request`
-- **Web:** Admin → FidoNet → Tools → FileFix request form
-
-`RequestFileFix()` sends netmail to **ToName `FileFix`** at your uplink.
-
-### Database
-
-Table `fido_filefix_subs` — same structure as AreaFix, with `file_tag` instead of `area_tag`.
+Table `fido_filefix_subs` stores subscriptions (`file_tag` instead of `area_tag`).
 
 ---
 
@@ -225,29 +223,56 @@ Table `fido_filefix_subs` — same structure as AreaFix, with `file_tag` instead
 
 ### FidoNet convention
 
-**TIC** (Ticket Information Center, FTS-5005) is the mechanism that actually **moves files** in a file echo. When a hub receives or uploads a file in a file area, a TIC processor:
+**TIC** (Ticket Information Center, FTS-5005/5006) moves files in a file echo. A `.TIC` control file lists metadata (Area, File, CRC, Size, From, …) alongside the payload file. BinkP transfers both.
 
-1. Builds a `.TIC` ticket describing the file (area, filename, size, CRC, etc.).
-2. Bundles the file (often in a `.TIC` + file archive) for BinkP transfer to subscribed downlinks.
+FileFix answers *"which areas does this downlink want?"* TIC delivers *"here is a new file in that area."*
 
-FileFix answers *"which areas does this downlink want?"* TIC answers *"here is the new file in that area."*
+### VirtBBS implementation
 
-### VirtBBS status
+| Component | Source |
+|-----------|--------|
+| TIC parse/format/CRC | `internal/fido/tic.go` |
+| Inbound processor | `internal/fido/ticprocess.go` — `ProcessInboundTICs()` |
+| Outbound file scan | `internal/fido/filescan.go` — `FileScanAll()` |
+| Export tracking | `fido_file_exports` table (`internal/fido/ticdb.go`) |
+| BinkP queue | `binkpOutboundFilesFor()` sends `.tic` + payload files |
 
-| Item | Status |
-|------|--------|
-| `tic_password` config field | Present on `[fido]` and `[[fido.networks]]` |
-| Downlink authentication for TIC | Intended to reuse `[[fido.downlinks]].password` (same as AreaFix/FileFix) |
-| Inbound TIC processor | **Not implemented** |
-| Outbound file scan / `.TIC` generation | **Not implemented** |
-| BinkP file transfer for file echo | **Not implemented** |
+**Inbound flow** (after BinkP receive, during toss/poll):
 
-Configure `tic_password` if your uplink requires it for when VirtBBS gains TIC support; it has no effect on runtime behaviour today.
+1. Scan `inbound_dir` for `*.tic` files.
+2. Validate CRC/size; authenticate `Pw`/`From` against `[[fido.downlinks]].password` (hub) or `tic_password` (from uplink).
+3. Install payload into the directory mapped by `Area` → `[fido.file_areas]`.
+4. Move processed files to `inbound/.ticdone/`.
 
-When TIC is added, the expected shape is:
+**Outbound flow** (manual file scan):
 
-- **Inbound:** process TIC bundles from uplink during toss (similar to echomail packets) and install files into mapped `[fido.file_areas]` directories.
-- **Outbound:** a file-scan step (parallel to `scan.go`) that watches subscribed directories, generates TIC announcements, and queues them for subscribed downlinks — using `fido_filefix_subs` the way echomail scan uses `fido_areafix_subs`.
+1. For each file in a mapped file area not yet in `fido_file_exports`, build an FTS-5006 `.TIC`.
+2. Queue `.tic` + tagged payload copy in `outbound_dir` for the uplink and each FileFix-subscribed downlink (address tag embedded in filename, same pattern as echomail `.pkt` fan-out).
+3. Mark source file exported in `fido_file_exports`.
+
+### TIC ticket format (simplified)
+
+```
+Area GAMES
+Origin 227:1/77
+From 227:1/77
+File LovlyNet_227z1n1_20260102150405.000000_0_DEMO.ZIP
+Desc Demo upload
+Size 1024
+CRC 3610A686
+Path 1/77
+SeenBy 1/77
+Pw secret
+```
+
+### Authentication
+
+| Direction | Password |
+|-----------|----------|
+| Downlink → your hub (inbound TIC) | `[[fido.downlinks]].password` in `Pw` line |
+| Your uplink → you (inbound TIC) | `tic_password` in `Pw` line |
+| You → uplink (outbound TIC) | `tic_password` embedded when hatching for uplink |
+| You → downlink (outbound TIC) | downlink's `password` embedded in `Pw` |
 
 ---
 
@@ -255,12 +280,12 @@ When TIC is added, the expected shape is:
 
 | | AreaFix | FileFix | TIC |
 |---|---------|---------|-----|
-| **Netmail robot name** | `AreaFix` | `FileFix` | (none — binary/TIC protocol) |
+| **Netmail robot name** | `AreaFix` | `FileFix` | (none — `.TIC` + payload) |
 | **Tag maps to** | Conference `EchoTag` / `[fido.areas]` | `[fido.file_areas]` → file dir ID | File area (via FileFix tags) |
-| **Responder** | Yes | Yes | No |
-| **Requester (to uplink)** | Yes | Yes | No |
-| **Distribution after subscribe** | Yes — scan fan-out | No | No |
-| **DB table** | `fido_areafix_subs` | `fido_filefix_subs` | (none yet) |
+| **Responder** | Yes | Yes | Inbound processor |
+| **Requester (to uplink)** | Yes | Yes | Outbound file scan |
+| **Distribution after subscribe** | Yes — echomail scan | Yes — file scan (TIC) | Delivers files |
+| **DB table** | `fido_areafix_subs` | `fido_filefix_subs` | `fido_file_exports` |
 | **Uplink password config** | `areafix_password` | `filefix_password` | `tic_password` |
 
 ---
@@ -271,10 +296,29 @@ When TIC is added, the expected shape is:
 
 | Menu | Actions |
 |------|---------|
-| FidoNet → `[A]reaFix` | `[D]` add downlink, `[R]` remove downlink (clears AreaFix subs), `[U]` upstream AreaFix request, view subscriptions |
-| FidoNet → `[F]ileFix` | `[U]` upstream FileFix request, view file-area subscriptions per downlink |
+| FidoNet → `[A]reaFix` | `[D]` add downlink, `[R]` remove downlink (clears AreaFix **and** FileFix subs), `[U]` upstream AreaFix request |
+| FidoNet → `[F]ileFix` | `[U]` upstream FileFix request, view file-area subscriptions |
+| FidoNet → `[O]` (main menu) | TIC file scan — hatch outbound `.TIC` tickets |
+| FidoNet → `[T]` toss | Also processes inbound `.TIC` files |
 
-Removing a downlink via the AreaFix menu or web Downlinks page deletes its **AreaFix** subscriptions from `fido_areafix_subs`. **FileFix** subscriptions in `fido_filefix_subs` are not cleared automatically today — remove them manually via FileFix `-TAG` commands or direct DB maintenance if needed.
+### Web admin
+
+| Page | URL | Capabilities |
+|------|-----|--------------|
+| Downlinks | `/admin/fido/downlinks` | Add/edit/remove downlinks; AreaFix + FileFix subs; nodelist type |
+| TIC | `/admin/fido/tic` | File scan, process inbound TIC, export count, file-area map |
+| Operations | `/admin/fido/ops` | Toss, echomail scan, **file scan**, poll |
+| Tools | `/admin/fido/tools` | Upstream AreaFix/FileFix requests |
+| Networks | `/admin/fido/networks` | Passwords, `[fido.file_areas]`, downlinks textarea |
+
+### CLI
+
+```bash
+virtbbs -fido-filescan    # hatch outbound TIC for all networks
+virtbbs -fido-toss        # also processes inbound TIC
+```
+
+Removing a downlink (terminal `[R]`, web Downlinks, or join deny) clears both **AreaFix** and **FileFix** subscriptions.
 
 ### Automatic nodelist echo subscription
 
@@ -315,5 +359,7 @@ VirtBBS replies (subject `AreaFix response`) confirming subscription and listing
 
 - [`FidoNet Config.md`](FidoNet%20Config.md) — §8 AreaFix, §9 FileFix/TIC, toss/scan/BinkP context
 - `internal/fido/areafix.go` — command parser and reply writer
-- `internal/fido/filefix.go` — FileFix mirror; documents TIC limitation in file header
+- `internal/fido/filefix.go` — FileFix subscription protocol
+- `internal/fido/filescan.go` — outbound TIC file scan
+- `internal/fido/ticprocess.go` — inbound TIC processor
 - `internal/fido/scan.go` — echomail downlink fan-out (`appendEchoMessage`)

@@ -41,6 +41,7 @@ func RenameNetwork(cfg *Config, db *sql.DB, oldName, newName string) error {
 		tables := []string{
 			"fido_areafix_subs",
 			"fido_filefix_subs",
+			"fido_file_exports",
 			"fido_nodelist_versions",
 			"fido_join_requests",
 			"fido_members",

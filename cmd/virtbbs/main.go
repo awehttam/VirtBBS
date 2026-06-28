@@ -82,6 +82,9 @@ func main() {
 	importMsgCon := flag.Int("import-msgs-conf", 0,             "target conference ID for --import-msgs (default 0)")
 	fidoToss          := flag.Bool("fido-toss",            false, "toss all inbound .PKT files and exit")
 	fidoScan          := flag.Bool("fido-scan",            false, "scan echo messages to outbound .PKT and exit")
+	fidoFileScan      := flag.Bool("fido-filescan",        false, "scan file areas to outbound TIC and exit")
+	fidoRebuildMaps   := flag.Bool("fido-rebuild-maps",    false, "rebuild VirtNet network map diagrams (VirtDiag.zip) and exit")
+	fidoRebuildMapsNet := flag.String("fido-rebuild-maps-net", "", "network name for --fido-rebuild-maps (default: first hub network)")
 	importNodelist    := flag.String("import-nodelist",    "",    "import a NODELIST.xxx file (or dir) and exit")
 	importNodelistNet := flag.String("import-nodelist-net","FidoNet", "network name for --import-nodelist")
 	flag.Parse()
@@ -169,7 +172,7 @@ func main() {
 		return
 	}
 
-	if *fidoToss || *fidoScan {
+	if *fidoToss || *fidoScan || *fidoFileScan || *fidoRebuildMaps {
 		msgStore, err := messages.Open(sqlDB)
 		if err != nil {
 			log.Fatalf("messages store: %v", err)
@@ -181,11 +184,16 @@ func main() {
 		if confStore != nil {
 			defer confStore.Close()
 		}
+		fileStore, _ := files.Open(sqlDB, cfg.Paths.Files)
+		var fileArea fido.FileArea
+		if fileStore != nil {
+			fileArea = fileStore
+		}
 
 		if *fidoToss {
-			result := fido.TossAll(fidoCfg, msgStore, confStore, cfg.Sysop.Name)
-			fmt.Printf("Toss complete: %d packets, %d imported, %d skipped, %d held\n",
-				result.Packets, result.Imported, result.Skipped, result.Orphaned)
+			result := fido.TossAll(fidoCfg, msgStore, confStore, cfg.Sysop.Name, fileArea)
+			fmt.Printf("Toss complete: %d packets, %d imported, %d skipped, %d held, %d TIC\n",
+				result.Packets, result.Imported, result.Skipped, result.Orphaned, result.TICProcessed)
 			for _, e := range result.Errors {
 				fmt.Fprintln(os.Stderr, "  ERROR:", e)
 			}
@@ -200,6 +208,49 @@ func main() {
 				result.Scanned, result.PKTFiles)
 			for _, e := range result.Errors {
 				fmt.Fprintln(os.Stderr, "  ERROR:", e)
+			}
+		}
+
+		if *fidoFileScan {
+			result, err := fido.FileScanAll(fidoCfg, sqlDB, cfg.Paths.Files)
+			if err != nil {
+				log.Fatalf("fido-filescan: %v", err)
+			}
+			fmt.Printf("File scan complete: %d file(s) in %d TIC ticket(s)\n",
+				result.Files, result.TICFiles)
+			for _, e := range result.Errors {
+				fmt.Fprintln(os.Stderr, "  ERROR:", e)
+			}
+		}
+
+		if *fidoRebuildMaps {
+			netName := strings.TrimSpace(*fidoRebuildMapsNet)
+			var nd *fido.NetworkDef
+			if netName != "" {
+				if n := fidoCfg.NetworkByName(netName); n != nil {
+					nd = n
+				} else {
+					log.Fatalf("fido-rebuild-maps: network %q not found", netName)
+				}
+			} else {
+				for _, n := range fidoCfg.AllNetworks() {
+					if n.Enabled && n.IsHub() {
+						ndCopy := n
+						nd = &ndCopy
+						break
+					}
+				}
+				if nd == nil {
+					log.Fatal("fido-rebuild-maps: no enabled hub network found — set --fido-rebuild-maps-net")
+				}
+			}
+			count, warns := fido.RebuildNetworkDiagrams(nd, sqlDB, fileArea, cfg.BBS.Name, cfg.Sysop.Name)
+			if count == 0 && len(warns) > 0 {
+				log.Fatalf("fido-rebuild-maps: %s", strings.Join(warns, "; "))
+			}
+			fmt.Printf("Network maps rebuilt for %s: %d diagram(s) in VirtDiag.zip\n", nd.Name, count)
+			for _, w := range warns {
+				fmt.Fprintln(os.Stderr, "  WARNING:", w)
 			}
 		}
 		return
@@ -317,7 +368,7 @@ func main() {
 
 		// Start the BinkP server so other systems (our uplink, or our own
 		// downlinks) can poll THIS BBS instead of only the reverse.
-		if _, err := fido.ServeBinkP(&cfg.Fido, msgStore, confStore, cfg.Sysop.Name); err != nil {
+		if _, err := fido.ServeBinkP(&cfg.Fido, msgStore, confStore, cfg.Sysop.Name, fileStore); err != nil {
 			fido.LogBinkp(fmt.Sprintf("BinkP server error: %v", err))
 		}
 

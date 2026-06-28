@@ -53,16 +53,12 @@ import (
 )
 
 // FileArea is the minimal subset of *files.Store the VirtNet file-area
-// features (NodeChgs.txt, generated nodelist/diagram files) need.
-// *files.Store satisfies this implicitly — see the file header comment for
-// why fido can't import internal/files directly to spell that out.
+// features and TIC processor need. *files.Store satisfies this implicitly.
 type FileArea interface {
-	// EnsureDir finds or creates a file area named name, returning its ID
-	// and absolute on-disk path to write payload files into directly.
 	EnsureDir(name, description string) (dirID int64, dirPath string, err error)
-	// RegisterUpload records a file already written to dirPath (from
-	// EnsureDir) into the database.
 	RegisterUpload(dirID int64, filename, description, uploader string) error
+	UploadDir(dirID int64) string
+	InstallFile(dirID int64, srcPath, destName, description, uploader string) error
 }
 
 // EnsureConference finds a conference literally named name, creating it

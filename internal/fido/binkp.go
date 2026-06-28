@@ -188,7 +188,7 @@ type PollAndTossResult struct {
 // This is the single entry point shared by the sysop "[P]oll uplink" menu,
 // the "fido.poll" management API, and the automatic scheduler, so all three
 // behave identically.
-func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string) *PollAndTossResult {
+func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea) *PollAndTossResult {
 	if store != nil {
 		if qr := ScanNetmailQueue(nd, store.DB()); qr != nil {
 			for _, e := range qr.Errors {
@@ -222,7 +222,7 @@ func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.S
 		}
 	}
 
-	tossResult, err := TossDir(nd, store, confStore, sysopName)
+	tossResult, err := TossDir(nd, store, confStore, sysopName, fileArea)
 	if err != nil {
 		tossResult = &TossResult{Errors: []string{err.Error()}}
 	}
@@ -250,7 +250,7 @@ func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.S
 // Returns a stop function that closes all listeners. Logs session activity
 // and errors with the standard logger; never returns an error itself once
 // listening has started (per-connection failures are logged, not fatal).
-func ServeBinkP(cfg *Config, store *messages.Store, confStore *conferences.Store, sysopName string) (stop func(), err error) {
+func ServeBinkP(cfg *Config, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea) (stop func(), err error) {
 	portCandidates := map[int][]NetworkDef{}
 	for _, nd := range cfg.AllNetworks() {
 		if !nd.Enabled {
@@ -274,7 +274,7 @@ func ServeBinkP(cfg *Config, store *messages.Store, confStore *conferences.Store
 		}
 		listeners = append(listeners, ln)
 		LogBinkp(fmt.Sprintf("BinkP listening on %s (%d network(s))", addr, len(candidates)))
-		go binkpAcceptLoop(ln, candidates, store, confStore, sysopName)
+		go binkpAcceptLoop(ln, candidates, store, confStore, sysopName, fileArea)
 	}
 
 	return func() {
@@ -284,20 +284,20 @@ func ServeBinkP(cfg *Config, store *messages.Store, confStore *conferences.Store
 	}, nil
 }
 
-func binkpAcceptLoop(ln net.Listener, candidates []NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string) {
+func binkpAcceptLoop(ln net.Listener, candidates []NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			return // listener closed
 		}
-		go binkpHandleIncoming(conn, candidates, store, confStore, sysopName)
+		go binkpHandleIncoming(conn, candidates, store, confStore, sysopName, fileArea)
 	}
 }
 
 // binkpHandleIncoming answers one inbound BinkP connection: handshake,
 // identify and authenticate the caller, receive their files, send back
 // whatever is queued for them, then toss what was received.
-func binkpHandleIncoming(conn net.Conn, candidates []NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string) {
+func binkpHandleIncoming(conn net.Conn, candidates []NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea) {
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(5 * time.Minute))
 	bp := &binkpConn{conn: conn}
@@ -401,7 +401,7 @@ func binkpHandleIncoming(conn net.Conn, candidates []NetworkDef, store *messages
 	RecordServerSession(nd.Name, linkType, peerKey, true, len(sent), len(received))
 
 	if len(received) > 0 {
-		if tr, err := TossDir(nd, store, confStore, sysopName); err != nil {
+		if tr, err := TossDir(nd, store, confStore, sysopName, fileArea); err != nil {
 			LogBinkp(fmt.Sprintf("binkp server [%s]: auto-toss error: %v", nd.Name, err))
 		} else {
 			logTossResult(nd.Name, "server", tr)
@@ -476,53 +476,20 @@ func binkpMatchPeer(candidates []NetworkDef, peerAddrs []string) (nd *NetworkDef
 
 // binkpOutboundFilesFor returns the paths of files queued for a specific
 // peer: if dl is set (the peer is a known downlink), only files whose name
-// was tagged with that downlink's address by the AreaFix scan-time fan-out
-// (see scan.go's sanitizeAddrForFilename); otherwise (the peer is our
-// uplink) every file NOT specifically tagged for one of our own downlinks.
-// Either way, any crash-routed netmail queued in that peer's OutboundDir
-// subdirectory is included too.
+// was tagged with that downlink's address by scan/file-scan fan-out; otherwise
+// (the peer is our uplink) every file NOT specifically tagged for one of our
+// own downlinks. Includes .pkt, .tic, and TIC payload files.
 func binkpOutboundFilesFor(nd *NetworkDef, dl *Downlink, peerAddr Addr) []string {
 	var out []string
 	entries, _ := os.ReadDir(nd.OutboundDir)
+	downlinkTags := downlinkOutboundTags(nd)
 
 	if dl != nil {
 		tag := sanitizeAddrForFilename(peerAddr)
-		for _, e := range entries {
-			if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".pkt") {
-				continue
-			}
-			if strings.Contains(e.Name(), tag) {
-				out = append(out, filepath.Join(nd.OutboundDir, e.Name()))
-			}
-		}
-	} else {
-		for _, e := range entries {
-			if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".pkt") {
-				continue
-			}
-			taggedForADownlink := false
-			for _, other := range nd.Downlinks {
-				a, err := ParseAddr(other.Address)
-				if err != nil {
-					continue
-				}
-				if strings.Contains(e.Name(), sanitizeAddrForFilename(a)) {
-					taggedForADownlink = true
-					break
-				}
-			}
-			if !taggedForADownlink {
-				out = append(out, filepath.Join(nd.OutboundDir, e.Name()))
-			}
-		}
-	}
-
-	if dl != nil {
+		out = append(out, filterTaggedOutbound(nd.OutboundDir, entries, tag, true)...)
 		appendOutboundSubdirFiles(&out, nd.OutboundDir, peerAddr)
 	} else {
-		// Uplink poll: a point node sends everything queued in any BSO-style
-		// *.OUT bucket (crash or routing-table next-hop), not only the uplink's
-		// own subdirectory.
+		out = append(out, filterTaggedOutbound(nd.OutboundDir, entries, "", false, downlinkTags)...)
 		for _, e := range entries {
 			if !e.IsDir() || !strings.HasSuffix(strings.ToUpper(e.Name()), ".OUT") {
 				continue
@@ -538,10 +505,6 @@ func binkpOutboundFilesFor(nd *NetworkDef, dl *Downlink, peerAddr Addr) []string
 		}
 	}
 
-	// VirtNet: for networks this BBS hosts (no uplink), unconditionally
-	// offer the latest generated nodelist alongside whatever's tagged for
-	// this peer — every member gets the current nodelist on every poll,
-	// not just via the echomail distribution path (nodelistecho.go).
 	if nd.IsHub() {
 		if latest := latestNodelistFile(nd.NodelistDir, "VirtNode.Z"); latest != "" {
 			out = append(out, latest)
@@ -549,6 +512,99 @@ func binkpOutboundFilesFor(nd *NetworkDef, dl *Downlink, peerAddr Addr) []string
 		if latest := latestNodelistFile(nd.NodelistDir, "VirtNode.D"); latest != "" {
 			out = append(out, latest)
 		}
+	}
+	return dedupePaths(out)
+}
+
+func downlinkOutboundTags(nd *NetworkDef) map[string]bool {
+	tags := map[string]bool{}
+	for _, dl := range nd.Downlinks {
+		if a, err := ParseAddr(dl.Address); err == nil {
+			tags[sanitizeAddrForFilename(a)] = true
+		}
+	}
+	return tags
+}
+
+func filterTaggedOutbound(dir string, entries []os.DirEntry, wantTag string, requireTag bool, excludeTags ...map[string]bool) []string {
+	var excl map[string]bool
+	if len(excludeTags) > 0 {
+		excl = excludeTags[0]
+	}
+	var out []string
+	var ticFiles []string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !isBinkpOutboundCandidate(name) {
+			continue
+		}
+		if requireTag {
+			if !strings.Contains(name, wantTag) {
+				continue
+			}
+		} else if excl != nil {
+			tagged := false
+			for tag := range excl {
+				if strings.Contains(name, tag) {
+					tagged = true
+					break
+				}
+			}
+			if tagged {
+				continue
+			}
+		}
+		full := filepath.Join(dir, name)
+		out = append(out, full)
+		if strings.EqualFold(filepath.Ext(name), ".tic") {
+			ticFiles = append(ticFiles, full)
+		}
+	}
+	for _, ticPath := range ticFiles {
+		if payload := ticPayloadPath(ticPath); payload != "" {
+			out = append(out, payload)
+		}
+	}
+	return out
+}
+
+func isBinkpOutboundCandidate(name string) bool {
+	ext := strings.ToLower(filepath.Ext(name))
+	switch ext {
+	case ".pkt", ".tic", ".zip", ".rar", ".lha", ".lzh", ".arj", ".zoo", ".gz", ".7z":
+		return true
+	}
+	return ext == "" || strings.Contains(name, "_")
+}
+
+func ticPayloadPath(ticPath string) string {
+	body, err := os.ReadFile(ticPath)
+	if err != nil {
+		return ""
+	}
+	ticket, err := ParseTIC(body)
+	if err != nil || ticket.File == "" {
+		return ""
+	}
+	payload := filepath.Join(filepath.Dir(ticPath), ticket.File)
+	if _, err := os.Stat(payload); err != nil {
+		return ""
+	}
+	return payload
+}
+
+func dedupePaths(in []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, p := range in {
+		if p == "" || seen[p] {
+			continue
+		}
+		seen[p] = true
+		out = append(out, p)
 	}
 	return out
 }

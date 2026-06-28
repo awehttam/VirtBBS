@@ -65,3 +65,11 @@ func TestRebuildHubNodelistDB_preservesImportedFidoNet(t *testing.T) {
 		t.Fatalf("RebuildHubNodelistDB wiped imported FidoNet rows: got %d nodes, want 3", count)
 	}
 }
+
+func TestRebuildNetworkDiagrams_nonHub(t *testing.T) {
+	nd := &NetworkDef{Name: "FidoNet", Uplink: "1:105/1"}
+	count, warns := RebuildNetworkDiagrams(nd, nil, nil, "BBS", "Sysop")
+	if count != 0 || len(warns) == 0 {
+		t.Fatalf("non-hub: got count=%d warns=%v, want 0 warns", count, warns)
+	}
+}

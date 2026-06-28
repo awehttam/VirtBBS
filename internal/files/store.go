@@ -35,6 +35,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -306,6 +307,31 @@ func (s *Store) EnsureDirPath(dirID int64) error {
 // UploadDir returns the path for storing an uploaded file.
 func (s *Store) UploadDir(dirID int64) string {
 	return filepath.Join(s.filesRoot, s.dirPath(dirID))
+}
+
+// InstallFile copies srcPath into dirID as destName and registers it.
+func (s *Store) InstallFile(dirID int64, srcPath, destName, description, uploader string) error {
+	if err := s.EnsureDirPath(dirID); err != nil {
+		return err
+	}
+	dest := filepath.Join(s.UploadDir(dirID), destName)
+	in, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	return s.RegisterUpload(dirID, destName, description, uploader)
 }
 
 func (s *Store) dirPath(dirID int64) string {

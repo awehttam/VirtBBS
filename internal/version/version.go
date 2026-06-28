@@ -272,6 +272,9 @@
 //                        i18n; ^ALANG kludge and user locale; real name and echo From-name
 //                        policy; profile editing; sysop Fido raw-source view for netmail/echo.
 //   v1.3.0  2026-06-28  Bootstrap 5 + jQuery responsive web UI (collapsible nav, cards, grids).
+//   v1.6.0  2026-06-28  TIC file-echo pipeline (inbound/outbound, file scan, admin UI);
+//                        AreaFix %RESCAN and +TAG,R=N backlog export; VirtNet nodelist
+//                        processing doc; manual hub network-map rebuild (admin, sysop, CLI).
 //   v1.5.2  2026-06-28  Conference new-message counts after deletes, member-only hub
 //                        nodelist rebuild, netmail queue export on BinkP poll, web netmail
 //                        crash option and load errors, BinkP bulletin view, IBN dial fixes.
@@ -291,4 +294,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "1.5.2"
+const Version = "1.6.0"

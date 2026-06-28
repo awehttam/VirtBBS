@@ -394,6 +394,29 @@ func (s *Store) ListEcho(conferenceID, limit, offset int) ([]*Message, error) {
 	return scanMessages(rows)
 }
 
+// ListEchoRescan returns echo-flagged messages in a conference including those
+// already exported, oldest first. limit 0 means no row cap. Used by AreaFix
+// %RESCAN to rebuild backlog packets for a downlink without re-marking export
+// state (which would suppress uplink retransmission).
+func (s *Store) ListEchoRescan(conferenceID, limit int) ([]*Message, error) {
+	q := `SELECT ` + messageCols + `
+		FROM messages WHERE conference_id=? AND echo=1 AND status!='D'
+		ORDER BY msg_number ASC`
+	var rows *sql.Rows
+	var err error
+	if limit > 0 {
+		q += ` LIMIT ?`
+		rows, err = s.db.Query(q, conferenceID, limit)
+	} else {
+		rows, err = s.db.Query(q, conferenceID)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanMessages(rows)
+}
+
 // HasFidoMsgID reports whether a message with the given FidoNet MSGID
 // already exists in the conference. Used by the toss pipeline to detect
 // duplicate packet processing (e.g. a crash between import and marking
