@@ -191,7 +191,7 @@ func main() {
 		}
 
 		if *fidoToss {
-			result := fido.TossAll(fidoCfg, msgStore, confStore, cfg.Sysop.Name, fileArea)
+			result := fido.TossAll(fidoCfg, msgStore, confStore, cfg.Sysop.Name, fileArea, cfg.Paths.Files)
 			fmt.Printf("Toss complete: %d packets, %d imported, %d skipped, %d held, %d TIC\n",
 				result.Packets, result.Imported, result.Skipped, result.Orphaned, result.TICProcessed)
 			for _, e := range result.Errors {
@@ -368,7 +368,7 @@ func main() {
 
 		// Start the BinkP server so other systems (our uplink, or our own
 		// downlinks) can poll THIS BBS instead of only the reverse.
-		if _, err := fido.ServeBinkP(&cfg.Fido, msgStore, confStore, cfg.Sysop.Name, fileStore); err != nil {
+		if _, err := fido.ServeBinkP(&cfg.Fido, msgStore, confStore, cfg.Sysop.Name, fileStore, cfg.Paths.Files); err != nil {
 			fido.LogBinkp(fmt.Sprintf("BinkP server error: %v", err))
 		}
 

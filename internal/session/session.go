@@ -1050,7 +1050,7 @@ func (s *session) sysopFidoMenu() {
 		switch cmd {
 		case "T":
 			s.writeln(ansi.Colorize(ansi.White, "Tossing inbound packets (all networks)…"))
-			result := fido.TossAll(&cfg.Fido, s.deps.Messages, s.deps.Conferences, cfg.Sysop.Name, s.deps.Files)
+			result := fido.TossAll(&cfg.Fido, s.deps.Messages, s.deps.Conferences, cfg.Sysop.Name, s.deps.Files, cfg.Paths.Files)
 			s.writeln(ansi.Colorize(ansi.BrightGreen, fmt.Sprintf(
 				"Toss complete: %d packet(s), %d imported, %d skipped, %d held, %d TIC file(s).",
 				result.Packets, result.Imported, result.Skipped, result.Orphaned, result.TICProcessed)))
@@ -2018,7 +2018,7 @@ func (s *session) fidoPoll() {
 
 	s.writeln(ansi.Colorize(ansi.White, fmt.Sprintf("Polling %s uplink %s…", target.Name, target.Uplink)))
 
-	result := fido.PollAndToss(target, s.deps.Messages, s.deps.Conferences, config.Get().Sysop.Name, s.deps.Files)
+	result := fido.PollAndToss(target, s.deps.Messages, s.deps.Conferences, config.Get().Sysop.Name, s.deps.Files, config.Get().Paths.Files)
 	if result.Poll.Error != nil {
 		s.writeln(ansi.Colorize(ansi.Red, "Poll error: "+result.Poll.Error.Error()))
 		return

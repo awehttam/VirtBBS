@@ -134,15 +134,32 @@ func ApplyPendingNodelistEcho(db *sql.DB, p *PendingNodelistEcho, fileArea FileA
 }
 
 // ProcessPendingNodelistEchoes drains the whole queue, applying each entry
-// via ApplyPendingNodelistEcho and clearing it on success. Call periodically
-// (the existing scheduler tick) and after a manual toss.
+// via ApplyPendingNodelistEcho and clearing it on success. Call after every
+// toss (TossDir) and from the scheduler's 1-minute echo ticker on hub and
+// member networks.
 func ProcessPendingNodelistEchoes(db *sql.DB, fileArea FileArea) []string {
+	return processPendingNodelistEchoes(db, fileArea, "")
+}
+
+// ProcessPendingNodelistEchoesForNetwork drains queued nodelist echoes for
+// one logical network name only.
+func ProcessPendingNodelistEchoesForNetwork(db *sql.DB, fileArea FileArea, network string) []string {
+	return processPendingNodelistEchoes(db, fileArea, network)
+}
+
+func processPendingNodelistEchoes(db *sql.DB, fileArea FileArea, network string) []string {
+	if fileArea == nil {
+		return []string{"file area store not available"}
+	}
 	var errs []string
 	pending, err := ListPendingNodelistEchoes(db)
 	if err != nil {
 		return []string{err.Error()}
 	}
 	for _, p := range pending {
+		if network != "" && p.Network != network {
+			continue
+		}
 		if err := ApplyPendingNodelistEcho(db, p, fileArea); err != nil {
 			errs = append(errs, fmt.Sprintf("echo %d: %v", p.ID, err))
 			continue

@@ -29,6 +29,9 @@
 //                        FidoNet poll+toss scheduler
 //   v0.5.0  2026-06-25  Add a second per-network ticker for automatic
 //                        nodelist fetching (fido.FetchAndImport)
+//   v1.6.0  2026-06-28  Member networks: drain nodelist echo queue on
+//                        startup, after poll+toss, and every 1 minute
+//                        (ProcessPendingNodelistEchoesForNetwork).
 // ============================================================================
 
 // Package scheduler runs background tasks for the VirtBBS server. Currently
@@ -100,9 +103,7 @@ func Start(store *messages.Store, confStore *conferences.Store, fileStore *files
 // runDayRollover regenerates a hub network's VirtNet nodelist/diff/change-
 // log/diagrams once every 24h, and once immediately at startup (files only —
 // no echo conference posts until the first daily rollover). Also drains any
-// pending inbound nodelist echoes (fido.ProcessPendingNodelistEchoes) once
-// per minute — fast enough that a freshly-tossed echo is applied locally
-// well within the same session a sysop might check it in.
+// pending inbound nodelist echoes for this network once per minute.
 func runDayRollover(networkName string, store *messages.Store, confStore *conferences.Store, fileStore *files.Store, stop <-chan struct{}) {
 	nd := config.Get().Fido.NetworkByName(networkName)
 	if nd == nil {
@@ -122,6 +123,7 @@ func runDayRollover(networkName string, store *messages.Store, confStore *confer
 		}
 	}
 	runRollover(false) // startup: regenerate files locally, defer echo posts to daily rollover
+	drainPendingNodelistEchoes(networkName, store, fileStore)
 
 	dayTicker := time.NewTicker(24 * time.Hour)
 	defer dayTicker.Stop()
@@ -139,15 +141,24 @@ func runDayRollover(networkName string, store *messages.Store, confStore *confer
 			if nd == nil || !nd.Enabled || !nd.IsHub() {
 				continue
 			}
-			for _, w := range fido.ProcessPendingNodelistEchoes(store.DB(), fileStore) {
-				log.Printf("virtnet scheduler: %s nodelist echo: %s", networkName, w)
-			}
+			drainPendingNodelistEchoes(networkName, store, fileStore)
 		}
 	}
 }
 
+func drainPendingNodelistEchoes(networkName string, store *messages.Store, fileStore *files.Store) {
+	if fileStore == nil {
+		return
+	}
+	for _, w := range fido.ProcessPendingNodelistEchoesForNetwork(store.DB(), fileStore, networkName) {
+		log.Printf("nodelist echo [%s]: %s", networkName, w)
+	}
+}
+
 // runNetwork polls and tosses one network on its own ticker until stop is
-// closed, re-reading live config every tick.
+// closed, re-reading live config every tick. After each poll+toss, TossDir
+// applies any queued VirtNet nodelist echoes; a 1-minute backup ticker also
+// drains the queue for this network (covers manual toss without poll).
 func runNetwork(networkName string, store *messages.Store, confStore *conferences.Store, fileStore *files.Store, stop <-chan struct{}) {
 	nd := config.Get().Fido.NetworkByName(networkName)
 	if nd == nil {
@@ -156,13 +167,23 @@ func runNetwork(networkName string, store *messages.Store, confStore *conference
 	interval := nd.EffectivePollInterval()
 	log.Printf("fido scheduler: %s — polling every %s", networkName, interval)
 
+	drainPendingNodelistEchoes(networkName, store, fileStore)
+
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+	echoTicker := time.NewTicker(1 * time.Minute)
+	defer echoTicker.Stop()
 
 	for {
 		select {
 		case <-stop:
 			return
+		case <-echoTicker.C:
+			nd := config.Get().Fido.NetworkByName(networkName)
+			if nd == nil || !nd.Enabled || nd.Uplink == "" {
+				continue
+			}
+			drainPendingNodelistEchoes(networkName, store, fileStore)
 		case <-ticker.C:
 			cfg := config.Get()
 			nd := cfg.Fido.NetworkByName(networkName)
@@ -182,7 +203,7 @@ func runNetwork(networkName string, store *messages.Store, confStore *conference
 			if fileStore != nil {
 				fileArea = fileStore
 			}
-			result := fido.PollAndToss(nd, store, confStore, config.Get().Sysop.Name, fileArea)
+			result := fido.PollAndToss(nd, store, confStore, config.Get().Sysop.Name, fileArea, config.Get().Paths.Files)
 			if result.Poll.Error != nil {
 				fido.LogBinkp(fmt.Sprintf("fido scheduler: %s poll error: %v", networkName, result.Poll.Error))
 				continue

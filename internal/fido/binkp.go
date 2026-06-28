@@ -188,7 +188,7 @@ type PollAndTossResult struct {
 // This is the single entry point shared by the sysop "[P]oll uplink" menu,
 // the "fido.poll" management API, and the automatic scheduler, so all three
 // behave identically.
-func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea) *PollAndTossResult {
+func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea, filesRoot string) *PollAndTossResult {
 	if store != nil {
 		if qr := ScanNetmailQueue(nd, store.DB()); qr != nil {
 			for _, e := range qr.Errors {
@@ -222,7 +222,7 @@ func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.S
 		}
 	}
 
-	tossResult, err := TossDir(nd, store, confStore, sysopName, fileArea)
+	tossResult, err := TossDir(nd, store, confStore, sysopName, fileArea, filesRoot)
 	if err != nil {
 		tossResult = &TossResult{Errors: []string{err.Error()}}
 	}
@@ -250,7 +250,7 @@ func PollAndToss(nd *NetworkDef, store *messages.Store, confStore *conferences.S
 // Returns a stop function that closes all listeners. Logs session activity
 // and errors with the standard logger; never returns an error itself once
 // listening has started (per-connection failures are logged, not fatal).
-func ServeBinkP(cfg *Config, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea) (stop func(), err error) {
+func ServeBinkP(cfg *Config, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea, filesRoot string) (stop func(), err error) {
 	portCandidates := map[int][]NetworkDef{}
 	for _, nd := range cfg.AllNetworks() {
 		if !nd.Enabled {
@@ -274,7 +274,7 @@ func ServeBinkP(cfg *Config, store *messages.Store, confStore *conferences.Store
 		}
 		listeners = append(listeners, ln)
 		LogBinkp(fmt.Sprintf("BinkP listening on %s (%d network(s))", addr, len(candidates)))
-		go binkpAcceptLoop(ln, candidates, store, confStore, sysopName, fileArea)
+		go binkpAcceptLoop(ln, candidates, store, confStore, sysopName, fileArea, filesRoot)
 	}
 
 	return func() {
@@ -284,20 +284,20 @@ func ServeBinkP(cfg *Config, store *messages.Store, confStore *conferences.Store
 	}, nil
 }
 
-func binkpAcceptLoop(ln net.Listener, candidates []NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea) {
+func binkpAcceptLoop(ln net.Listener, candidates []NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea, filesRoot string) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			return // listener closed
 		}
-		go binkpHandleIncoming(conn, candidates, store, confStore, sysopName, fileArea)
+		go binkpHandleIncoming(conn, candidates, store, confStore, sysopName, fileArea, filesRoot)
 	}
 }
 
 // binkpHandleIncoming answers one inbound BinkP connection: handshake,
 // identify and authenticate the caller, receive their files, send back
 // whatever is queued for them, then toss what was received.
-func binkpHandleIncoming(conn net.Conn, candidates []NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea) {
+func binkpHandleIncoming(conn net.Conn, candidates []NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea, filesRoot string) {
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(5 * time.Minute))
 	bp := &binkpConn{conn: conn}
@@ -401,7 +401,7 @@ func binkpHandleIncoming(conn net.Conn, candidates []NetworkDef, store *messages
 	RecordServerSession(nd.Name, linkType, peerKey, true, len(sent), len(received))
 
 	if len(received) > 0 {
-		if tr, err := TossDir(nd, store, confStore, sysopName, fileArea); err != nil {
+		if tr, err := TossDir(nd, store, confStore, sysopName, fileArea, filesRoot); err != nil {
 			LogBinkp(fmt.Sprintf("binkp server [%s]: auto-toss error: %v", nd.Name, err))
 		} else {
 			logTossResult(nd.Name, "server", tr)

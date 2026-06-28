@@ -28,6 +28,7 @@
 //   v0.4.0  2026-06-25  Initial implementation — FileFix responder (for downlink
 //                        file-area subscription requests) and request generator,
 //                        mirroring areafix.go's structure for echomail areas
+//   v0.5.0  2026-06-28  %RESCAN backlog TIC export, +TAG,R=N subscribe-with-rescan
 // ============================================================================
 
 package fido
@@ -38,7 +39,7 @@ package fido
 // managing FILE ECHO area subscriptions by netmail. Outbound distribution
 // is handled by filescan.go / ticprocess.go (FTS-5006 TIC tickets).
 //
-// Command syntax is identical to AreaFix, but tags refer to file areas
+// Command syntax mirrors AreaFix, but tags refer to file areas
 // (mapped to internal/files.Dir IDs via [fido.file_areas] /
 // [fido.networks.file_areas]) instead of echomail conferences:
 //
@@ -47,6 +48,8 @@ package fido
 //	-FILE_TAG       unsubscribe from FILE_TAG
 //	%LIST           list all file areas available to subscribe to
 //	%QUERY          list file areas currently subscribed to
+//	%RESCAN         rescan subscribed file areas (or set rescan mode for +TAG)
+//	%RESCAN TAG     rescan backlog for subscribed file area TAG
 //	%HELP           show this command summary
 
 import (
@@ -128,10 +131,11 @@ func (a *FileFixDB) SubscribedDownlinks(network, fileTag string) ([]string, erro
 // ProcessFileFixRequest handles an inbound netmail addressed to "FileFix".
 // It validates the sender against the network's configured Downlinks list
 // and the password supplied as the first non-blank body line, applies any
-// +TAG/-TAG/%LIST/%QUERY/%HELP commands found in the remaining lines, and
-// writes an immediate netmail reply summarising the result. Mirrors
-// ProcessAreaFixRequest exactly, substituting file areas for echo areas.
-func ProcessFileFixRequest(nd *NetworkDef, db *sql.DB, pm *Message) error {
+// +TAG/-TAG/%LIST/%QUERY/%RESCAN/%HELP commands found in the remaining lines,
+// and writes an immediate netmail reply summarising the result. When
+// filesRoot is non-empty, rescan commands queue backlog TIC files for the
+// downlink.
+func ProcessFileFixRequest(nd *NetworkDef, db *sql.DB, filesRoot string, pm *Message) error {
 	our := nd.NodeAddr()
 	if our == (Addr{}) {
 		return fmt.Errorf("filefix: invalid local address %q", nd.Address)
@@ -178,8 +182,46 @@ func ProcessFileFixRequest(nd *NetworkDef, db *sql.DB, pm *Message) error {
 		writeFileFixHelp(&out)
 	}
 
+	rescanMode := false
+
+	flushRescan := func(tags []string, maxFiles int, prefix string) {
+		if filesRoot == "" || len(tags) == 0 {
+			if filesRoot == "" {
+				fmt.Fprintf(&out, "  %srescan ERROR: files path not configured\r\n", prefix)
+			}
+			return
+		}
+		res, err := RescanFilesToDownlink(nd, db, filesRoot, downlinkAddr, tags, maxFiles)
+		if err != nil {
+			fmt.Fprintf(&out, "  %srescan ERROR: %v\r\n", prefix, err)
+			return
+		}
+		for _, e := range res.Errors {
+			fmt.Fprintf(&out, "  %srescan WARNING: %s\r\n", prefix, e)
+		}
+		if res.Files == 0 {
+			fmt.Fprintf(&out, "  %srescan — no files to send\r\n", prefix)
+		} else {
+			fmt.Fprintf(&out, "  %srescan — %d file(s) queued in %d TIC ticket(s)\r\n", prefix, res.Files, res.TICFiles)
+		}
+	}
+
+	subscribed := func(tag string) bool {
+		tags, err := filefixDB.SubscriptionsFor(nd.Name, downlinkAddr)
+		if err != nil {
+			return false
+		}
+		tag = strings.ToUpper(tag)
+		for _, t := range tags {
+			if t == tag {
+				return true
+			}
+		}
+		return false
+	}
+
 	for _, line := range cmdLines {
-		upper := strings.ToUpper(line)
+		upper := strings.ToUpper(strings.TrimSpace(line))
 		switch {
 		case upper == "%LIST" || upper == "LIST":
 			writeFileFixList(&out, nd)
@@ -187,11 +229,29 @@ func ProcessFileFixRequest(nd *NetworkDef, db *sql.DB, pm *Message) error {
 			writeFileFixQuery(&out, filefixDB, nd.Name, downlinkAddr)
 		case upper == "%HELP" || upper == "HELP" || upper == "?":
 			writeFileFixHelp(&out)
-		case strings.HasPrefix(line, "+"):
-			tag := strings.ToUpper(strings.TrimSpace(line[1:]))
-			if tag == "" {
+		case strings.HasPrefix(upper, "%RESCAN"):
+			tag, _ := parseAreaFixRescanLine(line)
+			if tag != "" {
+				if !subscribed(tag) {
+					fmt.Fprintf(&out, "  %-30s NOT SUBSCRIBED — not rescanned\r\n", tag)
+				} else {
+					flushRescan([]string{tag}, 0, "")
+				}
+			} else {
+				rescanMode = true
+				tags, err := filefixDB.SubscriptionsFor(nd.Name, downlinkAddr)
+				if err != nil || len(tags) == 0 {
+					out.WriteString("  %RESCAN — no subscribed areas (subsequent +TAG will rescan)\r\n")
+				} else {
+					flushRescan(tags, 0, "%RESCAN ")
+				}
+			}
+		case strings.HasPrefix(line, "+") || strings.HasPrefix(line, "="):
+			add, ok := parseAreaFixAddLine(line)
+			if !ok || add.tag == "" {
 				continue
 			}
+			tag := add.tag
 			if !fileFixTagExists(nd, tag) {
 				fmt.Fprintf(&out, "  +%-30s UNKNOWN FILE AREA — not added\r\n", tag)
 				continue
@@ -201,6 +261,11 @@ func ProcessFileFixRequest(nd *NetworkDef, db *sql.DB, pm *Message) error {
 				continue
 			}
 			fmt.Fprintf(&out, "  +%-30s subscribed\r\n", tag)
+			if add.rescanMax >= 0 {
+				flushRescan([]string{tag}, add.rescanMax, "")
+			} else if rescanMode {
+				flushRescan([]string{tag}, 0, "")
+			}
 		case strings.HasPrefix(line, "-"):
 			tag := strings.ToUpper(strings.TrimSpace(line[1:]))
 			if tag == "" {
@@ -225,7 +290,7 @@ func ProcessFileFixRequest(nd *NetworkDef, db *sql.DB, pm *Message) error {
 // fileFixTagExists reports whether tag is a configured file area
 // (present in nd.FileAreas, mapping to an internal/files.Dir ID).
 func fileFixTagExists(nd *NetworkDef, tag string) bool {
-	_, ok := nd.FileAreas[tag]
+	_, ok := nd.FileAreas[strings.ToUpper(tag)]
 	return ok
 }
 
@@ -259,11 +324,15 @@ func writeFileFixQuery(out *strings.Builder, filefixDB *FileFixDB, networkName, 
 
 func writeFileFixHelp(out *strings.Builder) {
 	out.WriteString("Commands (one per line, after your password):\r\n")
-	out.WriteString("  +TAG     subscribe to file area TAG\r\n")
-	out.WriteString("  -TAG     unsubscribe from file area TAG\r\n")
-	out.WriteString("  %LIST    list all file areas available\r\n")
-	out.WriteString("  %QUERY   list your current subscriptions\r\n")
-	out.WriteString("  %HELP    show this help\r\n\r\n")
+	out.WriteString("  +TAG         subscribe to file area TAG\r\n")
+	out.WriteString("  +TAG,R=N     subscribe and rescan N oldest files\r\n")
+	out.WriteString("  +TAG,R       subscribe and rescan full file backlog\r\n")
+	out.WriteString("  -TAG         unsubscribe from file area TAG\r\n")
+	out.WriteString("  %LIST        list all file areas available\r\n")
+	out.WriteString("  %QUERY       list your current subscriptions\r\n")
+	out.WriteString("  %RESCAN      rescan all subscribed file areas (+ sets rescan mode)\r\n")
+	out.WriteString("  %RESCAN TAG  rescan one subscribed file area\r\n")
+	out.WriteString("  %HELP        show this help\r\n\r\n")
 }
 
 // replyFileFix writes an immediate netmail reply from the FileFix robot

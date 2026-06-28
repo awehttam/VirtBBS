@@ -17,6 +17,13 @@ type FileScanResult struct {
 	Errors   []string
 }
 
+// FileRescanResult summarises a FileFix-triggered backlog rescan to one downlink.
+type FileRescanResult struct {
+	Files    int
+	TICFiles int
+	Errors   []string
+}
+
 // FileScanAll exports unexported files from every configured file area via TIC.
 func FileScanAll(cfg *Config, db *sql.DB, filesRoot string) (*FileScanResult, error) {
 	if !cfg.Enabled {
@@ -142,41 +149,10 @@ func fileScanNetwork(nd *NetworkDef, db *sql.DB, filesRoot string) (*FileScanRes
 			continue
 		}
 		d := dests[key]
-		for i, item := range items {
-			batch := fmt.Sprintf("%s_%s_%s_%04d", nd.Name, d.tag, tsBase, i)
-			payloadName := batch + "_" + sanitizeTICPayloadName(item.filename)
-			payloadPath := filepath.Join(nd.OutboundDir, payloadName)
-			if err := copyFile(item.srcPath, payloadPath); err != nil {
-				result.Errors = append(result.Errors, fmt.Sprintf("copy %s: %v", item.filename, err))
-				continue
-			}
-
-			ticket := &TICTicket{
-				Area:   item.areaTag,
-				Origin: our.String(),
-				From:   our.String(),
-				File:   payloadName,
-				Desc:   item.desc,
-				Size:   item.size,
-				CRC:    item.crc,
-				Path:   fmt.Sprintf("%d/%d", our.Net, our.Node),
-				SeenBy: fmt.Sprintf("%d/%d", our.Net, our.Node),
-			}
-			if nd.TicPassword != "" && uplink != (Addr{}) && d.addr == uplink {
-				ticket.Password = nd.TicPassword
-			}
-			if dl := nd.DownlinkByAddr(d.addr); dl != nil && dl.Password != "" {
-				ticket.Password = dl.Password
-			}
-
-			ticPath := filepath.Join(nd.OutboundDir, batch+".tic")
-			if err := os.WriteFile(ticPath, FormatTIC(ticket), 0644); err != nil {
-				result.Errors = append(result.Errors, fmt.Sprintf("write tic %s: %v", batch, err))
-				_ = os.Remove(payloadPath)
-				continue
-			}
-			result.TICFiles++
-		}
+		prefix := fmt.Sprintf("%s_%s_%s", nd.Name, d.tag, tsBase)
+		tics, errs := writeTICItemsForDest(nd, our, d.addr, uplink, items, prefix)
+		result.TICFiles += tics
+		result.Errors = append(result.Errors, errs...)
 	}
 
 	// Mark exported once at least one bucket succeeded for that file
@@ -195,6 +171,133 @@ func fileScanNetwork(nd *NetworkDef, db *sql.DB, filesRoot string) (*FileScanRes
 	}
 
 	return result, nil
+}
+
+// RescanFilesToDownlink exports files from fileTags to a single downlink via TIC,
+// including files already marked exported. Unlike FileScanAll it does not update
+// fido_file_exports, so normal file-scan uplink behaviour is unchanged.
+// maxFiles 0 sends the full catalog backlog per area (oldest by filename).
+func RescanFilesToDownlink(nd *NetworkDef, db *sql.DB, filesRoot, downlinkAddr string, fileTags []string, maxFiles int) (*FileRescanResult, error) {
+	result := &FileRescanResult{}
+	if filesRoot == "" {
+		return result, fmt.Errorf("filefix rescan: files root path required")
+	}
+	our := nd.NodeAddr()
+	if our == (Addr{}) {
+		return result, fmt.Errorf("filefix rescan: invalid local address %q", nd.Address)
+	}
+	dlAddr, err := ParseAddr(downlinkAddr)
+	if err != nil {
+		return result, fmt.Errorf("filefix rescan: invalid downlink address %q: %w", downlinkAddr, err)
+	}
+	if nd.DownlinkByAddr(dlAddr) == nil {
+		return result, fmt.Errorf("filefix rescan: %s is not a configured downlink", downlinkAddr)
+	}
+	if err := os.MkdirAll(nd.OutboundDir, 0755); err != nil {
+		return result, err
+	}
+
+	uplink := nd.UplinkAddr()
+	var items []ticOutboundItem
+	for _, tag := range fileTags {
+		tag = strings.ToUpper(strings.TrimSpace(tag))
+		if tag == "" {
+			continue
+		}
+		dirID, ok := nd.FileAreas[tag]
+		if !ok {
+			result.Errors = append(result.Errors, fmt.Sprintf("rescan: unknown file area %s", tag))
+			continue
+		}
+		dirID64 := int64(dirID)
+		catalog, err := queryCatalogFiles(db, dirID64)
+		if err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("rescan %s: %v", tag, err))
+			continue
+		}
+		if maxFiles > 0 && len(catalog) > maxFiles {
+			catalog = catalog[:maxFiles]
+		}
+		dirRel, err := queryDirPath(db, dirID64)
+		if err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("rescan %s path: %v", tag, err))
+			continue
+		}
+		srcDir := filepath.Join(filesRoot, dirRel)
+		for _, f := range catalog {
+			srcPath := filepath.Join(srcDir, f.Filename)
+			info, err := os.Stat(srcPath)
+			if err != nil || info.IsDir() {
+				continue
+			}
+			data, err := os.ReadFile(srcPath)
+			if err != nil {
+				result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", f.Filename, err))
+				continue
+			}
+			items = append(items, ticOutboundItem{
+				areaTag:  tag,
+				srcPath:  srcPath,
+				filename: f.Filename,
+				desc:     f.Description,
+				size:     info.Size(),
+				crc:      TICFileCRC(data),
+				dirID:    dirID64,
+			})
+		}
+	}
+
+	if len(items) == 0 {
+		return result, nil
+	}
+
+	destTag := sanitizeAddrForFilename(dlAddr)
+	tsBase := time.Now().Format("20060102150405.000000")
+	prefix := fmt.Sprintf("%s_%s_rescan_%s", nd.Name, destTag, tsBase)
+	tics, errs := writeTICItemsForDest(nd, our, dlAddr, uplink, items, prefix)
+	result.TICFiles = tics
+	result.Files = len(items)
+	result.Errors = append(result.Errors, errs...)
+	return result, nil
+}
+
+func writeTICItemsForDest(nd *NetworkDef, our, dest, uplink Addr, items []ticOutboundItem, batchPrefix string) (ticCount int, errs []string) {
+	for i, item := range items {
+		batch := fmt.Sprintf("%s_%04d", batchPrefix, i)
+		payloadName := batch + "_" + sanitizeTICPayloadName(item.filename)
+		payloadPath := filepath.Join(nd.OutboundDir, payloadName)
+		if err := copyFile(item.srcPath, payloadPath); err != nil {
+			errs = append(errs, fmt.Sprintf("copy %s: %v", item.filename, err))
+			continue
+		}
+
+		ticket := &TICTicket{
+			Area:   item.areaTag,
+			Origin: our.String(),
+			From:   our.String(),
+			File:   payloadName,
+			Desc:   item.desc,
+			Size:   item.size,
+			CRC:    item.crc,
+			Path:   fmt.Sprintf("%d/%d", our.Net, our.Node),
+			SeenBy: fmt.Sprintf("%d/%d", our.Net, our.Node),
+		}
+		if nd.TicPassword != "" && uplink != (Addr{}) && dest == uplink {
+			ticket.Password = nd.TicPassword
+		}
+		if dl := nd.DownlinkByAddr(dest); dl != nil && dl.Password != "" {
+			ticket.Password = dl.Password
+		}
+
+		ticPath := filepath.Join(nd.OutboundDir, batch+".tic")
+		if err := os.WriteFile(ticPath, FormatTIC(ticket), 0644); err != nil {
+			errs = append(errs, fmt.Sprintf("write tic %s: %v", batch, err))
+			_ = os.Remove(payloadPath)
+			continue
+		}
+		ticCount++
+	}
+	return ticCount, errs
 }
 
 type ticOutboundItem struct {

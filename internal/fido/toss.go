@@ -82,13 +82,13 @@ type TossResult struct {
 // aggregating the results. Disabled networks are skipped. Used wherever
 // "toss inbound mail" should mean *all* configured networks, not just the
 // primary one (sysop [T]oss menu, fido.toss API, -fido-toss CLI flag).
-func TossAll(cfg *Config, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea) *TossResult {
+func TossAll(cfg *Config, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea, filesRoot string) *TossResult {
 	total := &TossResult{}
 	for _, nd := range cfg.AllNetworks() {
 		if !nd.Enabled {
 			continue
 		}
-		r, err := TossDir(&nd, store, confStore, sysopName, fileArea)
+		r, err := TossDir(&nd, store, confStore, sysopName, fileArea, filesRoot)
 		if err != nil {
 			total.Errors = append(total.Errors, fmt.Sprintf("[%s] %v", nd.Name, err))
 			continue
@@ -110,7 +110,7 @@ func TossAll(cfg *Config, store *messages.Store, confStore *conferences.Store, s
 // echomail messages, and moves processed packets to <inbound>/.tossed/.
 // confStore may be nil (AreaFix's %LIST falls back to nd.Areas and area
 // validation is skipped for tag existence checks).
-func TossDir(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea) (*TossResult, error) {
+func TossDir(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName string, fileArea FileArea, filesRoot string) (*TossResult, error) {
 	if !nd.Enabled {
 		return nil, fmt.Errorf("network %s is disabled", nd.Name)
 	}
@@ -141,7 +141,7 @@ func TossDir(nd *NetworkDef, store *messages.Store, confStore *conferences.Store
 		}
 
 		pktPath := filepath.Join(nd.InboundDir, e.Name())
-		imp, skip, orphans, ni, ei, ns, es, nh, eh, notes, errs := tossFile(nd, store, confStore, pktPath)
+		imp, skip, orphans, ni, ei, ns, es, nh, eh, notes, errs := tossFile(nd, store, confStore, filesRoot, pktPath)
 		result.Packets++
 		result.Imported += imp
 		result.Skipped += skip
@@ -172,17 +172,20 @@ func TossDir(nd *NetworkDef, store *messages.Store, confStore *conferences.Store
 		for _, e := range ticRes.Errors {
 			result.Errors = append(result.Errors, "tic: "+e)
 		}
+		for _, e := range ProcessPendingNodelistEchoesForNetwork(store.DB(), fileArea, nd.Name) {
+			result.Errors = append(result.Errors, "nodelist echo: "+e)
+		}
 	}
 	return result, nil
 }
 
 // TossFile processes a single .PKT file, importing its messages.
-func TossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName, pktPath string) (imported, skipped, orphaned int, notes []OrphanNote, errs []string) {
-	imp, sk, orph, _, _, _, _, _, _, nts, es := tossFile(nd, store, confStore, pktPath)
+func TossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, sysopName, filesRoot, pktPath string) (imported, skipped, orphaned int, notes []OrphanNote, errs []string) {
+	imp, sk, orph, _, _, _, _, _, _, nts, es := tossFile(nd, store, confStore, filesRoot, pktPath)
 	return imp, sk, orph, nts, es
 }
 
-func tossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, pktPath string) (
+func tossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Store, filesRoot, pktPath string) (
 	imported, skipped, orphaned, netImported, echoImported, netSkipped, echoSkipped, netHeld, echoHeld int,
 	notes []OrphanNote, errs []string,
 ) {
@@ -232,7 +235,7 @@ func tossFile(nd *NetworkDef, store *messages.Store, confStore *conferences.Stor
 				}
 			}
 			if IsFileFixRequest(pm.ToName) {
-				if err := ProcessFileFixRequest(nd, store.DB(), pm); err != nil {
+				if err := ProcessFileFixRequest(nd, store.DB(), filesRoot, pm); err != nil {
 					errs = append(errs, fmt.Sprintf("filefix: %v", err))
 				}
 			}

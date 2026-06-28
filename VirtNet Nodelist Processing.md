@@ -179,7 +179,7 @@ For each enabled network **without uplink**:
 |------|--------|
 | **Startup** | `RunDayRollover(publish=false)` — regenerate local files and refresh `fido_nodes` from members; **no** echomail posts (avoids duplicate distribution on restart) |
 | **Every 24h** | `RunDayRollover(publish=true)` — full daily publish including echo posts |
-| **Every 1 min** | `ProcessPendingNodelistEchoes` — drain inbound nodelist echo queue (see §5) |
+| **Every 1 min** | `ProcessPendingNodelistEchoesForNetwork` — drain inbound nodelist echo queue for this hub network (see §5) |
 
 **Manual rebuild:** Sysop can regenerate `VirtDiag.zip` without a full rollover:
 
@@ -217,7 +217,7 @@ Import is deferred because applying the nodelist requires writing files through 
 
 ### Apply: file write + import
 
-`ProcessPendingNodelistEchoes` (`internal/fido/nodelistecho.go`):
+`ProcessPendingNodelistEchoes` / `ProcessPendingNodelistEchoesForNetwork` (`internal/fido/nodelistecho.go`):
 
 1. Derives filename from subject (`VirtNet Nodelist Z045` → `VirtNode.Z045`).
 2. Writes body to **`<NetworkName> Nodelist Files`** (auto-created file area).
@@ -229,10 +229,12 @@ Import is deferred because applying the nodelist requires writing files through 
 
 | Host role | Drain mechanism |
 |-----------|-----------------|
-| **Hub** (no uplink) | 1-minute ticker in `runDayRollover` |
-| **Member** (has uplink) | Queue is populated on toss after poll; **no dedicated scheduler ticker runs on member nodes today** — use manual import from the Nodelist Files area or web admin until member-side echo draining is added |
+| **Hub** (no uplink) | Startup drain + 1-minute ticker in `runDayRollover` (`ProcessPendingNodelistEchoesForNetwork`) |
+| **Member** (has uplink) | **Immediately after toss** in `TossDir` (post-poll) + startup drain + 1-minute ticker in `runNetwork` (`ProcessPendingNodelistEchoesForNetwork`) |
 
-> **Note:** If you operate a VirtNet **member** BBS, verify that received nodelists appear in `fido_nodes` after polling. If not, import the latest `VirtNode.Z*` file from **Nodelist Files** manually, or run `fido.nodelist.import` against the saved path.
+Both hub and member schedulers drain **one network at a time** so multi-network BBSes do not cross-apply echoes.
+
+> **Fallback:** If echoes were queued while the scheduler was stopped, restart the server or wait up to one minute for the echo ticker. You can also import the latest `VirtNode.Z*` from **Nodelist Files** manually or run `fido.nodelist.import` against the saved path.
 
 ---
 

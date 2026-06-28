@@ -25,7 +25,7 @@ All three are part of classic FidoNet **hub/downlink** operation:
 | Robot | Purpose | VirtBBS status |
 |-------|---------|----------------|
 | **AreaFix** | Subscribe/unsubscribe to **echomail** areas by netmail | Fully implemented (responder + requester + scan fan-out) |
-| **FileFix** | Subscribe/unsubscribe to **file echo** areas by netmail | Responder + requester + TIC distribution via file scan |
+| **FileFix** | Subscribe/unsubscribe to **file echo** areas by netmail; `%RESCAN` backlog TIC export | Responder + requester + TIC distribution via file scan |
 | **TIC** | Distribute actual **files** for subscribed file areas (FTS-5005/5006) | **Implemented** — inbound processor + outbound file scan + BinkP |
 
 VirtBBS plays two roles for each robot:
@@ -194,6 +194,8 @@ Same shape as AreaFix, implemented in `ProcessFileFixRequest()` (`internal/fido/
 - Uses the same `[[fido.downlinks]]` list and password rules.
 - Validates tags against `[fido.file_areas]` / `[[fido.networks.file_areas]]` (maps tag → local file directory ID).
 - Stores subscriptions in `fido_filefix_subs`.
+- Supports the same rescan commands as AreaFix: `%RESCAN`, `%RESCAN TAG`, `+TAG,R=N`, and `%RESCAN` mode before `+TAG`.
+- On rescan, writes downlink-only `.TIC` tickets via `RescanFilesToDownlink()` — includes already-exported files and does **not** update `fido_file_exports`.
 - Sends an immediate FileFix reply netmail (subject `FileFix response`; also via `WritePKT`, not scan).
 
 Example file-area mapping:

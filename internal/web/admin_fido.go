@@ -84,7 +84,7 @@ func (s *Server) handleAdminFidoOps(w http.ResponseWriter, r *http.Request) {
 			if !cfg.Fido.Enabled {
 				data.Error = "FidoNet not enabled"
 			} else {
-				res := fido.TossAll(&cfg.Fido, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name, s.Deps.Files)
+				res := fido.TossAll(&cfg.Fido, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name, s.Deps.Files, cfg.Paths.Files)
 				data.Flash = fmt.Sprintf("Toss complete — imported %d message(s), %d TIC file(s)", res.Imported, res.TICProcessed)
 			}
 		case "scan":
@@ -123,7 +123,7 @@ func (s *Server) handleAdminFidoOps(w http.ResponseWriter, r *http.Request) {
 			if nd == nil {
 				data.Error = "network not found"
 			} else {
-				res := fido.PollAndToss(nd, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name, s.Deps.Files)
+				res := fido.PollAndToss(nd, s.Deps.Messages, s.Deps.Conferences, cfg.Sysop.Name, s.Deps.Files, cfg.Paths.Files)
 				if res.Poll.Error != nil {
 					data.Error = res.Poll.Error.Error()
 				} else {
