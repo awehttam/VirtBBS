@@ -8,16 +8,13 @@
   <form method="post" action="/messages/post?conf={{.Conference.ID}}{{if .ReplyNum}}&amp;reply={{.ReplyNum}}{{end}}">
     <div class="mb-3">
       <label for="to" class="form-label">{{t .Locale "common.to"}}</label>
-    <input class="form-control" type="text" id="to" name="to" value="{{.ToName}}">
+      <input class="form-control" type="text" id="to" name="to" value="{{.ToName}}">
     </div>
     <div class="mb-3">
       <label for="subject" class="form-label">{{t .Locale "common.subject"}}</label>
-    <input class="form-control" type="text" id="subject" name="subject" value="{{.Subject}}" required>
+      <input class="form-control" type="text" id="subject" name="subject" value="{{.Subject}}" required>
     </div>
-    <div class="mb-3">
-      <label for="body" class="form-label">{{t .Locale "common.message"}}</label>
-    <textarea class="form-control" id="body" name="body" required>{{.Body}}</textarea>
-    </div>
+    {{template "compose_editor" (dict "Locale" .Locale "EditorType" .EditorType "ComposeI18nJSON" .ComposeI18nJSON "TextareaID" "body" "TextareaName" "body" "Body" .Body "Required" true)}}
     <button class="btn btn-primary" type="submit">{{t .Locale "post.submit"}}</button>
   </form>
   </div>

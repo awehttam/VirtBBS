@@ -1,55 +1,194 @@
 {{define "admin_fido_networks.html"}}
 {{template "header" .}}
-<div class="card mb-3 sysop-panel">
-  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "admin_fido_networks.title"}}</h2></div>
+<div class="card mb-3 sysop-panel admin-fido-networks">
+  <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <h2 class="h5 mb-0">{{t .Locale "admin_fido_networks.title"}}</h2>
+    <form method="post" class="m-0">
+      <input type="hidden" name="action" value="add_network">
+      <button class="btn btn-sm btn-outline-primary" type="submit">{{t .Locale "admin_fido_networks.add_network"}}</button>
+    </form>
+  </div>
   <div class="card-body">
-  <p><a href="/admin/fido">{{t .Locale "common.fido_back"}}</a></p>
-  {{if .Flash}}<p class="alert alert-success">{{.Flash}}</p>{{end}}
-  {{if .Error}}<p class="alert alert-danger">{{.Error}}</p>{{end}}
-  <form method="get" class="inline-form">
-    <label>{{t .Locale "common.network"}} <select class="form-select" name="network" onchange="this.form.submit()">{{range .Networks}}<option {{if eq $.Network .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
-  </form>
-  <form method="post" class="admin-form">
-    <input type="hidden" name="network" value="{{.Network}}">
-    <input type="hidden" name="action" value="save">
-    <label>{{t .Locale "admin_fido_networks.network_name"}} <input class="form-control" name="network_name" value="{{.Def.Name}}"></label>
-    <label><input type="checkbox" name="enabled" value="1" {{if .Def.Enabled}}checked{{end}}> {{t .Locale "common.enabled"}}</label>
-    <label>{{t .Locale "admin_fido_networks.address"}} <input class="form-control" name="address" value="{{.Def.Address}}"></label>
-    <label>{{t .Locale "admin_fido_networks.uplink"}} <input class="form-control" name="uplink" value="{{.Def.Uplink}}"></label>
-    <label>{{t .Locale "common.password"}} <input class="form-control" name="password" value="{{.Def.Password}}"></label>
-    <label>{{t .Locale "admin_fido_networks.inbound_dir"}} <input class="form-control" name="inbound_dir" value="{{.Def.InboundDir}}"></label>
-    <label>{{t .Locale "admin_fido_networks.outbound_dir"}} <input class="form-control" name="outbound_dir" value="{{.Def.OutboundDir}}"></label>
-    <label>{{t .Locale "admin_fido_networks.nodelist_dir"}} <input class="form-control" name="nodelist_dir" value="{{.Def.NodelistDir}}"></label>
-    <label>{{t .Locale "admin_fido_networks.holding_dir"}} <input class="form-control" name="holding_dir" value="{{.Def.HoldingDir}}"></label>
-    <label>{{t .Locale "admin_fido_networks.binkp_port"}} <input class="form-control" type="number" name="binkp_port" value="{{.Def.BinkpPort}}"></label>
-    <label>{{t .Locale "admin_fido_networks.poll_interval"}} <input class="form-control" type="number" name="poll_interval_mins" value="{{.Def.PollIntervalMins}}"></label>
-    <label>{{t .Locale "admin_fido_networks.nodelist_url"}} <input class="form-control" name="nodelist_url" value="{{.Def.NodelistURL}}"></label>
-    <label>{{t .Locale "admin_fido_networks.nodelist_update"}} <input class="form-control" type="number" name="nodelist_update_hours" value="{{.Def.NodelistUpdateIntervalHours}}"></label>
-    {{if not .IsPrimary}}<label>{{t .Locale "admin_fido_networks.nodelist_echo_tag"}} <input class="form-control" name="nodelist_echo_tag" value="{{.Def.NodelistEchoTag}}"></label>{{end}}
-    <label>{{t .Locale "admin_fido_networks.areafix_password"}} <input class="form-control" name="areafix_password" value="{{.Def.AreaFixPassword}}"></label>
-    <label>{{t .Locale "admin_fido_networks.filefix_password"}} <input class="form-control" name="filefix_password" value="{{.Def.FileFixPassword}}"></label>
-    <label>{{t .Locale "admin_fido_networks.tic_password"}} <input class="form-control" name="tic_password" value="{{.Def.TicPassword}}"></label>
-    <label>{{t .Locale "admin_fido_networks.akas"}} <textarea class="form-control" name="akas" rows="3">{{.AKAsText}}</textarea></label>
-    <label>{{t .Locale "admin_fido_networks.echo_areas"}} <textarea class="form-control" name="areas" rows="4">{{.AreasText}}</textarea></label>
-    <label>{{t .Locale "admin_fido_networks.file_areas"}} <textarea class="form-control" name="file_areas" rows="3">{{.FileAreasText}}</textarea></label>
-    <label>{{t .Locale "admin_fido_networks.downlinks"}} <textarea class="form-control" name="downlinks" rows="4">{{.DownlinksText}}</textarea></label>
-    <button class="btn btn-primary" type="submit">{{t .Locale "admin_fido_networks.save_network"}}</button>
-  </form>
-  <h3>{{t .Locale "admin_fido_networks.node_flags"}}</h3>
-  <form method="post" class="admin-form">
-    <input type="hidden" name="network" value="{{.Network}}">
-    <input type="hidden" name="action" value="save_flags">
-    <label>{{t .Locale "common.binkp_host"}} <input class="form-control" name="binkp_host" value="{{.Def.BinkpHost}}"></label>
-    {{range .NodeFlags}}
-    <label><input type="checkbox" name="node_flags" value="{{.Code}}" {{if index $.FlagSet .Code}}checked{{end}}> {{.Code}} — {{.Description}}</label>
+    <p class="mb-3"><a href="/admin/fido">{{t .Locale "common.fido_back"}}</a></p>
+    {{if .Flash}}<p class="alert alert-success">{{.Flash}}</p>{{end}}
+    {{if .Error}}<p class="alert alert-danger">{{.Error}}</p>{{end}}
+
+    <form method="get" class="row g-2 align-items-end mb-4">
+      <div class="col-auto">
+        <label class="form-label mb-0" for="network-select">{{t .Locale "common.network"}}</label>
+        <select class="form-select" id="network-select" name="network" onchange="this.form.submit()">
+          {{range .Networks}}<option {{if eq $.Network .}}selected{{end}}>{{.}}</option>{{end}}
+        </select>
+      </div>
+    </form>
+
+    <form method="post" class="admin-form admin-form-vertical admin-fido-networks-form">
+      <input type="hidden" name="network" value="{{.Network}}">
+      <input type="hidden" name="action" value="save">
+
+      <h3 class="section-head">{{t .Locale "admin_fido_networks.section.identity"}}</h3>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label" for="network-name">{{t .Locale "admin_fido_networks.network_name"}}</label>
+          <input class="form-control" id="network-name" name="network_name" value="{{.Def.Name}}">
+        </div>
+        <div class="col-md-6 d-flex align-items-end">
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="network-enabled" name="enabled" value="1" {{if .Def.Enabled}}checked{{end}}>
+            <label class="form-check-label" for="network-enabled">{{t .Locale "common.enabled"}}</label>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="section-head">{{t .Locale "admin_fido_networks.section.connectivity"}}</h3>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label" for="network-address">{{t .Locale "admin_fido_networks.address"}}</label>
+          <input class="form-control" id="network-address" name="address" value="{{.Def.Address}}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="network-uplink">{{t .Locale "admin_fido_networks.uplink"}}</label>
+          <input class="form-control" id="network-uplink" name="uplink" value="{{.Def.Uplink}}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="network-password">{{t .Locale "common.password"}}</label>
+          <input class="form-control" id="network-password" name="password" value="{{.Def.Password}}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="network-binkp-port">{{t .Locale "admin_fido_networks.binkp_port"}}</label>
+          <input class="form-control" type="number" id="network-binkp-port" name="binkp_port" value="{{.Def.BinkpPort}}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="network-poll-interval">{{t .Locale "admin_fido_networks.poll_interval"}}</label>
+          <input class="form-control" type="number" id="network-poll-interval" name="poll_interval_mins" value="{{.Def.PollIntervalMins}}">
+        </div>
+      </div>
+
+      <h3 class="section-head">{{t .Locale "admin_fido_networks.section.directories"}}</h3>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label" for="network-inbound">{{t .Locale "admin_fido_networks.inbound_dir"}}</label>
+          <input class="form-control" id="network-inbound" name="inbound_dir" value="{{.Def.InboundDir}}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="network-outbound">{{t .Locale "admin_fido_networks.outbound_dir"}}</label>
+          <input class="form-control" id="network-outbound" name="outbound_dir" value="{{.Def.OutboundDir}}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="network-nodelist-dir">{{t .Locale "admin_fido_networks.nodelist_dir"}}</label>
+          <input class="form-control" id="network-nodelist-dir" name="nodelist_dir" value="{{.Def.NodelistDir}}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="network-holding">{{t .Locale "admin_fido_networks.holding_dir"}}</label>
+          <input class="form-control" id="network-holding" name="holding_dir" value="{{.Def.HoldingDir}}">
+        </div>
+      </div>
+
+      <h3 class="section-head">{{t .Locale "admin_fido_networks.section.nodelist"}}</h3>
+      <div class="row g-3 mb-4">
+        <div class="col-md-8">
+          <label class="form-label" for="network-nodelist-url">{{t .Locale "admin_fido_networks.nodelist_url"}}</label>
+          <input class="form-control" id="network-nodelist-url" name="nodelist_url" value="{{.Def.NodelistURL}}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="network-nodelist-update">{{t .Locale "admin_fido_networks.nodelist_update"}}</label>
+          <input class="form-control" type="number" id="network-nodelist-update" name="nodelist_update_hours" value="{{.Def.NodelistUpdateIntervalHours}}">
+        </div>
+        {{if not .IsPrimary}}
+        <div class="col-md-6">
+          <label class="form-label" for="network-nodelist-echo">{{t .Locale "admin_fido_networks.nodelist_echo_tag"}}</label>
+          <input class="form-control" id="network-nodelist-echo" name="nodelist_echo_tag" value="{{.Def.NodelistEchoTag}}">
+        </div>
+        {{end}}
+      </div>
+
+      <h3 class="section-head">{{t .Locale "admin_fido_networks.section.passwords"}}</h3>
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <label class="form-label" for="network-areafix-pw">{{t .Locale "admin_fido_networks.areafix_password"}}</label>
+          <input class="form-control" id="network-areafix-pw" name="areafix_password" value="{{.Def.AreaFixPassword}}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="network-filefix-pw">{{t .Locale "admin_fido_networks.filefix_password"}}</label>
+          <input class="form-control" id="network-filefix-pw" name="filefix_password" value="{{.Def.FileFixPassword}}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="network-tic-pw">{{t .Locale "admin_fido_networks.tic_password"}}</label>
+          <input class="form-control" id="network-tic-pw" name="tic_password" value="{{.Def.TicPassword}}">
+        </div>
+      </div>
+
+      <h3 class="section-head">{{t .Locale "admin_fido_networks.section.mappings"}}</h3>
+      <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+          <label class="form-label" for="network-akas">{{t .Locale "admin_fido_networks.akas"}}</label>
+          <textarea class="form-control font-monospace" id="network-akas" name="akas" rows="3">{{.AKAsText}}</textarea>
+        </div>
+        <div class="col-lg-6">
+          <label class="form-label" for="network-downlinks">{{t .Locale "admin_fido_networks.downlinks"}}</label>
+          <textarea class="form-control font-monospace" id="network-downlinks" name="downlinks" rows="3">{{.DownlinksText}}</textarea>
+        </div>
+        <div class="col-lg-6">
+          <label class="form-label" for="network-areas">{{t .Locale "admin_fido_networks.echo_areas"}}</label>
+          <textarea class="form-control font-monospace" id="network-areas" name="areas" rows="5">{{.AreasText}}</textarea>
+        </div>
+        <div class="col-lg-6">
+          <label class="form-label" for="network-file-areas">{{t .Locale "admin_fido_networks.file_areas"}}</label>
+          <textarea class="form-control font-monospace" id="network-file-areas" name="file_areas" rows="5">{{.FileAreasText}}</textarea>
+        </div>
+      </div>
+
+      <div class="btn-row mb-5">
+        <button class="btn btn-primary" type="submit">{{t .Locale "admin_fido_networks.save_network"}}</button>
+      </div>
+    </form>
+
+    <h3 class="section-head">{{t .Locale "admin_fido_networks.node_flags"}}</h3>
+    <form method="post" class="admin-form admin-form-vertical admin-fido-networks-form mb-4">
+      <input type="hidden" name="network" value="{{.Network}}">
+      <input type="hidden" name="action" value="save_flags">
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label" for="network-binkp-host">{{t .Locale "common.binkp_host"}}</label>
+          <input class="form-control" id="network-binkp-host" name="binkp_host" value="{{.Def.BinkpHost}}">
+        </div>
+      </div>
+      <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2 mb-3">
+        {{range .NodeFlags}}
+        <div class="col">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="flag-{{.Code}}" name="node_flags" value="{{.Code}}" {{if index $.FlagSet .Code}}checked{{end}}>
+            <label class="form-check-label" for="flag-{{.Code}}"><code>{{.Code}}</code> — {{.Description}}</label>
+          </div>
+        </div>
+        {{end}}
+      </div>
+      <button class="btn btn-primary" type="submit">{{t .Locale "admin_fido_networks.save_node_flags"}}</button>
+    </form>
+
+    {{if .AreaFixSubs}}
+    <h3 class="section-head">{{t .Locale "admin_fido_networks.areafix_subs"}}</h3>
+    <div class="table-responsive mb-0">
+      <table class="table table-dark table-striped table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>{{t .Locale "common.name"}}</th>
+            <th>{{t .Locale "admin_fido_networks.col.downlink"}}</th>
+            <th>{{t .Locale "admin_fido_networks.col.areas"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .AreaFixSubs}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td><code>{{.Downlink}}</code></td>
+            <td>{{range $i, $a := .Areas}}{{if $i}}, {{end}}{{$a}}{{end}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
     {{end}}
-    <button class="btn btn-primary" type="submit">{{t .Locale "admin_fido_networks.save_node_flags"}}</button>
-  </form>
-  {{if .AreaFixSubs}}
-  <h3>{{t .Locale "admin_fido_networks.areafix_subs"}}</h3>
-  <ul>{{range .AreaFixSubs}}<li>{{.Name}} ({{.Downlink}}): {{range .Areas}}{{.}} {{end}}</li>{{end}}</ul>
-  {{end}}
-  <form method="post"><input type="hidden" name="action" value="add_network"><button class="btn btn-primary" type="submit">{{t .Locale "admin_fido_networks.add_network"}}</button></form>
   </div>
 </div>
 {{template "footer" .}}

@@ -335,6 +335,52 @@ body.virtbbs-body {
 .ansi-fg-bright-cyan { color: #6ff; }
 .ansi-fg-bright-white { color: #fff; }
 
+.msg-body-formatted {
+  white-space: normal;
+}
+
+.msg-body-formatted .ansi-screen {
+  white-space: pre-wrap;
+}
+
+.sc-inverse {
+  background: #ccc;
+  color: #111;
+  padding: 0 0.15em;
+}
+
+.compose-editor .compose-textarea {
+  min-height: 12rem;
+}
+
+.compose-editor .ansi-editor-ruler {
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #101018;
+}
+
+.compose-editor .ansi-editor-ruler-text {
+  display: block;
+  width: 100%;
+  min-width: 132ch;
+  border: 0;
+  background: transparent;
+  color: var(--bs-secondary-color);
+  resize: none;
+  overflow: hidden;
+  outline: none;
+}
+
+.compose-editor .ansi-editor-controls .btn,
+.compose-editor .compose-toolbar .btn {
+  min-width: 2rem;
+}
+
+.compose-advanced summary {
+  cursor: pointer;
+  user-select: none;
+}
+
 .nav-badge[hidden] {
   display: none !important;
 }
@@ -431,6 +477,15 @@ body.virtbbs-body {
 .admin-form-vertical .form-control,
 .admin-form-vertical textarea {
   max-width: 32rem;
+}
+
+.admin-fido-networks-form .form-control,
+.admin-fido-networks-form textarea {
+  max-width: none;
+}
+
+.admin-fido-networks .form-check-label code {
+  font-size: 0.85em;
 }
 
 /* Auth pages */

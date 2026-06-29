@@ -19,7 +19,11 @@
     {{end}}
   </p>
   {{end}}
+  {{if .ShowSource}}
   <div class="msg-body">{{.DisplayBody}}</div>
+  {{else}}
+  <div class="msg-body msg-body-formatted">{{safeHTML .DisplayBody}}</div>
+  {{end}}
   {{if .CanWrite}}
   <p>
     <a class="btn" href="/messages/post?conf={{.Conference.ID}}&amp;reply={{.Message.MsgNumber}}">{{t .Locale "common.reply"}}</a>

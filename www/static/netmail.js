@@ -57,11 +57,14 @@
         return r.json();
       })
       .then(function (m) {
+        var bodyHtml = m.DisplayBody || '';
+        var bodyBlock = bodyHtml.indexOf('<') >= 0
+          ? '<div class="msg-body msg-body-formatted">' + bodyHtml + '</div>'
+          : '<div class="msg-body">' + esc(bodyHtml || m.Body) + '</div>';
         paneEl.innerHTML = '<h3>' + esc(m.Subject) + '</h3>' +
           '<p class="meta">' + esc(formatFrom(m.FromName, m.MsgNumber)) +
           (m.LangLabel ? ' <span class="badge bg-secondary">' + esc(m.LangLabel) + '</span>' : '') +
-          '</p>' +
-          '<div class="msg-body">' + esc(m.DisplayBody || m.Body) + '</div>';
+          '</p>' + bodyBlock;
       })
       .catch(function () {
         paneEl.innerHTML = '<p class="meta">' + esc(i18n.loadFailed) + '</p>';

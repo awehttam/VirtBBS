@@ -1,0 +1,52 @@
+{{define "compose_editor"}}
+<div class="compose-editor" data-compose-editor data-editor-type="{{.EditorType}}">
+  <div class="mb-2">
+    <label class="form-label" for="{{.TextareaID}}">{{t .Locale "common.message"}}</label>
+    <div class="row g-2 align-items-end mb-2">
+      <div class="col-sm-6">
+        <label class="form-label form-label-sm mb-0" for="{{.TextareaID}}-markup">{{t .Locale "compose.markup_format"}}</label>
+        <select class="form-select form-select-sm" id="{{.TextareaID}}-markup" data-compose-markup>
+          <option value="plain">{{t .Locale "compose.plain_text"}}</option>
+          <option value="stylecodes">{{t .Locale "compose.stylecodes_label"}}</option>
+          <option value="ansi">{{t .Locale "compose.ansi_label"}}</option>
+        </select>
+      </div>
+      <div class="col-sm-6">
+        <p class="form-text mb-0">{{t .Locale "compose.markup_format_help"}}</p>
+      </div>
+    </div>
+    <div class="compose-toolbar btn-toolbar mb-2 d-none" data-compose-toolbar="plain" role="toolbar" aria-label="{{t .Locale "compose.plain_text"}}">
+      <span class="meta small">{{t .Locale "compose.plain_text"}}</span>
+    </div>
+    <div class="compose-toolbar btn-toolbar mb-2 d-none" data-compose-toolbar="stylecodes" role="toolbar" aria-label="{{t .Locale "compose.stylecodes_label"}}">
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-sc-action="bold" title="{{t .Locale "compose.bold"}}"><strong>B</strong></button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-sc-action="italic" title="{{t .Locale "compose.italic"}}"><em>I</em></button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-sc-action="underline" title="{{t .Locale "compose.underline"}}"><u>U</u></button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-sc-action="inverse" title="{{t .Locale "compose.inverse"}}">#</button>
+      <span class="meta small ms-2">{{t .Locale "compose.stylecodes_hint"}}</span>
+    </div>
+    <div class="compose-ansi-host d-none" data-compose-ansi-host></div>
+    <textarea class="form-control compose-textarea font-monospace" id="{{.TextareaID}}" name="{{.TextareaName}}" rows="12"{{if .Required}} required{{end}}>{{.Body}}</textarea>
+  </div>
+  <details class="compose-advanced mb-2">
+    <summary class="meta">{{t .Locale "compose.advanced_options"}}</summary>
+    <div class="mt-2">
+      <label class="form-label form-label-sm" for="{{.TextareaID}}-wrap">{{t .Locale "compose.hard_wrap"}}</label>
+      <select class="form-select form-select-sm w-auto" id="{{.TextareaID}}-wrap" data-compose-hard-wrap>
+        <option value="0">{{t .Locale "compose.hard_wrap_off"}}</option>
+        <option value="79">{{t .Locale "compose.hard_wrap_79"}}</option>
+        <option value="39">{{t .Locale "compose.hard_wrap_39"}}</option>
+      </select>
+      <p class="form-text">{{t .Locale "compose.hard_wrap_help"}}</p>
+    </div>
+  </details>
+  <div class="compose-stats meta mb-2" data-compose-stats>
+    <span data-compose-lines>0</span> · <span data-compose-bytes>0</span>
+    <span class="compose-size-warn text-warning ms-2 d-none" data-compose-size-warn></span>
+  </div>
+</div>
+<script type="application/json" id="compose-i18n">{{.ComposeI18nJSON}}</script>
+<script src="/static/ansi-preview.js"></script>
+<script src="/static/ansi-editor.js"></script>
+<script src="/static/compose-editor.js"></script>
+{{end}}

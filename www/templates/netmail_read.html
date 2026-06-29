@@ -12,7 +12,11 @@
   {{if .Message.FidoOrigin}}
   <p class="meta fido-source-hint">{{t .Locale "read.fido_origin"}} {{.Message.FidoOrigin}}</p>
   {{end}}
+  {{if .User.Sysop}}
   <div class="msg-body">{{.DisplayBody}}</div>
+  {{else}}
+  <div class="msg-body msg-body-formatted">{{safeHTML .DisplayBody}}</div>
+  {{end}}
   </div>
 </div>
 {{template "footer" .}}

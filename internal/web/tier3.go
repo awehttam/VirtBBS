@@ -139,14 +139,19 @@ func (s *Server) handleAddressBook(w http.ResponseWriter, r *http.Request) {
 // ── Netmail SPA (12) ─────────────────────────────────────────────────────────
 
 func (s *Server) handleNetmailApp(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireUser(w, r)
+	u, ok := s.requireUser(w, r)
 	if !ok {
 		return
 	}
+	pd := s.page(r)
 	data := struct {
 		pageData
+		EditorType      string
+		ComposeI18nJSON string
 	}{
-		pageData: s.page(r),
+		pageData:        pd,
+		EditorType:      u.EditorType,
+		ComposeI18nJSON: composeI18nJSON(pd.Locale),
 	}
 	s.render(w, "netmail_app.html", data)
 }
@@ -171,7 +176,7 @@ func (s *Server) handleAPINetmail(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(buildMessageViewJSON(locale, m, fido.ReconstructSource(fidoSourceOpts(m, ""))))
 			return
 		}
-		_ = json.NewEncoder(w).Encode(buildMessageViewJSON(locale, m, ""))
+		_ = json.NewEncoder(w).Encode(buildMessageViewJSON(locale, m, FormatMessageBodyHTML(m.Body)))
 		return
 	}
 	msgs, err := s.Deps.Messages.ListNetmail(u.Name, u.Sysop, 0, 200)

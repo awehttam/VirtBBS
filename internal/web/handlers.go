@@ -259,7 +259,7 @@ func (s *Server) handleMessageRead(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.Deps.Users.SetLastRead(u.ID, confID, msgNum)
 	showSource := u.Sysop && c.Echo && r.URL.Query().Get("source") == "1"
-	displayBody := msg.Body
+	displayBody := FormatMessageBodyHTML(msg.Body)
 	if showSource {
 		displayBody = fido.ReconstructSource(fidoSourceOpts(msg, c.EchoTag))
 	}
@@ -322,20 +322,24 @@ func (s *Server) handleMessagePost(w http.ResponseWriter, r *http.Request) {
 			pd := s.page(r)
 			data := struct {
 				pageData
-				Conference *conferences.Conference
-				Subject    string
-				ToName     string
-				Body       string
-				ReplyNum   int
-				Error      string
+				Conference      *conferences.Conference
+				Subject         string
+				ToName          string
+				Body            string
+				ReplyNum        int
+				Error           string
+				EditorType      string
+				ComposeI18nJSON string
 			}{
-				pageData:   pd,
-				Conference: c,
-				Subject:    subject,
-				ToName:     toName,
-				Body:       body,
-				ReplyNum:   replyNum,
-				Error:      tr(pd.Locale, "post.error.required"),
+				pageData:        pd,
+				Conference:      c,
+				Subject:         subject,
+				ToName:          toName,
+				Body:            body,
+				ReplyNum:        replyNum,
+				Error:           tr(pd.Locale, "post.error.required"),
+				EditorType:      u.EditorType,
+				ComposeI18nJSON: composeI18nJSON(pd.Locale),
 			}
 			s.render(w, "post.html", data)
 			return
@@ -344,20 +348,24 @@ func (s *Server) handleMessagePost(w http.ResponseWriter, r *http.Request) {
 			pd := s.page(r)
 			data := struct {
 				pageData
-				Conference *conferences.Conference
-				Subject    string
-				ToName     string
-				Body       string
-				ReplyNum   int
-				Error      string
+				Conference      *conferences.Conference
+				Subject         string
+				ToName          string
+				Body            string
+				ReplyNum        int
+				Error           string
+				EditorType      string
+				ComposeI18nJSON string
 			}{
-				pageData:   pd,
-				Conference: c,
-				Subject:    subject,
-				ToName:     toName,
-				Body:       body,
-				ReplyNum:   replyNum,
-				Error:      translateAPIError(pd.Locale, err.Error()),
+				pageData:        pd,
+				Conference:      c,
+				Subject:         subject,
+				ToName:          toName,
+				Body:            body,
+				ReplyNum:        replyNum,
+				Error:           translateAPIError(pd.Locale, err.Error()),
+				EditorType:      u.EditorType,
+				ComposeI18nJSON: composeI18nJSON(pd.Locale),
 			}
 			s.render(w, "post.html", data)
 			return
@@ -379,20 +387,25 @@ func (s *Server) handleMessagePost(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, fmt.Sprintf("/messages/read?conf=%d&num=%d", confID, m.MsgNumber), http.StatusSeeOther)
 		return
 	}
+	pd := s.page(r)
 	data := struct {
 		pageData
-		Conference *conferences.Conference
-		Subject    string
-		ToName     string
-		Body       string
-		ReplyNum   int
+		Conference      *conferences.Conference
+		Subject         string
+		ToName          string
+		Body            string
+		ReplyNum        int
+		EditorType      string
+		ComposeI18nJSON string
 	}{
-		pageData: s.page(r),
-		Conference: c,
-		Subject:    subject,
-		ToName:     toName,
-		Body:       body,
-		ReplyNum:   replyNum,
+		pageData:        pd,
+		Conference:      c,
+		Subject:         subject,
+		ToName:          toName,
+		Body:            body,
+		ReplyNum:        replyNum,
+		EditorType:      u.EditorType,
+		ComposeI18nJSON: composeI18nJSON(pd.Locale),
 	}
 	s.render(w, "post.html", data)
 }
@@ -429,7 +442,7 @@ func (s *Server) handleNetmailRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	msg := msgs[0]
-	displayBody := msg.Body
+	displayBody := FormatMessageBodyHTML(msg.Body)
 	if u.Sysop {
 		displayBody = fido.ReconstructSource(fidoSourceOpts(msg, ""))
 	}

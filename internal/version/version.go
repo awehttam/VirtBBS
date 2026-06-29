@@ -272,6 +272,8 @@
 //                        i18n; ^ALANG kludge and user locale; real name and echo From-name
 //                        policy; profile editing; sysop Fido raw-source view for netmail/echo.
 //   v1.3.0  2026-06-28  Bootstrap 5 + jQuery responsive web UI (collapsible nav, cards, grids).
+//   v1.7.0  2026-06-28  Web rich compose editor (plain, style codes, ANSI) with formatted
+//                        read view; admin Fido networks page layout reorganized.
 //   v1.6.2  2026-06-28  Bundled Graphviz: include lib/graphviz plugins for PNG;
 //                        fallback to PATH dot when bundle plugins are missing.
 //   v1.6.1  2026-06-28  FileFix %RESCAN backlog TIC export; VirtNet member
@@ -298,4 +300,4 @@
 package version
 
 // Version is the current VirtBBS release version.
-const Version = "1.6.2"
+const Version = "1.7.0"
