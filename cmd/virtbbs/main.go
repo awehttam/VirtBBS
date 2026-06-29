@@ -269,6 +269,11 @@ func main() {
 		if err != nil {
 			log.Fatalf("import-nodelist: %v", err)
 		}
+		if nd := cfg.Fido.NetworkByName(*importNodelistNet); nd != nil {
+			if err := fido.RestoreLocalNodeEntries(msgStore.DB(), nd, cfg.BBS.Name, cfg.Sysop.Name, "Internet", cfg.Network.TelnetPort); err != nil {
+				log.Fatalf("restore local nodelist entries: %v", err)
+			}
+		}
 		fmt.Printf("Done: %d inserted, %d skipped, %d errors\n",
 			result.Inserted, result.Skipped, len(result.Errors))
 		for _, e := range result.Errors {

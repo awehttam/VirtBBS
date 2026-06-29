@@ -80,6 +80,7 @@ func Start(store *messages.Store, confStore *conferences.Store, fileStore *files
 			continue
 		}
 		name := nd.Name
+		go runNodelistMonitor(name, store, confStore, fileStore, stopCh)
 		if nd.Uplink != "" {
 			go runNetwork(name, store, confStore, fileStore, stopCh)
 			if nd.NodelistFetchEnabled() {
@@ -123,12 +124,9 @@ func runDayRollover(networkName string, store *messages.Store, confStore *confer
 		}
 	}
 	runRollover(false) // startup: regenerate files locally, defer echo posts to daily rollover
-	drainPendingNodelistEchoes(networkName, store, fileStore)
 
 	dayTicker := time.NewTicker(24 * time.Hour)
 	defer dayTicker.Stop()
-	echoTicker := time.NewTicker(1 * time.Minute)
-	defer echoTicker.Stop()
 
 	for {
 		select {
@@ -136,17 +134,33 @@ func runDayRollover(networkName string, store *messages.Store, confStore *confer
 			return
 		case <-dayTicker.C:
 			runRollover(true)
-		case <-echoTicker.C:
-			nd := config.Get().Fido.NetworkByName(networkName)
-			if nd == nil || !nd.Enabled || !nd.IsHub() {
-				continue
-			}
-			drainPendingNodelistEchoes(networkName, store, fileStore)
 		}
 	}
 }
 
-func drainPendingNodelistEchoes(networkName string, store *messages.Store, fileStore *files.Store) {
+// runNodelistMonitor scans each network's Nodelist Files area and Nodelists
+// conference every minute, applying nodelists/diffs newer than the current import.
+func runNodelistMonitor(networkName string, store *messages.Store, confStore *conferences.Store, fileStore *files.Store, stop <-chan struct{}) {
+	log.Printf("nodelist monitor: %s — checking file area and conference every 1m", networkName)
+	drainPendingNodelistEchoes(networkName, store, confStore, fileStore)
+
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+			nd := config.Get().Fido.NetworkByName(networkName)
+			if nd == nil || !nd.Enabled {
+				continue
+			}
+			drainPendingNodelistEchoes(networkName, store, confStore, fileStore)
+		}
+	}
+}
+
+func drainPendingNodelistEchoes(networkName string, store *messages.Store, confStore *conferences.Store, fileStore *files.Store) {
 	if fileStore == nil {
 		return
 	}
@@ -154,14 +168,16 @@ func drainPendingNodelistEchoes(networkName string, store *messages.Store, fileS
 	nd := cfg.Fido.NetworkByName(networkName)
 	var ndPtr *fido.NetworkDef
 	bbsName, sysopName := "", ""
+	telnetPort := 0
 	if nd != nil {
 		ndCopy := *nd
 		ndPtr = &ndCopy
 		bbsName = cfg.BBS.Name
 		sysopName = cfg.Sysop.Name
+		telnetPort = cfg.Network.TelnetPort
 	}
-	for _, w := range fido.ProcessPendingNodelistEchoesForNetwork(store.DB(), fileStore, ndPtr, bbsName, sysopName) {
-		log.Printf("nodelist echo [%s]: %s", networkName, w)
+	for _, w := range fido.MonitorNetworkNodelists(store.DB(), confStore, store, fileStore, ndPtr, bbsName, sysopName, telnetPort) {
+		log.Printf("nodelist monitor [%s]: %s", networkName, w)
 	}
 }
 
@@ -177,23 +193,13 @@ func runNetwork(networkName string, store *messages.Store, confStore *conference
 	interval := nd.EffectivePollInterval()
 	log.Printf("fido scheduler: %s — polling every %s", networkName, interval)
 
-	drainPendingNodelistEchoes(networkName, store, fileStore)
-
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
-	echoTicker := time.NewTicker(1 * time.Minute)
-	defer echoTicker.Stop()
 
 	for {
 		select {
 		case <-stop:
 			return
-		case <-echoTicker.C:
-			nd := config.Get().Fido.NetworkByName(networkName)
-			if nd == nil || !nd.Enabled || nd.Uplink == "" {
-				continue
-			}
-			drainPendingNodelistEchoes(networkName, store, fileStore)
 		case <-ticker.C:
 			cfg := config.Get()
 			nd := cfg.Fido.NetworkByName(networkName)
@@ -228,6 +234,7 @@ func runNetwork(networkName string, store *messages.Store, confStore *conference
 					fido.LogBinkp(fmt.Sprintf("fido scheduler: %s toss error: %s", networkName, e))
 				}
 			}
+			drainPendingNodelistEchoes(networkName, store, confStore, fileStore)
 		}
 	}
 }
@@ -272,7 +279,7 @@ func runNodelistFetch(networkName string, store *messages.Store, fileStore *file
 				log.Printf("nodelist scheduler: %s — interval changed to %s", networkName, interval)
 			}
 
-			result, err := fido.FetchAndImport(nd, store.DB())
+			result, err := fido.FetchAndImport(nd, store.DB(), fileStore)
 			if err != nil {
 				log.Printf("nodelist scheduler: %s fetch error: %v", networkName, err)
 				continue

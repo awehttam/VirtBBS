@@ -99,6 +99,15 @@ func (s *Store) migrate() error {
 		`ALTER TABLE messages ADD COLUMN fido_network TEXT`,
 		`ALTER TABLE messages ADD COLUMN fido_exported_at TEXT`,
 		`ALTER TABLE fido_netmail ADD COLUMN author_lang TEXT NOT NULL DEFAULT 'en'`,
+		`ALTER TABLE fido_nodelist_versions ADD COLUMN source TEXT NOT NULL DEFAULT 'import'`,
+		`CREATE TABLE IF NOT EXISTS fido_nodelist_applied (
+			network TEXT NOT NULL,
+			source TEXT NOT NULL,
+			source_key TEXT NOT NULL,
+			filename TEXT NOT NULL,
+			applied_at TEXT NOT NULL,
+			PRIMARY KEY (network, source, source_key)
+		)`,
 	}
 	for _, stmt := range alters {
 		if _, err := s.db.Exec(stmt); err != nil {

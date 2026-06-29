@@ -524,10 +524,10 @@ func binkpOutboundFilesFor(nd *NetworkDef, dl *Downlink, peerAddr Addr) []string
 	}
 
 	if nd.IsHub() {
-		if latest := latestNodelistFile(nd.NodelistDir, "VirtNode.Z"); latest != "" {
+		if latest := latestFullNodelistPath(nd.NodelistDir); latest != "" {
 			out = append(out, latest)
 		}
-		if latest := latestNodelistFile(nd.NodelistDir, "VirtNode.D"); latest != "" {
+		if latest := latestNodelistDiffPath(nd.NodelistDir); latest != "" {
 			out = append(out, latest)
 		}
 	}
@@ -640,7 +640,7 @@ func appendOutboundSubdirFiles(out *[]string, baseOutbound string, peerAddr Addr
 }
 
 // latestNodelistFile finds the most recently modified file in dir whose
-// name starts with prefix (e.g. "VirtNode.Z" or "VirtNode.D").
+// name starts with prefix (e.g. "NODELIST.Z" or "NODEDIFF.Z").
 func latestNodelistFile(dir, prefix string) string {
 	entries, err := os.ReadDir(dir)
 	if err != nil {

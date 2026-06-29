@@ -37,8 +37,9 @@
 //
 // Generates this BBS's own outbound nodelist for a network it hosts
 // (NetworkDef.IsHub()), sourced from fido_members rather than a parsed
-// file. Filename convention: "VirtNode.Z045" (full) / "VirtNode.D045"
-// (diff), day-of-year, mirroring FidoNet's own NODELIST.045/NODEDIFF.045.
+// file. Filename convention: NODELIST.Z## / NODEDIFF.Z## where ## is
+// day-of-year mod 100 (FidoNet style). Full lists publish weekly (Friday);
+// other days publish diffs only.
 package fido
 
 import (
@@ -51,34 +52,59 @@ import (
 	"time"
 )
 
-// GenerateNodelist builds the full nodelist for nd (a hub network) from
-// fido_members, writes it to nd.NodelistDir, syncs fido_nodes for search,
-// and returns its bytes and filename.
+// GenerateNodelist rebuilds fido_nodes from fido_members for hub network nd.
+// On weekly nodelist days (Friday) it also writes NODELIST.Z## to nodelist_dir.
+// Returns the encoded nodelist bytes and the filename when written (empty on
+// non-weekly days).
 func GenerateNodelist(db *sql.DB, nd *NetworkDef, hubBBSName, hubSysopName string) ([]byte, string, error) {
-	our := nd.NodeAddr()
-	if our == (Addr{}) {
-		return nil, "", fmt.Errorf("invalid network address %q", nd.Address)
-	}
-	mdb := OpenMembersDB(db)
-	members, err := mdb.ListMembers(nd.Name)
+	data, entries, err := buildHubNodelist(db, nd, hubBBSName, hubSysopName)
 	if err != nil {
 		return nil, "", err
 	}
-
-	entries := hubNodelistEntries(nd, members, hubBBSName, hubSysopName)
-	data := encodeNodelistEntries(nd.Name, entries)
-
-	filename := fmt.Sprintf("VirtNode.Z%03d", time.Now().YearDay())
+	if err := rebuildHubNodelistDB(db, nd.Name, entries); err != nil {
+		return data, "", err
+	}
+	now := time.Now()
+	if !IsWeeklyNodelistDay(now) {
+		return data, "", nil
+	}
+	filename := NodelistFullFilename(now)
 	if err := os.MkdirAll(nd.NodelistDir, 0755); err != nil {
 		return nil, "", err
 	}
 	if err := os.WriteFile(filepath.Join(nd.NodelistDir, filename), data, 0644); err != nil {
 		return nil, "", err
 	}
-	if err := rebuildHubNodelistDB(db, nd.Name, entries); err != nil {
-		return data, filename, err
-	}
 	return data, filename, nil
+}
+
+// UpdateHubNodelistFromMembers syncs fido_nodes from fido_members and writes
+// the appropriate on-disk file: NODELIST.Z## on weekly days, NODEDIFF.Z## on
+// other days when there are changes.
+func UpdateHubNodelistFromMembers(db *sql.DB, nd *NetworkDef, hubBBSName, hubSysopName string) error {
+	_, fullName, err := GenerateNodelist(db, nd, hubBBSName, hubSysopName)
+	if err != nil {
+		return err
+	}
+	if fullName != "" {
+		return nil
+	}
+	_, _, err = GenerateNodelistDiff(db, nd)
+	return err
+}
+
+func buildHubNodelist(db *sql.DB, nd *NetworkDef, hubBBSName, hubSysopName string) ([]byte, []NodeEntry, error) {
+	our := nd.NodeAddr()
+	if our == (Addr{}) {
+		return nil, nil, fmt.Errorf("invalid network address %q", nd.Address)
+	}
+	mdb := OpenMembersDB(db)
+	members, err := mdb.ListMembers(nd.Name)
+	if err != nil {
+		return nil, nil, err
+	}
+	entries := hubNodelistEntries(nd, members, hubBBSName, hubSysopName)
+	return encodeNodelistEntries(nd.Name, entries), entries, nil
 }
 
 // RebuildHubNodelistDB refreshes fido_nodes from fido_members for a hub
@@ -106,7 +132,7 @@ func rebuildHubNodelistDB(db *sql.DB, network string, entries []NodeEntry) error
 			return err
 		}
 	}
-	return RecordNodelistVersion(db, network, len(entries))
+	return RecordNodelistVersionFromMembers(db, network, len(entries))
 }
 
 // hubNodelistEntries builds VirtNet nodelist rows from fido_members,
@@ -231,6 +257,50 @@ func LinkHostAKAsPtrs(nodes []*NodeEntry) {
 
 func hostHostAKAFromEntry(e *NodeEntry) string {
 	return fmt.Sprintf("%d:%d/0", e.Zone, e.Net)
+}
+
+// LinkConfiguredAKAs sets NodeEntry.AKA for rows matching this BBS's configured
+// local addresses when LinkHostAKAs did not already pair them.
+func LinkConfiguredAKAs(nodes []*NodeEntry, nd *NetworkDef) {
+	if nd == nil || len(nodes) == 0 {
+		return
+	}
+	our := nd.NodeAddr()
+	if our == (Addr{}) {
+		return
+	}
+	local := nd.AllAddrs()
+	if len(local) <= 1 {
+		return
+	}
+	localSet := make(map[string]bool, len(local))
+	for _, a := range local {
+		localSet[a.String()] = true
+	}
+	primary := our.String()
+	var companions []string
+	for _, a := range local {
+		if s := a.String(); s != primary {
+			companions = append(companions, s)
+		}
+	}
+	companionStr := strings.Join(companions, ", ")
+	for _, n := range nodes {
+		if n == nil {
+			continue
+		}
+		addr := n.Addr4D()
+		if !localSet[addr] {
+			continue
+		}
+		if addr == primary {
+			if n.AKA == "" {
+				n.AKA = companionStr
+			}
+		} else if n.AKA == "" {
+			n.AKA = primary
+		}
+	}
 }
 
 func encodeNodelistEntries(network string, entries []NodeEntry) []byte {
@@ -386,7 +456,7 @@ func GenerateNodelistDiff(db *sql.DB, nd *NetworkDef) ([]byte, string, error) {
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, ";VirtNet nodelist diff for %q, generated %s\r\n", nd.Name, time.Now().Format(time.RFC3339))
+	fmt.Fprintf(&b, ";%s nodelist diff, generated %s\r\n", nd.Name, time.Now().Format(time.RFC3339))
 
 	for addr, m := range curByAddr {
 		old, existed := prev[addr]
@@ -401,8 +471,11 @@ func GenerateNodelistDiff(db *sql.DB, nd *NetworkDef) ([]byte, string, error) {
 		}
 	}
 
-	filename := fmt.Sprintf("VirtNode.D%03d", time.Now().YearDay())
+	filename := NodelistDiffFilename(time.Now())
 	data := []byte(b.String())
+	if !nodelistBodyHasChanges(data) {
+		return nil, "", nil
+	}
 	if err := os.MkdirAll(nd.NodelistDir, 0755); err != nil {
 		return nil, "", err
 	}

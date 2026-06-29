@@ -29,6 +29,8 @@ func (s *stubFileArea) InstallFile(dirID int64, srcPath, destName, description, 
 	return nil
 }
 
+func (s *stubFileArea) ListAreaFiles(dirID int64) ([]AreaFile, error) { return nil, nil }
+
 func TestProcessPendingNodelistEchoesForNetworkFiltersByNetwork(t *testing.T) {
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -47,8 +49,8 @@ func TestProcessPendingNodelistEchoesForNetworkFiltersByNetwork(t *testing.T) {
 		network string
 		subject string
 	}{
-		{"AlphaNet", "VirtNet Nodelist Diff D045"},
-		{"BetaNet", "VirtNet Nodelist Diff D045"},
+		{"AlphaNet", "VirtNet Nodelist Diff Z45"},
+		{"BetaNet", "VirtNet Nodelist Diff Z45"},
 	} {
 		if err := QueueNodelistEcho(db, tc.network, tc.subject, "body-"+tc.network); err != nil {
 			t.Fatal(err)
@@ -61,7 +63,7 @@ func TestProcessPendingNodelistEchoesForNetworkFiltersByNetwork(t *testing.T) {
 		t.Fatalf("unexpected errors: %v", errs)
 	}
 
-	alphaPath := filepath.Join(dirPath, "VirtNode.D045")
+	alphaPath := filepath.Join(dirPath, "NODEDIFF.Z45")
 	if _, err := os.Stat(alphaPath); err != nil {
 		t.Fatalf("AlphaNet diff not written: %v", err)
 	}

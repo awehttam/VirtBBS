@@ -226,6 +226,32 @@ func sanitizeDirPath(name string) string {
 	return string(out)
 }
 
+// CountFiles returns the number of catalog entries in a directory.
+func (s *Store) CountFiles(dirID int64) (int, error) {
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM files WHERE dir_id=?`, dirID).Scan(&n)
+	return n, err
+}
+
+// CountFilesByDir returns file counts keyed by directory ID.
+func (s *Store) CountFilesByDir() (map[int64]int, error) {
+	rows, err := s.db.Query(`SELECT dir_id, COUNT(*) FROM files GROUP BY dir_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make(map[int64]int)
+	for rows.Next() {
+		var dirID int64
+		var n int
+		if err := rows.Scan(&dirID, &n); err != nil {
+			return nil, err
+		}
+		out[dirID] = n
+	}
+	return out, rows.Err()
+}
+
 // ListFiles returns files in a directory, sorted per the dir's SortType.
 func (s *Store) ListFiles(dirID int64) ([]*File, error) {
 	rows, err := s.db.Query(`SELECT id, dir_id, filename, size, description, uploader, upload_date, downloads FROM files WHERE dir_id=? ORDER BY filename`, dirID)

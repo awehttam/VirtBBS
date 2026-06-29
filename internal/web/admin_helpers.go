@@ -34,6 +34,34 @@ func networkDefByName(name string) (*fido.NetworkDef, error) {
 	return nd, nil
 }
 
+func importNodelistRestoreLocal(db *sql.DB, path, network string) (*fido.ImportResult, error) {
+	result, err := fido.ImportFile(db, path, network)
+	if err != nil {
+		return result, err
+	}
+	restoreLocalNodelistEntries(db, network)
+	return result, nil
+}
+
+func restoreLocalNodelistEntries(db *sql.DB, network string) {
+	cfg := config.Get()
+	nd := cfg.Fido.NetworkByName(network)
+	if nd == nil {
+		return
+	}
+	_ = fido.RestoreLocalNodeEntries(db, nd, cfg.BBS.Name, cfg.Sysop.Name, "Internet", cfg.Network.TelnetPort)
+}
+
+func linkNodelistAKAs(nodes []*fido.NodeEntry, network string) {
+	if len(nodes) == 0 {
+		return
+	}
+	fido.LinkHostAKAsPtrs(nodes)
+	if nd, err := networkDefByName(network); err == nil {
+		fido.LinkConfiguredAKAs(nodes, nd)
+	}
+}
+
 func saveFidoConfig(db *sql.DB, fidoCfg fido.Config) error {
 	current := config.Get()
 	merged := *current

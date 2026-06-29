@@ -138,7 +138,7 @@ func writeSingleNodeNodediff(nd *NetworkDef, our Addr, old, new *NodeEntry) ([]b
 		nlEncode(new.Name), nlEncode(new.Location), nlEncode(new.Sysop),
 		new.Phone, new.Baud, new.Flags)
 
-	filename := fmt.Sprintf("NODEDIFF.%03d", time.Now().YearDay())
+	filename := NodelistDiffFilename(time.Now())
 	data := []byte(b.String())
 	if nd.NodelistDir != "" {
 		if err := os.MkdirAll(nd.NodelistDir, 0755); err != nil {

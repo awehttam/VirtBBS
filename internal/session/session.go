@@ -1247,7 +1247,7 @@ func (s *session) fidoApproveJoinRequest(target *fido.NetworkDef, mdb *fido.Memb
 			BinkpHost: m.BinkpHost, IsActive: true}, "NEW"); err != nil {
 		s.writeln(ansi.Colorize(ansi.Yellow, "Member approved but welcome announcement failed: "+err.Error()))
 	}
-	if _, _, err := fido.GenerateNodelist(s.deps.Messages.DB(), target, cfg.BBS.Name, cfg.Sysop.Name); err != nil {
+	if err := fido.UpdateHubNodelistFromMembers(s.deps.Messages.DB(), target, cfg.BBS.Name, cfg.Sysop.Name); err != nil {
 		s.writeln(ansi.Colorize(ansi.Yellow, "Member approved but nodelist regeneration failed: "+err.Error()))
 	}
 
@@ -1337,7 +1337,7 @@ func (s *session) fidoRoutingTableMenu() {
 				s.writeln(ansi.Colorize(ansi.Red, "  "+e))
 			}
 			cfg := config.Get()
-			if _, _, err := fido.GenerateNodelist(s.deps.Messages.DB(), target, cfg.BBS.Name, cfg.Sysop.Name); err != nil {
+			if err := fido.UpdateHubNodelistFromMembers(s.deps.Messages.DB(), target, cfg.BBS.Name, cfg.Sysop.Name); err != nil {
 				s.writeln(ansi.Colorize(ansi.Yellow, "Nodelist regeneration failed: "+err.Error()))
 			}
 		case "E":
@@ -1493,7 +1493,7 @@ func (s *session) fidoEditMemberInfo(target *fido.NetworkDef, mdb *fido.MembersD
 		}
 	}
 	cfg := config.Get()
-	if _, _, err := fido.GenerateNodelist(s.deps.Messages.DB(), target, cfg.BBS.Name, cfg.Sysop.Name); err != nil {
+	if err := fido.UpdateHubNodelistFromMembers(s.deps.Messages.DB(), target, cfg.BBS.Name, cfg.Sysop.Name); err != nil {
 		s.writeln(ansi.Colorize(ansi.Yellow, "Nodelist regeneration failed: "+err.Error()))
 	}
 	s.writeln(ansi.Colorize(ansi.BrightGreen, "Member info updated."))
@@ -2030,7 +2030,7 @@ func (s *session) fidoLoadNodelist() {
 		s.writeln(ansi.Colorize(ansi.Yellow, "No nodelist_url configured for "+target.Name+" — set one in network config or use Import File."))
 		return
 	}
-	result, err := fido.FetchAndImport(target, s.deps.Messages.DB())
+	result, err := fido.FetchAndImport(target, s.deps.Messages.DB(), s.deps.Files)
 	if err != nil {
 		s.writeln(ansi.Colorize(ansi.Red, "Nodelist fetch error: "+err.Error()))
 		return

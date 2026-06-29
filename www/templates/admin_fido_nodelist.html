@@ -94,38 +94,7 @@
 </div>
 
 {{template "nodelist_modal.html" .}}
-<script>
-window.nodelistPage = {
-  apiUrl: '/admin/fido/nodelist/node',
-  saveUrl: '/admin/fido/nodelist',
-  editable: true,
-  query: {{printf "%q" .Query}},
-  i18n: {
-    address: {{printf "%q" (t .Locale "nodelist.col.address")}},
-    aka: {{printf "%q" (t .Locale "nodelist.col.aka")}},
-    network: {{printf "%q" (t .Locale "common.network")}},
-    name: {{printf "%q" (t .Locale "common.name")}},
-    location: {{printf "%q" (t .Locale "nodelist.col.location")}},
-    sysop: {{printf "%q" (t .Locale "nodelist.col.sysop")}},
-    phone: {{printf "%q" (t .Locale "nodelist.col.phone")}},
-    baud: {{printf "%q" (t .Locale "nodelist.col.baud")}},
-    type: {{printf "%q" (t .Locale "nodelist.col.type")}},
-    active: {{printf "%q" (t .Locale "common.active")}},
-    flags: {{printf "%q" (t .Locale "common.flags")}},
-    capabilities: {{printf "%q" (t .Locale "nodelist.col.capabilities")}},
-    flags_help: {{printf "%q" (t .Locale "nodelist.flags_help")}},
-    commit: {{printf "%q" (t .Locale "admin_fido_nodelist.commit_checkbox")}},
-    yes: {{printf "%q" (t .Locale "common.yes")}},
-    no: {{printf "%q" (t .Locale "common.no")}},
-    close: {{printf "%q" (t .Locale "common.close")}},
-    edit: {{printf "%q" (t .Locale "common.edit")}},
-    save: {{printf "%q" (t .Locale "common.save")}},
-    loading: {{printf "%q" (t .Locale "common.loading")}},
-    load_error: {{printf "%q" (t .Locale "nodelist.load_error")}},
-    save_error: {{printf "%q" (t .Locale "admin_fido_nodelist.save_error")}}
-  }
-};
-</script>
+<script type="application/json" id="nodelist-page-config">{{nodelistPageJSON "/admin/fido/nodelist/node" "/admin/fido/nodelist" .Query .Locale true}}</script>
 <script src="/static/nodelist.js" defer></script>
 {{template "footer" .}}
 {{end}}

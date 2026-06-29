@@ -130,7 +130,18 @@ CREATE TABLE IF NOT EXISTS fido_file_exports (
 CREATE TABLE IF NOT EXISTS fido_nodelist_versions (
     network     TEXT    NOT NULL PRIMARY KEY,
     imported_at TEXT    NOT NULL,
-    node_count  INTEGER NOT NULL DEFAULT 0
+    node_count  INTEGER NOT NULL DEFAULT 0,
+    source      TEXT    NOT NULL DEFAULT 'import'
+);
+
+-- Tracks nodelist/diff artifacts applied to fido_nodes (file area + echo).
+CREATE TABLE IF NOT EXISTS fido_nodelist_applied (
+    network     TEXT    NOT NULL,
+    source      TEXT    NOT NULL,
+    source_key  TEXT    NOT NULL,
+    filename    TEXT    NOT NULL,
+    applied_at  TEXT    NOT NULL,
+    PRIMARY KEY (network, source, source_key)
 );
 
 -- VirtNet hub support: pending applications to join a network this BBS

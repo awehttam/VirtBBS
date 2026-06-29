@@ -127,9 +127,15 @@ func ImportFile(db *sql.DB, path, network string) (*ImportResult, error) {
 		path = resolved
 	}
 
-	f, err := os.Open(path)
+	plainPath, cleanup, err := prepareNodelistImportPath(path)
 	if err != nil {
 		return nil, fmt.Errorf("open nodelist %s: %w", path, err)
+	}
+	defer cleanup()
+
+	f, err := os.Open(plainPath)
+	if err != nil {
+		return nil, fmt.Errorf("open nodelist %s: %w", plainPath, err)
 	}
 	defer f.Close()
 
@@ -260,16 +266,52 @@ func ImportFile(db *sql.DB, path, network string) (*ImportResult, error) {
 	return result, nil
 }
 
+// Nodelist version source values stored in fido_nodelist_versions.source.
+const (
+	NodelistSourceImport  = "import"
+	NodelistSourceMembers = "members"
+)
+
 // RecordNodelistVersion upserts the fido_nodelist_versions row for network,
 // recording the current time and node count. Called by ImportFile after
 // every successful import.
 func RecordNodelistVersion(db *sql.DB, network string, nodeCount int) error {
+	return recordNodelistVersion(db, network, nodeCount, NodelistSourceImport)
+}
+
+// RecordNodelistVersionFromMembers records a hub rebuild from fido_members.
+func RecordNodelistVersionFromMembers(db *sql.DB, network string, nodeCount int) error {
+	return recordNodelistVersion(db, network, nodeCount, NodelistSourceMembers)
+}
+
+func recordNodelistVersion(db *sql.DB, network string, nodeCount int, source string) error {
+	if source == "" {
+		source = NodelistSourceImport
+	}
 	_, err := db.Exec(`
-		INSERT INTO fido_nodelist_versions (network, imported_at, node_count)
-		VALUES (?,?,?)
-		ON CONFLICT(network) DO UPDATE SET imported_at=excluded.imported_at, node_count=excluded.node_count`,
-		network, time.Now().Format(time.RFC3339), nodeCount)
+		INSERT INTO fido_nodelist_versions (network, imported_at, node_count, source)
+		VALUES (?,?,?,?)
+		ON CONFLICT(network) DO UPDATE SET
+			imported_at=excluded.imported_at,
+			node_count=excluded.node_count,
+			source=excluded.source`,
+		network, time.Now().Format(time.RFC3339), nodeCount, source)
 	return err
+}
+
+// bumpNodelistVersionCount updates only the node count/timestamp, preserving source.
+func bumpNodelistVersionCount(db *sql.DB, network string, nodeCount int) error {
+	res, err := db.Exec(`
+		UPDATE fido_nodelist_versions SET imported_at=?, node_count=? WHERE network=?`,
+		time.Now().Format(time.RFC3339), nodeCount, network)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return recordNodelistVersion(db, network, nodeCount, NodelistSourceImport)
+	}
+	return nil
 }
 
 // NodelistVersion describes the most recent successful import for a network.
@@ -277,14 +319,29 @@ type NodelistVersion struct {
 	Network    string `json:"network"`
 	ImportedAt string `json:"imported_at"`
 	NodeCount  int    `json:"node_count"`
+	Source     string `json:"source"`
+}
+
+// ShouldPreserveImportedNodelist reports whether a hub network's fido_nodes
+// rows came from a manual file import and must not be replaced by a member
+// registry rebuild on page load.
+func ShouldPreserveImportedNodelist(db *sql.DB, nd *NetworkDef) bool {
+	if nd == nil || !nd.UsesMemberNodelist() {
+		return false
+	}
+	v, err := GetNodelistVersion(db, nd.Name)
+	if err != nil || v == nil {
+		return false
+	}
+	return v.Source == NodelistSourceImport && v.NodeCount > 0
 }
 
 // GetNodelistVersion returns the most recent import record for network, or
 // nil if the network has never been successfully imported.
 func GetNodelistVersion(db *sql.DB, network string) (*NodelistVersion, error) {
 	v := &NodelistVersion{Network: network}
-	err := db.QueryRow(`SELECT imported_at, node_count FROM fido_nodelist_versions WHERE network=?`, network).
-		Scan(&v.ImportedAt, &v.NodeCount)
+	err := db.QueryRow(`SELECT imported_at, node_count, COALESCE(source, 'import') FROM fido_nodelist_versions WHERE network=?`, network).
+		Scan(&v.ImportedAt, &v.NodeCount, &v.Source)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

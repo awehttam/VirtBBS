@@ -638,7 +638,7 @@ func (s *Server) handleNodelist(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if results != nil {
-			fido.LinkHostAKAsPtrs(results.Nodes)
+			linkNodelistAKAs(results.Nodes, network)
 		}
 	}
 	data := struct {

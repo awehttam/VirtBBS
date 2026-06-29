@@ -43,9 +43,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // QueueNodelistEcho records an arrived "<NetworkName> Nodelists" echomail
@@ -90,29 +87,11 @@ func ClearPendingNodelistEcho(db *sql.DB, id int64) error {
 	return err
 }
 
-// nodelistFilenameFromSubject derives a VirtNode.Z045/D045-style filename
-// from the subject lines GenerateNodelist's day-rollover poster uses
-// ("VirtNet Nodelist Z045" / "VirtNet Nodelist Diff D045").
-func nodelistFilenameFromSubject(subject string) string {
-	fields := strings.Fields(subject)
-	if len(fields) == 0 {
-		return "VirtNode.Z000"
-	}
-	last := fields[len(fields)-1]
-	if len(last) > 1 && (last[0] == 'Z' || last[0] == 'D') {
-		if _, err := strconv.Atoi(last[1:]); err == nil {
-			return "VirtNode." + last
-		}
-	}
-	return fmt.Sprintf("VirtNode.Z%03d", time.Now().YearDay())
-}
-
 // ApplyPendingNodelistEcho writes one queued echo's body to a file, registers
 // it into "<NetworkName> Nodelist Files" (creating that area if needed via
-// fileArea), and — for a full nodelist (a "VirtNode.Z*" filename, not a
-// diff) — calls the existing, completely unmodified fido.ImportFile to
-// update this instance's own fido_nodes rows for the network.
-func ApplyPendingNodelistEcho(db *sql.DB, p *PendingNodelistEcho, fileArea FileArea) error {
+// fileArea), and — for a full nodelist (NODELIST.Z*, not NODEDIFF.Z*) —
+// calls ImportFile to update this instance's fido_nodes rows for the network.
+func ApplyPendingNodelistEcho(db *sql.DB, p *PendingNodelistEcho, fileArea FileArea, nd *NetworkDef, bbsName, sysopName string, telnetPort int) error {
 	filename := nodelistFilenameFromSubject(p.Subject)
 	dirID, dirPath, err := fileArea.EnsureDir(p.Network+" Nodelist Files", p.Network+" Nodelist Files (auto-created)")
 	if err != nil {
@@ -125,11 +104,13 @@ func ApplyPendingNodelistEcho(db *sql.DB, p *PendingNodelistEcho, fileArea FileA
 	if err := fileArea.RegisterUpload(dirID, filename, "VirtNet nodelist", "VirtBBS"); err != nil {
 		return err
 	}
-	if strings.Contains(filename, ".Z") {
-		if _, err := ImportFile(db, fullPath, p.Network); err != nil {
-			return fmt.Errorf("import received nodelist: %w", err)
-		}
+	if nd == nil {
+		nd = &NetworkDef{Name: p.Network}
 	}
+	if err := applyNodelistArtifact(db, fileArea, nd, filename, fullPath, bbsName, sysopName, telnetPort); err != nil {
+		return err
+	}
+	markPendingEchoApplied(db, p.Network, filename, p.ID)
 	return nil
 }
 
@@ -167,12 +148,14 @@ func processPendingNodelistEchoes(db *sql.DB, fileArea FileArea, network string,
 			continue
 		}
 		filename := nodelistFilenameFromSubject(p.Subject)
-		if err := ApplyPendingNodelistEcho(db, p, fileArea); err != nil {
+		if err := ApplyPendingNodelistEcho(db, p, fileArea, nd, bbsName, sysopName, 0); err != nil {
 			errs = append(errs, fmt.Sprintf("echo %d: %v", p.ID, err))
 			continue
 		}
-		if strings.Contains(filename, ".Z") {
-			nodelistImported = true
+		if IsFullNodelistFilename(filename) || IsNodelistDiffFilename(filename) {
+			if IsFullNodelistFilename(filename) {
+				nodelistImported = true
+			}
 		}
 		if err := ClearPendingNodelistEcho(db, p.ID); err != nil {
 			errs = append(errs, fmt.Sprintf("echo %d: clear: %v", p.ID, err))

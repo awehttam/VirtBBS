@@ -162,6 +162,7 @@ func (s *Server) templates() (*template.Template, error) {
 			"chartData": func(c StatsCharts) template.JS { return template.JS(c.ChartJSON()) },
 			"chartJSON": func(s string) template.JS { return template.JS(s) },
 			"netmailI18nJSON": func(locale string) template.JS { return template.JS(netmailI18nJSON(locale)) },
+			"nodelistPageJSON": nodelistPageJSON,
 			"webOp": func(locale, op string) string { return translateWebOp(locale, op) },
 			"safeHTML": func(s string) template.HTML { return template.HTML(s) },
 		}

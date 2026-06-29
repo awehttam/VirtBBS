@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -156,6 +157,12 @@ func (s *Server) handleAdminMessages(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "admin_messages.html", data)
 }
 
+type adminFileDir struct {
+	*files.Dir
+	FileCount int
+	Files     []*files.File
+}
+
 func (s *Server) handleAdminFiles(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requireSysop(w, r)
 	if !ok {
@@ -165,9 +172,19 @@ func (s *Server) handleAdminFiles(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "files store not available", http.StatusInternalServerError)
 		return
 	}
+	locale := localeFromRequest(r)
 	if r.Method == http.MethodPost {
 		_ = r.ParseForm()
 		switch r.FormValue("action") {
+		case "scan":
+			totals, err := s.Deps.Files.ScanAll("Sysop")
+			if err != nil {
+				http.Redirect(w, r, "/admin/files?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
+				return
+			}
+			flash := trf(locale, "admin_files.flash_scan_ok", totals.Dirs, totals.NewAreas, totals.Added, totals.Missing)
+			http.Redirect(w, r, "/admin/files?flash="+url.QueryEscape(flash), http.StatusSeeOther)
+			return
 		case "create":
 			name := strings.TrimSpace(r.FormValue("name"))
 			path := strings.TrimSpace(r.FormValue("path"))
@@ -187,17 +204,50 @@ func (s *Server) handleAdminFiles(w http.ResponseWriter, r *http.Request) {
 				Active:      formBool(r, "active"),
 			}
 			_ = s.Deps.Files.UpdateDir(&d)
+		case "update_file_desc":
+			dirID := int64(formInt(r, "dir_id", 0))
+			filename := strings.TrimSpace(r.FormValue("filename"))
+			desc := strings.TrimSpace(r.FormValue("description"))
+			if dirID == 0 || filename == "" {
+				http.Redirect(w, r, "/admin/files?error="+url.QueryEscape(tr(locale, "admin_files.error_file_desc")), http.StatusSeeOther)
+				return
+			}
+			if err := s.Deps.Files.UpdateDescription(dirID, filename, desc); err != nil {
+				http.Redirect(w, r, "/admin/files?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
+				return
+			}
+			_ = s.Deps.Files.BuildLocalFile(config.Get().BBS.Name)
+			flash := trf(locale, "admin_files.flash_desc_updated", filename)
+			http.Redirect(w, r, "/admin/files?flash="+url.QueryEscape(flash), http.StatusSeeOther)
+			return
 		}
 		http.Redirect(w, r, "/admin/files", http.StatusSeeOther)
 		return
 	}
 	list, _ := s.Deps.Files.ListAllDirs()
+	counts, _ := s.Deps.Files.CountFilesByDir()
+	dirs := make([]adminFileDir, 0, len(list))
+	for _, d := range list {
+		afd := adminFileDir{Dir: d, FileCount: counts[d.ID]}
+		if afd.FileCount > 0 {
+			afd.Files, _ = s.Deps.Files.ListFiles(d.ID)
+		}
+		dirs = append(dirs, afd)
+	}
 	data := struct {
 		pageData
-		Dirs []*files.Dir
+		Dirs  []adminFileDir
+		Flash string
+		Error string
 	}{
 		pageData: s.page(r),
-		Dirs:     list,
+		Dirs:     dirs,
+	}
+	if flash := r.URL.Query().Get("flash"); flash != "" {
+		data.Flash = flash
+	}
+	if errMsg := r.URL.Query().Get("error"); errMsg != "" {
+		data.Error = errMsg
 	}
 	s.render(w, "admin_files.html", data)
 }

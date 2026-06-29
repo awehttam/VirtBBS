@@ -40,17 +40,19 @@ type LocalNodelistCommitResult struct {
 	Message      string `json:"message,omitempty"`
 }
 
-// EnsureOwnNode upserts this BBS's own address into the local nodelist DB.
+// EnsureOwnNode upserts this BBS's own address (and configured AKAs) into the local nodelist DB.
 func EnsureOwnNode(db *sql.DB, nd *NetworkDef, bbsName, sysopName, location string, telnetPort int) error {
+	return RestoreLocalNodeEntries(db, nd, bbsName, sysopName, location, telnetPort)
+}
+
+// RestoreLocalNodeEntries re-applies this BBS's configured addresses (primary
+// plus AKAs from NetworkDef.AllAddrs) into fido_nodes. Call after an external
+// nodelist import replaces the table, or when AKAs are added to config.
+func RestoreLocalNodeEntries(db *sql.DB, nd *NetworkDef, bbsName, sysopName, location string, telnetPort int) error {
 	our := nd.NodeAddr()
 	if our == (Addr{}) {
 		return nil
 	}
-	flags := nd.NodeFlags
-	if len(flags) == 0 {
-		flags = DefaultNodeFlags
-	}
-	flagsStr := BuildNodelistFlags(flags, nd.BinkpHost, nd.Port(), telnetPort)
 	if bbsName == "" {
 		bbsName = "VirtBBS"
 	}
@@ -60,22 +62,46 @@ func EnsureOwnNode(db *sql.DB, nd *NetworkDef, bbsName, sysopName, location stri
 	if location == "" {
 		location = "Internet"
 	}
-	entry := &NodeEntry{
+
+	ndb := OpenNodelistDB(db)
+	for _, addr := range nd.AllAddrs() {
+		e := localNodeEntryForAddr(nd, addr, bbsName, sysopName, location, telnetPort)
+		if err := ndb.UpsertLocalNode(e); err != nil {
+			return err
+		}
+	}
+	count, err := ndb.Count(nd.Name)
+	if err != nil {
+		return err
+	}
+	return bumpNodelistVersionCount(db, nd.Name, count)
+}
+
+func localNodeEntryForAddr(nd *NetworkDef, addr Addr, bbsName, sysopName, location string, telnetPort int) *NodeEntry {
+	flags := nd.NodeFlags
+	if len(flags) == 0 {
+		flags = DefaultNodeFlags
+	}
+	flagsStr := BuildNodelistFlags(flags, nd.BinkpHost, nd.Port(), telnetPort)
+	nodeType := "Node"
+	if addr.Node == 0 && addr.Point == 0 {
+		nodeType = "Host"
+	}
+	return &NodeEntry{
 		Network:  nd.Name,
-		Zone:     our.Zone,
-		Net:      our.Net,
-		Node:     our.Node,
-		Point:    our.Point,
+		Zone:     addr.Zone,
+		Net:      addr.Net,
+		Node:     addr.Node,
+		Point:    addr.Point,
 		Name:     bbsName,
 		Location: location,
 		Sysop:    sysopName,
 		Phone:    "-Unpublished-",
 		Baud:     33600,
 		Flags:    flagsStr,
-		Type:     "Node",
+		Type:     nodeType,
 		Active:   true,
 	}
-	return OpenNodelistDB(db).UpsertLocalNode(entry)
 }
 
 // EnsureAllNetworkOwnNodes ensures every enabled network has its own node row.
@@ -162,7 +188,7 @@ func CommitLocalNodelist(db *sql.DB, nd *NetworkDef, bbsName, sysopName string, 
 		}
 	}
 
-	diffFile := fmt.Sprintf("NODEDIFF.%03d", time.Now().YearDay())
+	diffFile := NodelistDiffFilename(time.Now())
 	var diffBody []byte
 	if len(diffLines) > 0 {
 		var b strings.Builder
@@ -209,8 +235,8 @@ func ExportNodelistFile(db *sql.DB, nd *NetworkDef) (path string, body []byte, e
 		return "", nil, err
 	}
 	body = EncodeNodelistBytes(nd.Name, nodes)
-	filename := fmt.Sprintf("NODELIST.%03d", time.Now().YearDay())
-	if nd.NodelistDir == "" {
+	filename := NodelistFullFilename(time.Now())
+	if !IsWeeklyNodelistDay(time.Now()) || nd.NodelistDir == "" {
 		return filename, body, nil
 	}
 	if err := os.MkdirAll(nd.NodelistDir, 0755); err != nil {

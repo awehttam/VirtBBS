@@ -166,44 +166,62 @@ func looksLikeDirectFile(rawURL string) bool {
 	return false
 }
 
+// FetchedNodelist holds paths produced by FetchNodelist.
+type FetchedNodelist struct {
+	ImportPath  string // plain-text file passed to ImportFile
+	ArchivePath string // optional downloaded archive (e.g. .zip), when applicable
+}
+
 // FetchNodelist downloads the current nodelist for network nd — resolving
 // nd.EffectiveNodelistURL() via the discovery-page scan above if it isn't
 // already a direct file URL — and writes it into nd.NodelistDir. Returns
-// the path to the resulting file (ready to pass to ImportFile).
-func FetchNodelist(nd *NetworkDef) (string, error) {
+// paths ready to import and optionally register in the BBS file catalog.
+func FetchNodelist(nd *NetworkDef) (*FetchedNodelist, error) {
 	target := nd.EffectiveNodelistURL()
 	if target == "" {
-		return "", fmt.Errorf("network %q: no nodelist_url configured (automatic FidoNet discovery applies to the primary network only)", nd.Name)
+		return nil, fmt.Errorf("network %q: no nodelist_url configured (automatic FidoNet discovery applies to the primary network only)", nd.Name)
 	}
 
 	if !looksLikeDirectFile(target) {
 		discovered, err := discoverNodelistURL(target)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		target = discovered
 	}
 
 	resp, err := nodelistHTTPGet(target)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("download %s: %w", target, err)
+		return nil, fmt.Errorf("download %s: %w", target, err)
 	}
 
 	if err := os.MkdirAll(nd.NodelistDir, 0755); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Sniff for a ZIP magic header rather than trusting the URL's
 	// extension — e.g. darkrealms.ca's daily file is named like
 	// "Z1DAILY.Z77" despite being a ZIP archive.
 	if bytes.HasPrefix(data, []byte("PK\x03\x04")) {
-		return extractNodelistZip(data, nd.NodelistDir)
+		archiveName := filepath.Base(target)
+		if archiveName == "" || archiveName == "." || archiveName == "/" {
+			archiveName = NodelistFullFilename(time.Now())
+		}
+		archivePath := filepath.Join(nd.NodelistDir, archiveName)
+		if err := os.WriteFile(archivePath, data, 0644); err != nil {
+			return nil, err
+		}
+		importPath, err := extractNodelistZip(data, nd.NodelistDir)
+		if err != nil {
+			return nil, err
+		}
+		return &FetchedNodelist{ImportPath: importPath, ArchivePath: archivePath}, nil
 	}
 
 	name := filepath.Base(target)
@@ -212,9 +230,51 @@ func FetchNodelist(nd *NetworkDef) (string, error) {
 	}
 	destPath := filepath.Join(nd.NodelistDir, name)
 	if err := os.WriteFile(destPath, data, 0644); err != nil {
-		return "", err
+		return nil, err
 	}
-	return destPath, nil
+	return &FetchedNodelist{ImportPath: destPath}, nil
+}
+
+// RegisterNodelistInFileArea copies srcPath into "<Network> Nodelist Files"
+// and adds a catalog entry. No-op when fileArea is nil.
+func RegisterNodelistInFileArea(fileArea FileArea, nd *NetworkDef, srcPath, description string) error {
+	if fileArea == nil || nd == nil || srcPath == "" {
+		return nil
+	}
+	dirID, _, err := fileArea.EnsureDir(nd.Name+" Nodelist Files", nd.Name+" Nodelist Files (auto-created)")
+	if err != nil {
+		return err
+	}
+	filename := filepath.Base(srcPath)
+	if description == "" {
+		description = nd.Name + " nodelist"
+	}
+	return fileArea.InstallFile(dirID, srcPath, filename, description, "VirtBBS")
+}
+
+// prepareNodelistImportPath returns a plain-text nodelist path suitable for
+// ImportFile. ZIP archives (e.g. LOVLYNET.Z26, FidoNet daily Z1DAILY.Z77)
+// are extracted to a temp directory; cleanup must be called when done.
+func prepareNodelistImportPath(path string) (plainPath string, cleanup func(), err error) {
+	cleanup = func() {}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", cleanup, err
+	}
+	if !bytes.HasPrefix(data, []byte("PK\x03\x04")) {
+		return path, cleanup, nil
+	}
+	tmpDir, err := os.MkdirTemp("", "virtbbs-nodelist-*")
+	if err != nil {
+		return "", cleanup, err
+	}
+	cleanup = func() { _ = os.RemoveAll(tmpDir) }
+	extracted, err := extractNodelistZip(data, tmpDir)
+	if err != nil {
+		cleanup()
+		return "", func() {}, err
+	}
+	return extracted, cleanup, nil
 }
 
 // extractNodelistZip extracts the first file from a ZIP archive's bytes
@@ -247,12 +307,26 @@ func extractNodelistZip(data []byte, destDir string) (string, error) {
 	return destPath, nil
 }
 
-// FetchAndImport downloads the current nodelist for network nd and imports
-// it via the existing ImportFile, using nd.Name as the logical network name.
-func FetchAndImport(nd *NetworkDef, db *sql.DB) (*ImportResult, error) {
-	path, err := FetchNodelist(nd)
+// FetchAndImport downloads the current nodelist for network nd, registers it
+// in the BBS "<Name> Nodelist Files" area when fileArea is set, and imports
+// it via ImportFile using nd.Name as the logical network name.
+func FetchAndImport(nd *NetworkDef, db *sql.DB, fileArea FileArea) (*ImportResult, error) {
+	fetched, err := FetchNodelist(nd)
 	if err != nil {
 		return nil, err
 	}
-	return ImportFile(db, path, nd.Name)
+	if err := RegisterNodelistInFileArea(fileArea, nd, fetched.ImportPath, nd.Name+" nodelist (fetched)"); err != nil {
+		return nil, fmt.Errorf("register nodelist in file area: %w", err)
+	}
+	if fetched.ArchivePath != "" {
+		if err := RegisterNodelistInFileArea(fileArea, nd, fetched.ArchivePath, nd.Name+" nodelist archive (fetched)"); err != nil {
+			return nil, fmt.Errorf("register nodelist archive in file area: %w", err)
+		}
+	}
+	result, err := ImportFile(db, fetched.ImportPath, nd.Name)
+	if err != nil {
+		return nil, err
+	}
+	_ = RestoreLocalNodeEntries(db, nd, "", "", "Internet", 0)
+	return result, nil
 }

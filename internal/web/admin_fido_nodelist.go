@@ -40,6 +40,7 @@ func (s *Server) handleAdminFidoNodelist(w http.ResponseWriter, r *http.Request)
 		data.VersionText = fmt.Sprintf("%s — %d nodes", v.ImportedAt, v.NodeCount)
 	}
 
+	importedThisRequest := false
 	if r.Method == http.MethodPost {
 		_ = r.ParseForm()
 		network = selectedNetwork(r)
@@ -51,19 +52,21 @@ func (s *Server) handleAdminFidoNodelist(w http.ResponseWriter, r *http.Request)
 				data.Error = tr(locale, "admin_binkp.error.network")
 			} else if !nd.NodelistFetchEnabled() {
 				data.Error = tr(locale, "admin_fido_ops.error.no_nodelist_url")
-			} else if _, err := fido.FetchAndImport(nd, db); err != nil {
+			} else if _, err := fido.FetchAndImport(nd, db, s.Deps.Files); err != nil {
 				data.Error = err.Error()
 			} else {
 				data.Flash = tr(locale, "admin_fido_nodelist.flash_fetched")
+				importedThisRequest = true
 			}
 		case "import":
 			path := strings.TrimSpace(r.FormValue("import_path"))
 			if path == "" {
 				data.Error = tr(locale, "admin_fido_ops.error.import_path")
-			} else if _, err := fido.ImportFile(db, path, network); err != nil {
+			} else if _, err := importNodelistRestoreLocal(db, path, network); err != nil {
 				data.Error = err.Error()
 			} else {
 				data.Flash = tr(locale, "admin_fido_nodelist.flash_imported")
+				importedThisRequest = true
 			}
 		case "export_local":
 			nd, err := networkDefByName(network)
@@ -106,13 +109,15 @@ func (s *Server) handleAdminFidoNodelist(w http.ResponseWriter, r *http.Request)
 	if page < 1 {
 		page = 1
 	}
-	_ = s.maybeRebuildHubNodelist(network)
+	if !importedThisRequest {
+		_ = s.maybeRebuildHubNodelist(network)
+	}
 	ndb := fido.OpenNodelistDB(db)
 	results, err := ndb.Search(network, data.Query, page, 25)
 	if err != nil {
 		data.Error = err.Error()
 	} else if results != nil {
-		fido.LinkHostAKAsPtrs(results.Nodes)
+		linkNodelistAKAs(results.Nodes, network)
 		data.Results = results
 	}
 	s.render(w, "admin_fido_nodelist.html", data)

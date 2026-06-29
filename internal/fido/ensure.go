@@ -49,6 +49,8 @@
 package fido
 
 import (
+	"time"
+
 	"github.com/virtbbs/virtbbs/internal/conferences"
 )
 
@@ -59,6 +61,15 @@ type FileArea interface {
 	RegisterUpload(dirID int64, filename, description, uploader string) error
 	UploadDir(dirID int64) string
 	InstallFile(dirID int64, srcPath, destName, description, uploader string) error
+	ListAreaFiles(dirID int64) ([]AreaFile, error)
+}
+
+// AreaFile is one registered file in a BBS file directory.
+type AreaFile struct {
+	Filename string
+	FullPath string
+	ModTime  time.Time
+	Uploader string
 }
 
 // EnsureConference finds a conference literally named name, creating it

@@ -7,7 +7,17 @@
     if (booted) {
       return;
     }
-    var cfg = window.nodelistPage || {};
+    var cfg = (function () {
+      var el = document.getElementById('nodelist-page-config');
+      if (el) {
+        try {
+          return JSON.parse(el.textContent);
+        } catch (e) {
+          return window.nodelistPage || {};
+        }
+      }
+      return window.nodelistPage || {};
+    })();
     var i18n = cfg.i18n || {};
     var modalEl = document.getElementById('nodelist-detail-modal');
     if (!modalEl || typeof bootstrap === 'undefined') {

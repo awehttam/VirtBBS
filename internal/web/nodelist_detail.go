@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,10 +27,67 @@ type nodeDetailJSON struct {
 	FlagDetails []fido.NodelistFlagDisplay `json:"flag_details"`
 }
 
+type nodelistPageConfig struct {
+	APIURL   string            `json:"apiUrl"`
+	SaveURL  string            `json:"saveUrl,omitempty"`
+	Editable bool              `json:"editable"`
+	Query    string            `json:"query,omitempty"`
+	I18n     map[string]string `json:"i18n"`
+}
+
+// nodelistPageJSON returns page config for nodelist.js (safe for embedding in HTML).
+func nodelistPageJSON(apiURL, saveURL, query, locale string, editable bool) template.JS {
+	keys := []struct{ jsKey, locKey string }{
+		{"address", "nodelist.col.address"},
+		{"aka", "nodelist.col.aka"},
+		{"network", "common.network"},
+		{"name", "common.name"},
+		{"location", "nodelist.col.location"},
+		{"sysop", "nodelist.col.sysop"},
+		{"phone", "nodelist.col.phone"},
+		{"baud", "nodelist.col.baud"},
+		{"type", "nodelist.col.type"},
+		{"active", "common.active"},
+		{"flags", "common.flags"},
+		{"capabilities", "nodelist.col.capabilities"},
+		{"yes", "common.yes"},
+		{"no", "common.no"},
+		{"close", "common.close"},
+		{"edit", "common.edit"},
+		{"save", "common.save"},
+		{"loading", "common.loading"},
+		{"load_error", "nodelist.load_error"},
+	}
+	i18n := make(map[string]string, len(keys)+3)
+	for _, pair := range keys {
+		i18n[pair.jsKey] = tr(locale, pair.locKey)
+	}
+	if editable {
+		i18n["flags_help"] = tr(locale, "nodelist.flags_help")
+		i18n["commit"] = tr(locale, "admin_fido_nodelist.commit_checkbox")
+		i18n["save_error"] = tr(locale, "admin_fido_nodelist.save_error")
+	}
+	cfg := nodelistPageConfig{
+		APIURL:   apiURL,
+		SaveURL:  saveURL,
+		Editable: editable,
+		Query:    query,
+		I18n:     i18n,
+	}
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return template.JS("{}")
+	}
+	return template.JS(b)
+}
+
 func (s *Server) maybeRebuildHubNodelist(network string) error {
 	nd, err := networkDefByName(network)
 	if err != nil || !nd.UsesMemberNodelist() {
 		return err
+	}
+	if s.Deps.Messages != nil && fido.ShouldPreserveImportedNodelist(s.Deps.Messages.DB(), nd) {
+		return nil
 	}
 	cfg := config.Get()
 	return fido.RebuildHubNodelistDB(s.Deps.Messages.DB(), nd, cfg.BBS.Name, cfg.Sysop.Name)
@@ -50,12 +108,13 @@ func (s *Server) lookupNodeDetail(network, addrStr string) (*nodeDetailJSON, err
 		return nil, err
 	}
 	aka := entry.AKA
-	if aka == "" {
-		linked := []*fido.NodeEntry{entry}
-		fido.LinkHostAKAsPtrs(linked)
-		if linked[0].AKA != "" {
-			aka = linked[0].AKA
-		}
+	linked := []*fido.NodeEntry{entry}
+	fido.LinkHostAKAsPtrs(linked)
+	if nd, nerr := networkDefByName(network); nerr == nil {
+		fido.LinkConfiguredAKAs(linked, nd)
+	}
+	if linked[0].AKA != "" {
+		aka = linked[0].AKA
 	}
 	return nodeEntryToDetail(entry, aka), nil
 }

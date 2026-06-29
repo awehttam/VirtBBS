@@ -44,6 +44,8 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/virtbbs/virtbbs/internal/conferences"
 	"github.com/virtbbs/virtbbs/internal/messages"
@@ -87,18 +89,11 @@ func writeMultiZipAndRegister(dirPath string, dirID int64, fileArea FileArea, zi
 	return fileArea.RegisterUpload(dirID, zipName, diz, "VirtBBS")
 }
 
-// RunDayRollover regenerates everything VirtNet publishes once per day for
-// a hub network nd: the full nodelist, its diff against yesterday, a
-// snapshot for tomorrow's diff, the NodeChgs.txt change log, and the node
-// diagrams — and, when publish is true, posts the nodelist and diff into
-// the network's echo conference (auto-created, auto-wired to
-// nd.EffectiveNodelistEchoTag) so scan.go's downlink fan-out distributes
-// them. Generated files are always registered into the network's Nodelist
-// Files area (also auto-created). Call with publish=false at startup to
-// refresh local artifacts without echo traffic; the daily rollover passes
-// publish=true. Only meaningful for hub networks (nd.IsHub()); returns
-// non-fatal warnings rather than failing outright on any one step, so e.g.
-// a missing `dot` binary doesn't block the nodelist itself from publishing.
+// RunDayRollover regenerates everything a hub network publishes once per day:
+// on Fridays a full NODELIST.Z## plus any changes as NODEDIFF.Z##; on other
+// days NODEDIFF.Z## only when members changed. Always snapshots members,
+// refreshes fido_nodes, NodeChgs.txt, and diagrams. When publish is true,
+// posts nodelist/diff into the echo conference for downlink fan-out.
 func RunDayRollover(nd *NetworkDef, db *sql.DB, confStore *conferences.Store, msgStore *messages.Store,
 	fileArea FileArea, hubBBSName, hubSysopName string, publish bool) []string {
 	var warnings []string
@@ -127,30 +122,37 @@ func RunDayRollover(nd *NetworkDef, db *sql.DB, confStore *conferences.Store, ms
 		warn("snapshot members: %v", err)
 	}
 
-	if publish {
+	nodelistSuffix := func(filename string) string {
+		if i := strings.LastIndex(filename, ".Z"); i >= 0 {
+			return filename[i+1:]
+		}
+		return NodelistDaySuffix(time.Now())
+	}
+
+	if publish && fullName != "" {
 		if err := msgStore.Post(&messages.Message{
 			ConferenceID: nlConfID,
 			FromName:     "VirtBBS NodeAnnounce",
 			ToName:       "All",
-			Subject:      fmt.Sprintf("VirtNet Nodelist %s", fullName[len("VirtNode."):]),
+			Subject:      fmt.Sprintf("%s Nodelist %s", nd.Name, nodelistSuffix(fullName)),
 			Status:       "A",
 			Echo:         true,
 			Body:         string(fullData),
 		}); err != nil {
 			warn("post nodelist message: %v", err)
 		}
-		if diffData != nil {
-			if err := msgStore.Post(&messages.Message{
-				ConferenceID: nlConfID,
-				FromName:     "VirtBBS NodeAnnounce",
-				ToName:       "All",
-				Subject:      fmt.Sprintf("VirtNet Nodelist Diff %s", diffName[len("VirtNode."):]),
-				Status:       "A",
-				Echo:         true,
-				Body:         string(diffData),
-			}); err != nil {
-				warn("post nodelist diff message: %v", err)
-			}
+	}
+	if publish && diffData != nil {
+		if err := msgStore.Post(&messages.Message{
+			ConferenceID: nlConfID,
+			FromName:     "VirtBBS NodeAnnounce",
+			ToName:       "All",
+			Subject:      fmt.Sprintf("%s Nodelist Diff %s", nd.Name, nodelistSuffix(diffName)),
+			Status:       "A",
+			Echo:         true,
+			Body:         string(diffData),
+		}); err != nil {
+			warn("post nodelist diff message: %v", err)
 		}
 	}
 
@@ -168,11 +170,12 @@ func RunDayRollover(nd *NetworkDef, db *sql.DB, confStore *conferences.Store, ms
 			warn("register %s: %v", filename, err)
 		}
 	}
-	writeAndRegister(fullName, fullData)
+	if fullName != "" {
+		writeAndRegister(fullName, fullData)
+	}
 	if diffData != nil {
 		writeAndRegister(diffName, diffData)
 	}
-
 	if chgsText, err := BuildNodeChgsText(db, nd.Name); err != nil {
 		warn("build NodeChgs.txt: %v", err)
 	} else if err := writeZipAndRegister(dirPath, dirID, fileArea, "NodeChgs.zip", "NodeChgs.txt",

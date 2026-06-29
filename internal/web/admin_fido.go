@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -166,7 +167,7 @@ func (s *Server) handleAdminFidoOps(w http.ResponseWriter, r *http.Request) {
 				data.Error = "network not found"
 			} else if !nd.NodelistFetchEnabled() {
 				data.Error = "no nodelist_url configured"
-			} else if _, err := fido.FetchAndImport(nd, db); err != nil {
+			} else if _, err := fido.FetchAndImport(nd, db, s.Deps.Files); err != nil {
 				data.Error = err.Error()
 			} else {
 				data.Flash = "Nodelist fetched and imported."
@@ -182,7 +183,7 @@ func (s *Server) handleAdminFidoOps(w http.ResponseWriter, r *http.Request) {
 			path := strings.TrimSpace(r.FormValue("import_path"))
 			if path == "" {
 				data.Error = "import path required"
-			} else if _, err := fido.ImportFile(db, path, network); err != nil {
+			} else if _, err := importNodelistRestoreLocal(db, path, network); err != nil {
 				data.Error = err.Error()
 			} else {
 				data.Flash = "Nodelist imported from " + path
@@ -629,7 +630,7 @@ func (s *Server) handleAdminFidoJoin(w http.ResponseWriter, r *http.Request) {
 			} else {
 				cfg := config.Get()
 				_ = fido.ApplyNodeAnnounceInfo(nd, db, s.Deps.Conferences, s.Deps.Messages, m, "NEW")
-				_, _, _ = fido.GenerateNodelist(db, nd, cfg.BBS.Name, cfg.Sysop.Name)
+				_ = fido.UpdateHubNodelistFromMembers(db, nd, cfg.BBS.Name, cfg.Sysop.Name)
 				data.ApprovedPassword = password
 				data.Flash = fmt.Sprintf("Approved as %s", m.Addr4D())
 			}
@@ -736,7 +737,7 @@ func (s *Server) handleAdminFidoImportUpload(w http.ResponseWriter, r *http.Requ
 	}
 	_ = tmp.Close()
 	network := selectedNetwork(r)
-	if _, err := fido.ImportFile(s.Deps.Messages.DB(), tmpPath, network); err != nil {
+	if _, err := importNodelistRestoreLocal(s.Deps.Messages.DB(), tmpPath, network); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -747,5 +748,7 @@ func (s *Server) handleAdminFidoImportUpload(w http.ResponseWriter, r *http.Requ
 		}
 	}
 	_ = header
-	http.Redirect(w, r, "/admin/fido/nodelist?network="+network, http.StatusSeeOther)
+	locale := localeFromRequest(r)
+	flash := url.QueryEscape(tr(locale, "admin_fido_nodelist.flash_imported"))
+	http.Redirect(w, r, "/admin/fido/nodelist?network="+url.QueryEscape(network)+"&flash="+flash, http.StatusSeeOther)
 }
