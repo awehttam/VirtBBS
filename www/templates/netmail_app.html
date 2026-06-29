@@ -1,30 +1,158 @@
 {{define "netmail_app.html"}}
 {{template "header" .}}
 <div class="card mb-3 netmail-app">
-  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "netmail.app.title"}}</h2></div>
-  <div class="card-body">
-  <div id="netmail-app" class="row g-3">
-    <aside id="netmail-list" class="col-12 col-md-4 col-lg-3"><p class="meta">{{t .Locale "common.loading"}}</p></aside>
-    <section id="netmail-pane" class="col-12 col-md-8 col-lg-9"><p class="meta">{{t .Locale "netmail.app.select"}}</p></section>
+  <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <h2 class="h5 mb-0">{{t .Locale "netmail.app.title"}}</h2>
+    <button type="button" class="btn btn-sm btn-primary" id="netmail-compose-btn">{{t .Locale "netmail.app.compose"}}</button>
   </div>
-  <details class="compose-panel">
-    <summary>{{t .Locale "netmail.app.compose"}}</summary>
-    <form id="netmail-compose">
-      <div class="mb-3"><label class="form-label">{{t .Locale "netmail.app.to_name"}}</label><input class="form-control" type="text" id="nm-to-name" required></div>
-      <div class="mb-3"><label class="form-label">{{t .Locale "netmail.app.to_addr"}}</label><input class="form-control" type="text" id="nm-to-addr" placeholder="{{t .Locale "netmail.app.addr_placeholder"}}" required></div>
-      <div class="mb-3"><label class="form-label">{{t .Locale "common.subject"}}</label><input class="form-control" type="text" id="nm-subject" required></div>
-      {{template "compose_editor" (dict "Locale" .Locale "EditorType" .EditorType "ComposeI18nJSON" .ComposeI18nJSON "TextareaID" "nm-body" "TextareaName" "" "Body" "" "Required" true)}}
-      <div class="mb-3 form-check">
-        <input class="form-check-input" type="checkbox" id="nm-crash">
-        <label class="form-check-label" for="nm-crash">{{t .Locale "netmail.app.crash"}}</label>
-      </div>
-      <button type="submit" class="btn btn-primary">{{t .Locale "common.send"}}</button>
-      <span id="nm-compose-status" class="meta"></span>
-    </form>
-  </details>
+  <div class="card-body">
+    <div class="row g-3 netmail-layout">
+      <aside class="col-lg-4 col-xl-3">
+        <div class="netmail-sidebar card h-100">
+          <div class="card-body p-2">
+            <div class="btn-group btn-group-sm w-100 mb-2" role="group" id="netmail-filters">
+              <button type="button" class="btn btn-outline-secondary active" data-filter="all">{{t .Locale "netmail.app.filter_all"}}</button>
+              <button type="button" class="btn btn-outline-secondary" data-filter="unread">{{t .Locale "netmail.app.filter_unread"}}</button>
+            </div>
+            <div id="netmail-stats" class="meta small mb-2"></div>
+            <div id="netmail-list" class="netmail-list"><p class="meta">{{t .Locale "common.loading"}}</p></div>
+          </div>
+        </div>
+        <div class="card mt-3">
+          <div class="card-header py-2 d-flex align-items-center justify-content-between gap-2">
+            <h3 class="h6 mb-0">{{t .Locale "addressbook.title"}}</h3>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="netmail-ab-add">{{t .Locale "common.add"}}</button>
+          </div>
+          <div class="card-body p-2">
+            <input type="search" class="form-control form-control-sm mb-2" id="netmail-ab-search" placeholder="{{t .Locale "addressbook.placeholder"}}">
+            <div id="netmail-addressbook" class="netmail-addressbook"><p class="meta small">{{t .Locale "common.loading"}}</p></div>
+          </div>
+        </div>
+      </aside>
+      <section class="col-lg-8 col-xl-9">
+        <div id="netmail-pane" class="netmail-pane card min-vh-25">
+          <div class="card-body">
+            <p class="meta mb-0">{{t .Locale "netmail.app.select"}}</p>
+          </div>
+        </div>
+        <div id="netmail-compose-panel" class="card mt-3 d-none">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="h6 mb-0">{{t .Locale "netmail.app.compose"}}</h3>
+            <button type="button" class="btn-close" id="netmail-compose-close" aria-label="{{t .Locale "common.close"}}"></button>
+          </div>
+          <div class="card-body">
+            <form id="netmail-compose">
+              <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label" for="nm-to-name">{{t .Locale "netmail.app.to_name"}}</label>
+                  <input class="form-control" type="text" id="nm-to-name" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="nm-to-addr">{{t .Locale "netmail.app.to_addr"}}</label>
+                  <div class="input-group">
+                    <input class="form-control" type="text" id="nm-to-addr" placeholder="{{t .Locale "netmail.app.addr_placeholder"}}" required>
+                    <button class="btn btn-outline-secondary" type="button" id="nm-nodelist-btn" title="{{t .Locale "netmail.app.nodelist_lookup"}}">{{t .Locale "netmail.app.lookup"}}</button>
+                  </div>
+                </div>
+              </div>
+              <div class="row g-3 mb-3">
+                <div class="col-md-8">
+                  <label class="form-label" for="nm-subject">{{t .Locale "common.subject"}}</label>
+                  <input class="form-control" type="text" id="nm-subject" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="nm-tagline">{{t .Locale "netmail.app.tagline"}}</label>
+                  <select class="form-select" id="nm-tagline">
+                    <option value="">{{t .Locale "netmail.app.tagline_none"}}</option>
+                  </select>
+                </div>
+              </div>
+              {{template "compose_editor" (dict "Locale" .Locale "EditorType" .EditorType "ComposeI18nJSON" .ComposeI18nJSON "TextareaID" "nm-body" "TextareaName" "" "Body" "" "Required" true)}}
+              <div class="mb-3 form-check">
+                <input class="form-check-input" type="checkbox" id="nm-crash">
+                <label class="form-check-label" for="nm-crash">{{t .Locale "netmail.app.crash"}}</label>
+              </div>
+              <button type="submit" class="btn btn-primary">{{t .Locale "common.send"}}</button>
+              <span id="nm-compose-status" class="meta ms-2"></span>
+            </form>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </div>
-<script type="application/json" id="netmail-i18n">{"empty":{{printf "%q" (t .Locale "netmail.empty")}},"from":{{printf "%q" (t .Locale "netmail.app.from")}},"queued":{{printf "%q" (t .Locale "netmail.app.queued")}},"sendFailed":{{printf "%q" (t .Locale "netmail.app.send_failed")}},"loadFailed":{{printf "%q" (t .Locale "netmail.app.load_failed")}}}</script>
+
+<div class="modal fade" id="netmail-contact-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="netmail-contact-modal-title">{{t .Locale "addressbook.add_contact"}}</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{t .Locale "common.close"}}"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="netmail-contact-id" value="">
+        <div class="mb-3">
+          <label class="form-label" for="netmail-contact-name">{{t .Locale "common.name"}}</label>
+          <input class="form-control" type="text" id="netmail-contact-name" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="netmail-contact-addr">{{t .Locale "addressbook.label.fido"}}</label>
+          <input class="form-control font-monospace" type="text" id="netmail-contact-addr" placeholder="{{t .Locale "netmail.app.addr_placeholder"}}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="netmail-contact-email">{{t .Locale "addressbook.label.email"}}</label>
+          <input class="form-control" type="email" id="netmail-contact-email">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="netmail-contact-language">{{t .Locale "addressbook.label.language"}}</label>
+          <select class="form-select" id="netmail-contact-language">
+            <option value="">{{t .Locale "addressbook.language_unknown"}}</option>
+            <option value="en">{{t .Locale "lang.en"}}</option>
+            <option value="es">{{t .Locale "lang.es"}}</option>
+            <option value="af">{{t .Locale "lang.af"}}</option>
+          </select>
+        </div>
+        <div class="mb-0">
+          <label class="form-label" for="netmail-contact-notes">{{t .Locale "addressbook.label.notes"}}</label>
+          <textarea class="form-control" id="netmail-contact-notes" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{t .Locale "common.close"}}</button>
+        <button type="button" class="btn btn-primary" id="netmail-contact-save">{{t .Locale "common.save"}}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="netmail-nodelist-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5">{{t .Locale "netmail.app.nodelist_lookup"}}</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{t .Locale "common.close"}}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2 mb-3">
+          <div class="col-md-4">
+            <select class="form-select" id="nm-nodelist-network">
+              {{range .Networks}}<option value="{{.}}">{{.}}</option>{{end}}
+            </select>
+          </div>
+          <div class="col-md-8">
+            <div class="input-group">
+              <input type="search" class="form-control" id="nm-nodelist-query" placeholder="{{t .Locale "nodelist.search_placeholder"}}">
+              <button type="button" class="btn btn-primary" id="nm-nodelist-search">{{t .Locale "common.search"}}</button>
+            </div>
+          </div>
+        </div>
+        <div id="netmail-nodelist-results"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="netmail-i18n">{{netmailI18nJSON .Locale}}</script>
 <script src="/static/netmail.js"></script>
 {{template "footer" .}}
 {{end}}

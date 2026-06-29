@@ -608,16 +608,31 @@ func (s *session) conferenceMenu() {
 		s.writeln(ansi.Colorize(ansi.Yellow, "No conferences available."))
 		return
 	}
-	s.writeln(ansi.Header("Conference List"))
-	for _, c := range confs {
-		marker := "  "
-		if c.ID == s.conference {
-			marker = ansi.Color(ansi.BrightGreen) + "* " + ansi.Reset()
+	cfg := config.Get()
+	order := []string{cfg.Fido.EffectivePrimaryName()}
+	for _, nd := range cfg.Fido.Networks {
+		if nd.Name != "" {
+			order = append(order, nd.Name)
 		}
-		s.writeln(fmt.Sprintf("%s%s%-4d%s  %s",
-			marker,
-			ansi.Color(ansi.BrightCyan), c.ID, ansi.Reset(),
-			c.Name))
+	}
+	groups := conferences.GroupByNetwork(confs, order, cfg.Fido.EffectivePrimaryName())
+	s.writeln(ansi.Header("Conference List"))
+	for _, g := range groups {
+		label := g.Network
+		if label == "" {
+			label = "Local"
+		}
+		s.writeln(ansi.Color(ansi.BrightWhite) + "  " + label + ansi.Reset())
+		for _, c := range g.List {
+			marker := "  "
+			if c.ID == s.conference {
+				marker = ansi.Color(ansi.BrightGreen) + "* " + ansi.Reset()
+			}
+			s.writeln(fmt.Sprintf("%s  %s%-4d%s  %s",
+				marker,
+				ansi.Color(ansi.BrightCyan), c.ID, ansi.Reset(),
+				c.Name))
+		}
 	}
 	s.write(ansi.Prompt("\r\nJoin conference # (Enter=stay): "))
 	input := strings.TrimSpace(s.readline())
@@ -1893,17 +1908,31 @@ func (s *session) echoFlagConference() {
 		return
 	}
 	s.writeln(ansi.Header("Conference Echo Settings"))
-	for _, c := range confs {
-		echo := ansi.Color(ansi.BrightCyan) + "LOCAL" + ansi.Reset()
-		tag := ""
-		if c.Echo {
-			echo = ansi.Color(ansi.BrightGreen) + "ECHO " + ansi.Reset()
-			tag = " tag=" + c.EchoTag
-			if c.UplinkAddr != "" {
-				tag += " uplink=" + c.UplinkAddr
-			}
+	cfg := config.Get()
+	order := []string{cfg.Fido.EffectivePrimaryName()}
+	for _, nd := range cfg.Fido.Networks {
+		if nd.Name != "" {
+			order = append(order, nd.Name)
 		}
-		s.writeln(fmt.Sprintf("  %3d  %s  %-25s %s%s", c.ID, echo, c.Name, c.Network, tag))
+	}
+	for _, g := range conferences.GroupByNetwork(confs, order, cfg.Fido.EffectivePrimaryName()) {
+		label := g.Network
+		if label == "" {
+			label = "Local"
+		}
+		s.writeln(ansi.Color(ansi.BrightWhite) + "  " + label + ansi.Reset())
+		for _, c := range g.List {
+			echo := ansi.Color(ansi.BrightCyan) + "LOCAL" + ansi.Reset()
+			tag := ""
+			if c.Echo {
+				echo = ansi.Color(ansi.BrightGreen) + "ECHO " + ansi.Reset()
+				tag = " tag=" + c.EchoTag
+				if c.UplinkAddr != "" {
+					tag += " uplink=" + c.UplinkAddr
+				}
+			}
+			s.writeln(fmt.Sprintf("  %3d  %s  %-25s %s%s", c.ID, echo, c.Name, c.Network, tag))
+		}
 	}
 	s.writeln("")
 	s.write(ansi.Prompt("Conference ID to edit (Enter=cancel): "))

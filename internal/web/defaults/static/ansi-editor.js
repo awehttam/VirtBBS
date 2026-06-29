@@ -128,8 +128,11 @@
     return numberLine.join('') + '\n' + tickLine.join('');
   }
 
-  var previewModalInstance = null;
-  var cheatsheetModalInstance = null;
+  function showModal(id) {
+    var el = document.getElementById(id);
+    if (!el || !window.bootstrap || !window.bootstrap.Modal) return;
+    window.bootstrap.Modal.getOrCreateInstance(el).show();
+  }
 
   function ensurePreviewModal() {
     var modal = document.getElementById('ansiEditorPreviewModal');
@@ -146,9 +149,6 @@
         + escapeHtml(t('close', 'Close')) + '</button></div></div></div>';
       document.body.appendChild(modal);
     }
-    if (!previewModalInstance && window.bootstrap && window.bootstrap.Modal) {
-      previewModalInstance = new window.bootstrap.Modal(modal);
-    }
     return {
       title: document.getElementById('ansiEditorPreviewModalTitle'),
       body: document.getElementById('ansiEditorPreviewModalBody')
@@ -164,7 +164,7 @@
     } else {
       modal.body.innerHTML = '<pre class="mb-0">' + escapeHtml(options && options.content ? options.content : '') + '</pre>';
     }
-    if (previewModalInstance) previewModalInstance.show();
+    showModal('ansiEditorPreviewModal');
   }
 
   function ensureCheatsheetModal() {
@@ -181,9 +181,6 @@
         + '<div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">'
         + escapeHtml(t('close', 'Close')) + '</button></div></div></div>';
       document.body.appendChild(modal);
-    }
-    if (!cheatsheetModalInstance && window.bootstrap && window.bootstrap.Modal) {
-      cheatsheetModalInstance = new window.bootstrap.Modal(modal);
     }
     return document.getElementById('ansiEditorCheatsheetModalBody');
   }
@@ -209,7 +206,7 @@
   function openCheatsheet() {
     var body = ensureCheatsheetModal();
     renderCheatsheetTable(body);
-    if (cheatsheetModalInstance) cheatsheetModalInstance.show();
+    showModal('ansiEditorCheatsheetModal');
   }
 
   function AnsiEditor(root, options) {
@@ -226,20 +223,22 @@
   }
 
   AnsiEditor.prototype.buildUi = function () {
+    var hidePreview = !!(this.options && this.options.hidePreview);
     var controls = document.createElement('div');
-    controls.className = 'ansi-editor-controls row g-2 mb-2';
-    controls.innerHTML = '<div class="col-md-4"><select class="form-select form-select-sm" data-ansi-editor-preset></select></div>'
-      + '<div class="col-md-3"><input class="form-control form-control-sm font-monospace" data-ansi-editor-custom></div>'
-      + '<div class="col-auto"><button type="button" class="btn btn-sm btn-outline-secondary" data-ansi-editor-insert-esc">'
-      + escapeHtml(t('insert_escape_prefix', 'Insert ESC[')) + '</button></div>'
-      + '<div class="col-auto"><button type="button" class="btn btn-sm btn-outline-secondary" data-ansi-editor-insert-seq">'
-      + escapeHtml(t('insert_sequence', 'Insert Sequence')) + '</button></div>'
-      + '<div class="col-auto"><button type="button" class="btn btn-sm btn-outline-secondary" data-ansi-editor-cheatsheet-btn">'
-      + escapeHtml(t('cheatsheet_title', 'ANSI Cheatsheet')) + '</button></div>'
-      + '<div class="col-auto"><button type="button" class="btn btn-sm btn-outline-secondary" data-ansi-editor-insert-file-btn">'
-      + escapeHtml(t('insert_file', 'Insert File')) + '</button><input type="file" class="d-none" data-ansi-editor-file-input accept=".ans,.asc,.txt,text/*"></div>'
-      + '<div class="col-auto"><button type="button" class="btn btn-sm btn-outline-primary" data-ansi-editor-preview-btn">'
-      + escapeHtml(t('preview', 'Preview')) + '</button></div>';
+    controls.className = 'ansi-editor-controls d-flex flex-wrap align-items-center gap-2 mb-2 px-2 pt-2';
+    controls.innerHTML = '<select class="form-select form-select-sm ansi-preset-select" data-ansi-editor-preset></select>'
+      + '<input class="form-control form-control-sm font-monospace ansi-custom-input" data-ansi-editor-custom>'
+      + '<button type="button" class="btn btn-sm btn-outline-secondary" data-ansi-editor-insert-esc">'
+      + escapeHtml(t('insert_escape_prefix', 'Insert ESC[')) + '</button>'
+      + '<button type="button" class="btn btn-sm btn-outline-secondary" data-ansi-editor-insert-seq">'
+      + escapeHtml(t('insert_sequence', 'Insert Sequence')) + '</button>'
+      + '<button type="button" class="btn btn-sm btn-outline-secondary" data-ansi-editor-cheatsheet-btn">'
+      + escapeHtml(t('cheatsheet_title', 'ANSI Cheatsheet')) + '</button>'
+      + '<button type="button" class="btn btn-sm btn-outline-secondary" data-ansi-editor-insert-file-btn">'
+      + escapeHtml(t('insert_file', 'Insert File')) + '</button>'
+      + '<input type="file" class="d-none" data-ansi-editor-file-input accept=".ans,.asc,.txt,text/*">'
+      + (hidePreview ? '' : '<button type="button" class="btn btn-sm btn-outline-primary" data-ansi-editor-preview-btn">'
+        + escapeHtml(t('preview', 'Preview')) + '</button>');
     this.root.insertBefore(controls, this.textarea);
 
     var rulerWrap = document.createElement('div');
@@ -290,9 +289,10 @@
       self.customInput.value = '';
       self.presetSelect.value = '';
     });
-    this.root.querySelector('[data-ansi-editor-preview-btn]').addEventListener('click', function () {
-      self.openPreview();
-    });
+    var previewBtn = this.root.querySelector('[data-ansi-editor-preview-btn]');
+    if (previewBtn) {
+      previewBtn.addEventListener('click', function () { self.openPreview(); });
+    }
     this.root.querySelector('[data-ansi-editor-cheatsheet-btn]').addEventListener('click', openCheatsheet);
     var fileInput = this.root.querySelector('[data-ansi-editor-file-input]');
     this.root.querySelector('[data-ansi-editor-insert-file-btn]').addEventListener('click', function () {
@@ -326,7 +326,16 @@
   };
 
   AnsiEditor.prototype.syncRulerMetrics = function () {
-    if (!this.textarea || !this.rulerTextarea || !this.rulerWrap || !this.textarea.offsetParent) return;
+    if (!this.textarea || !this.rulerTextarea || !this.rulerWrap) return;
+    var wrapCols = parseInt(this.textarea.getAttribute('data-wrap-cols') || '0', 10);
+    var rulerWidth = wrapCols > 0 ? wrapCols : 132;
+    var rulerContent = buildColumnRuler(rulerWidth);
+    if (this.rulerTextarea.value !== rulerContent) {
+      this.rulerTextarea.value = rulerContent;
+      this.rulerTextarea.defaultValue = rulerContent;
+      this.rulerTextarea.style.minWidth = rulerWidth + 'ch';
+    }
+    if (!this.textarea.offsetParent) return;
     var styles = window.getComputedStyle(this.textarea);
     ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'tabSize',
       'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'boxSizing'].forEach(function (prop) {

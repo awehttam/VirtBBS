@@ -33,7 +33,7 @@
       $(this).closest('form').trigger('submit');
     });
 
-    $('#mainNav .nav-link[data-nav], #mainNav .dropdown-toggle').on('click', function () {
+    $('#mainNav [data-nav]').on('click', function () {
       if (window.matchMedia('(max-width: 991.98px)').matches) {
         collapseNavOnMobile();
       }

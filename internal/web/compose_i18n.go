@@ -21,6 +21,7 @@ func composeI18nJSON(locale string) string {
 		"compose.hard_wrap_79",
 		"compose.hard_wrap_39",
 		"compose.hard_wrap_help",
+		"compose.apply_wrap",
 		"compose.stats_lines",
 		"compose.stats_bytes",
 		"compose.body_size_warning",

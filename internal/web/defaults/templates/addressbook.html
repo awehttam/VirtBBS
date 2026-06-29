@@ -1,54 +1,122 @@
 {{define "addressbook.html"}}
 {{template "header" .}}
 <div class="card mb-3">
-  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "addressbook.title"}}</h2></div>
+  <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <h2 class="h5 mb-0">{{t .Locale "addressbook.title"}}</h2>
+    <button type="button" class="btn btn-sm btn-primary" id="ab-add-btn">{{t .Locale "common.add"}}</button>
+  </div>
   <div class="card-body">
   <form method="get" action="/addressbook" class="search-form d-flex flex-wrap gap-2 align-items-center mb-3">
     <input class="form-control" type="search" name="q" value="{{.Query}}" placeholder="{{t .Locale "addressbook.placeholder"}}">
     <button type="submit" class="btn btn-primary">{{t .Locale "common.search"}}</button>
   </form>
-  </div>
-</div>
-<div class="card mb-3">
-  <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "addressbook.add_section"}}</h2></div>
-  <div class="card-body">
-  <form method="post" action="/addressbook">
-    <input type="hidden" name="action" value="add">
-    <label>{{t .Locale "common.name"}}</label><input class="form-control" type="text" name="name" required>
-    <label>{{t .Locale "addressbook.label.fido"}}</label><input class="form-control" type="text" name="fido_addr" placeholder="{{t .Locale "netmail.app.addr_placeholder"}}">
-    <label>{{t .Locale "addressbook.label.email"}}</label><input class="form-control" type="email" name="email">
-    <label>{{t .Locale "addressbook.label.notes"}}</label><textarea class="form-control" name="notes" rows="2"></textarea>
-    <button type="submit" class="btn btn-primary">{{t .Locale "common.add"}}</button>
-  </form>
-  </div>
-</div>
-<div class="card mb-3">
-  <div class="card-body">
   <div class="table-responsive">
   <table class="table table-dark table-striped table-hover align-middle mb-0">
-    <thead><tr><th>{{t .Locale "common.name"}}</th><th>{{t .Locale "addressbook.col.fido"}}</th><th>{{t .Locale "addressbook.col.email"}}</th><th>{{t .Locale "addressbook.col.notes"}}</th><th></th></tr></thead>
+    <thead><tr><th>{{t .Locale "common.name"}}</th><th>{{t .Locale "addressbook.col.fido"}}</th><th>{{t .Locale "addressbook.col.email"}}</th><th>{{t .Locale "addressbook.col.language"}}</th><th>{{t .Locale "addressbook.col.notes"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Entries}}
-    <tr>
+    <tr data-entry-id="{{.ID}}" data-entry-name="{{.Name}}" data-entry-fido="{{.FidoAddr}}" data-entry-email="{{.Email}}" data-entry-notes="{{.Notes}}" data-entry-language="{{.Language}}">
       <td>{{.Name}}</td>
-      <td>{{.FidoAddr}}</td>
+      <td><code>{{.FidoAddr}}</code></td>
       <td>{{.Email}}</td>
+      <td>{{if .Language}}{{.Language}}{{else}}—{{end}}</td>
       <td class="meta">{{.Notes}}</td>
-      <td>
-        <form method="post" action="/addressbook" style="display:inline">
+      <td class="text-nowrap">
+        <button type="button" class="btn btn-sm btn-outline-secondary ab-edit-btn">{{t $.Locale "common.edit"}}</button>
+        <form method="post" action="/addressbook" class="d-inline">
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="id" value="{{.ID}}">
-          <button type="submit" class="btn btn-link">{{t $.Locale "common.delete"}}</button>
+          <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('{{t $.Locale "addressbook.delete_confirm"}}')">{{t $.Locale "common.delete"}}</button>
         </form>
       </td>
     </tr>
     {{else}}
-    <tr><td colspan="5">{{t .Locale "addressbook.empty"}}</td></tr>
+    <tr><td colspan="6">{{t .Locale "addressbook.empty"}}</td></tr>
     {{end}}
     </tbody>
   </table>
   </div>
   </div>
 </div>
+
+<div class="modal fade" id="ab-contact-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="ab-contact-modal-title">{{t .Locale "addressbook.add_contact"}}</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{t .Locale "common.close"}}"></button>
+      </div>
+      <form method="post" action="/addressbook" id="ab-contact-form">
+        <div class="modal-body">
+          <input type="hidden" name="action" id="ab-contact-action" value="add">
+          <input type="hidden" name="id" id="ab-contact-id" value="">
+          <div class="mb-3">
+            <label class="form-label" for="ab-contact-name">{{t .Locale "common.name"}}</label>
+            <input class="form-control" type="text" name="name" id="ab-contact-name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="ab-contact-fido">{{t .Locale "addressbook.label.fido"}}</label>
+            <input class="form-control font-monospace" type="text" name="fido_addr" id="ab-contact-fido" placeholder="{{t .Locale "netmail.app.addr_placeholder"}}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="ab-contact-email">{{t .Locale "addressbook.label.email"}}</label>
+            <input class="form-control" type="email" name="email" id="ab-contact-email">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="ab-contact-language">{{t .Locale "addressbook.label.language"}}</label>
+            <select class="form-select" name="language" id="ab-contact-language">
+              <option value="">{{t .Locale "addressbook.language_unknown"}}</option>
+              <option value="en">{{t .Locale "lang.en"}}</option>
+              <option value="es">{{t .Locale "lang.es"}}</option>
+              <option value="af">{{t .Locale "lang.af"}}</option>
+            </select>
+          </div>
+          <div class="mb-0">
+            <label class="form-label" for="ab-contact-notes">{{t .Locale "addressbook.label.notes"}}</label>
+            <textarea class="form-control" name="notes" id="ab-contact-notes" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{t .Locale "common.close"}}</button>
+          <button type="submit" class="btn btn-primary">{{t .Locale "common.save"}}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var modalEl = document.getElementById('ab-contact-modal');
+  if (!modalEl) return;
+  var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  var addBtn = document.getElementById('ab-add-btn');
+  var title = document.getElementById('ab-contact-modal-title');
+  var action = document.getElementById('ab-contact-action');
+  var idField = document.getElementById('ab-contact-id');
+  function openForm(editRow) {
+    if (editRow) {
+      action.value = 'edit';
+      idField.value = editRow.getAttribute('data-entry-id') || '';
+      document.getElementById('ab-contact-name').value = editRow.getAttribute('data-entry-name') || '';
+      document.getElementById('ab-contact-fido').value = editRow.getAttribute('data-entry-fido') || '';
+      document.getElementById('ab-contact-email').value = editRow.getAttribute('data-entry-email') || '';
+      document.getElementById('ab-contact-notes').value = editRow.getAttribute('data-entry-notes') || '';
+      document.getElementById('ab-contact-language').value = editRow.getAttribute('data-entry-language') || '';
+      title.textContent = {{printf "%q" (t .Locale "addressbook.edit_contact")}};
+    } else {
+      action.value = 'add';
+      idField.value = '';
+      document.getElementById('ab-contact-form').reset();
+      title.textContent = {{printf "%q" (t .Locale "addressbook.add_contact")}};
+    }
+    modal.show();
+  }
+  if (addBtn) addBtn.addEventListener('click', function () { openForm(null); });
+  document.querySelectorAll('.ab-edit-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { openForm(btn.closest('tr')); });
+  });
+})();
+</script>
 {{template "footer" .}}
 {{end}}

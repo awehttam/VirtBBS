@@ -13,6 +13,7 @@ type AddressBookEntry struct {
 	FidoAddr string
 	Email    string
 	Notes    string
+	Language string
 	Created  string
 }
 
@@ -24,11 +25,13 @@ func (s *Store) ensureAddressBookSchema() error {
 		fido_addr  TEXT NOT NULL DEFAULT '',
 		email      TEXT NOT NULL DEFAULT '',
 		notes      TEXT NOT NULL DEFAULT '',
+		language   TEXT NOT NULL DEFAULT '',
 		created_at TEXT NOT NULL DEFAULT (datetime('now'))
 	)`)
 	if err != nil {
 		return err
 	}
+	_, _ = s.db.Exec(`ALTER TABLE user_address_book ADD COLUMN language TEXT NOT NULL DEFAULT ''`)
 	_, err = s.db.Exec(`CREATE INDEX IF NOT EXISTS idx_address_book_user ON user_address_book(user_id)`)
 	return err
 }
@@ -40,7 +43,7 @@ func (s *Store) ListAddressBook(userID int64, query string) ([]*AddressBookEntry
 	}
 	q := strings.TrimSpace(strings.ToLower(query))
 	if q == "" {
-		r, e := s.db.Query(`SELECT id, user_id, name, fido_addr, email, notes, created_at
+		r, e := s.db.Query(`SELECT id, user_id, name, fido_addr, email, notes, language, created_at
 			FROM user_address_book WHERE user_id=? ORDER BY name`, userID)
 		if e != nil {
 			return nil, e
@@ -49,10 +52,10 @@ func (s *Store) ListAddressBook(userID int64, query string) ([]*AddressBookEntry
 		return scanAddressRows(r)
 	}
 	like := "%" + q + "%"
-	r, err := s.db.Query(`SELECT id, user_id, name, fido_addr, email, notes, created_at
+	r, err := s.db.Query(`SELECT id, user_id, name, fido_addr, email, notes, language, created_at
 		FROM user_address_book WHERE user_id=?
-		AND (lower(name) LIKE ? OR lower(fido_addr) LIKE ? OR lower(email) LIKE ? OR lower(notes) LIKE ?)
-		ORDER BY name`, userID, like, like, like, like)
+		AND (lower(name) LIKE ? OR lower(fido_addr) LIKE ? OR lower(email) LIKE ? OR lower(notes) LIKE ? OR lower(language) LIKE ?)
+		ORDER BY name`, userID, like, like, like, like, like)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +71,7 @@ func scanAddressRows(rows interface {
 	var out []*AddressBookEntry
 	for rows.Next() {
 		e := &AddressBookEntry{}
-		if err := rows.Scan(&e.ID, &e.UserID, &e.Name, &e.FidoAddr, &e.Email, &e.Notes, &e.Created); err != nil {
+		if err := rows.Scan(&e.ID, &e.UserID, &e.Name, &e.FidoAddr, &e.Email, &e.Notes, &e.Language, &e.Created); err != nil {
 			return nil, err
 		}
 		out = append(out, e)
@@ -77,7 +80,7 @@ func scanAddressRows(rows interface {
 }
 
 // AddAddressBookEntry inserts a contact for userID.
-func (s *Store) AddAddressBookEntry(userID int64, name, fidoAddr, email, notes string) error {
+func (s *Store) AddAddressBookEntry(userID int64, name, fidoAddr, email, notes, language string) error {
 	if err := s.ensureAddressBookSchema(); err != nil {
 		return err
 	}
@@ -85,8 +88,9 @@ func (s *Store) AddAddressBookEntry(userID int64, name, fidoAddr, email, notes s
 	if name == "" {
 		return fmt.Errorf("name is required")
 	}
-	_, err := s.db.Exec(`INSERT INTO user_address_book (user_id, name, fido_addr, email, notes)
-		VALUES (?,?,?,?,?)`, userID, name, strings.TrimSpace(fidoAddr), strings.TrimSpace(email), strings.TrimSpace(notes))
+	_, err := s.db.Exec(`INSERT INTO user_address_book (user_id, name, fido_addr, email, notes, language)
+		VALUES (?,?,?,?,?,?)`, userID, name, strings.TrimSpace(fidoAddr), strings.TrimSpace(email),
+		strings.TrimSpace(notes), strings.TrimSpace(language))
 	return err
 }
 
@@ -107,7 +111,7 @@ func (s *Store) DeleteAddressBookEntry(userID, entryID int64) error {
 }
 
 // UpdateAddressBookEntry updates an entry owned by userID.
-func (s *Store) UpdateAddressBookEntry(userID, entryID int64, name, fidoAddr, email, notes string) error {
+func (s *Store) UpdateAddressBookEntry(userID, entryID int64, name, fidoAddr, email, notes, language string) error {
 	if err := s.ensureAddressBookSchema(); err != nil {
 		return err
 	}
@@ -115,8 +119,9 @@ func (s *Store) UpdateAddressBookEntry(userID, entryID int64, name, fidoAddr, em
 	if name == "" {
 		return fmt.Errorf("name is required")
 	}
-	res, err := s.db.Exec(`UPDATE user_address_book SET name=?, fido_addr=?, email=?, notes=?
-		WHERE id=? AND user_id=?`, name, strings.TrimSpace(fidoAddr), strings.TrimSpace(email), strings.TrimSpace(notes), entryID, userID)
+	res, err := s.db.Exec(`UPDATE user_address_book SET name=?, fido_addr=?, email=?, notes=?, language=?
+		WHERE id=? AND user_id=?`, name, strings.TrimSpace(fidoAddr), strings.TrimSpace(email),
+		strings.TrimSpace(notes), strings.TrimSpace(language), entryID, userID)
 	if err != nil {
 		return err
 	}

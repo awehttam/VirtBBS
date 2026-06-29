@@ -101,7 +101,7 @@ func (s *Server) handleAddressBook(w http.ResponseWriter, r *http.Request) {
 		switch r.FormValue("action") {
 		case "add":
 			err := s.Deps.Users.AddAddressBookEntry(u.ID,
-				r.FormValue("name"), r.FormValue("fido_addr"), r.FormValue("email"), r.FormValue("notes"))
+				r.FormValue("name"), r.FormValue("fido_addr"), r.FormValue("email"), r.FormValue("notes"), r.FormValue("language"))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -112,7 +112,7 @@ func (s *Server) handleAddressBook(w http.ResponseWriter, r *http.Request) {
 		case "edit":
 			id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 			err := s.Deps.Users.UpdateAddressBookEntry(u.ID, id,
-				r.FormValue("name"), r.FormValue("fido_addr"), r.FormValue("email"), r.FormValue("notes"))
+				r.FormValue("name"), r.FormValue("fido_addr"), r.FormValue("email"), r.FormValue("notes"), r.FormValue("language"))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -148,10 +148,12 @@ func (s *Server) handleNetmailApp(w http.ResponseWriter, r *http.Request) {
 		pageData
 		EditorType      string
 		ComposeI18nJSON string
+		Networks        []string
 	}{
 		pageData:        pd,
 		EditorType:      u.EditorType,
 		ComposeI18nJSON: composeI18nJSON(pd.Locale),
+		Networks:        fidoNetworkNamesList(),
 	}
 	s.render(w, "netmail_app.html", data)
 }
@@ -165,18 +167,13 @@ func (s *Server) handleAPINetmail(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	num, _ := strconv.Atoi(r.URL.Query().Get("num"))
 	if num > 0 {
-		msgs, err := s.Deps.Messages.ListNetmail(u.Name, u.Sysop, num, 1)
-		if err != nil || len(msgs) == 0 {
+		m, err := s.Deps.Messages.GetNetmail(u.Name, u.Sysop, num)
+		if err != nil {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
 		}
-		m := msgs[0]
-		locale := localeFromRequest(r)
-		if u.Sysop {
-			_ = json.NewEncoder(w).Encode(buildMessageViewJSON(locale, m, fido.ReconstructSource(fidoSourceOpts(m, ""))))
-			return
-		}
-		_ = json.NewEncoder(w).Encode(buildMessageViewJSON(locale, m, FormatMessageBodyHTML(m.Body)))
+		_ = s.Deps.Users.SetLastRead(u.ID, netmailConferenceID, num)
+		writeNetmailMessageJSON(w, localeFromRequest(r), u, m)
 		return
 	}
 	msgs, err := s.Deps.Messages.ListNetmail(u.Name, u.Sysop, 0, 200)
@@ -187,7 +184,8 @@ func (s *Server) handleAPINetmail(w http.ResponseWriter, r *http.Request) {
 	if msgs == nil {
 		msgs = []*messages.Message{}
 	}
-	_ = json.NewEncoder(w).Encode(msgs)
+	lastRead := s.netmailLastRead(u.ID)
+	_ = json.NewEncoder(w).Encode(netmailListItems(msgs, lastRead))
 }
 
 func (s *Server) handleAPINetmailCompose(w http.ResponseWriter, r *http.Request) {
@@ -275,10 +273,7 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 				newTotal += n
 			}
 		}
-		netmail := 0
-		if n, err := s.Deps.Messages.CountNetmail(u.Name, u.Sysop); err == nil {
-			netmail = n
-		}
+		netmail := s.netmailUnreadCount(u)
 		if newTotal != lastNew || netmail != lastNet {
 			payload, _ := json.Marshal(map[string]int{"new_messages": newTotal, "netmail": netmail})
 			fmt.Fprintf(w, "event: notify\ndata: %s\n\n", payload)

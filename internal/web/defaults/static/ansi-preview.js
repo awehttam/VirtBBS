@@ -69,17 +69,76 @@
     return out;
   }
 
+  function styleCodeSlashInURL(line, slash) {
+    if (slash > 0 && line.charAt(slash - 1) === ':') return true;
+    if (slash > 1 && line.charAt(slash - 1) === '/' && line.charAt(slash - 2) === ':') return true;
+    return false;
+  }
+
+  function renderStyleCodeLine(line) {
+    var escaped = escapeHtml(line);
+    var italicRe = /\/([^/\r\n]+)\//g;
+    var out = '';
+    var pos = 0;
+    var m;
+    while ((m = italicRe.exec(escaped)) !== null) {
+      if (styleCodeSlashInURL(escaped, m.index) || (m.index + m[0].length < escaped.length && escaped.charAt(m.index + m[0].length) === ':')) {
+        continue;
+      }
+      if (m.index > pos) out += escaped.slice(pos, m.index);
+      out += '<em>' + m[1] + '</em>';
+      pos = m.index + m[0].length;
+    }
+    out += escaped.slice(pos);
+    out = out.replace(/\*([^*\r\n]+)\*/g, '<strong>$1</strong>');
+    out = out.replace(/_([^_\r\n]+)_/g, '<u>$1</u>');
+    out = out.replace(/#([^#\r\n]+)#/g, '<span class="sc-inverse">$1</span>');
+    return out;
+  }
+
+  function styleCodesToHTML(raw) {
+    var lines = String(raw || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    var out = '<div class="stylecodes-body p-3">';
+    lines.forEach(function (line, i) {
+      if (i > 0) out += '<br>';
+      out += renderStyleCodeLine(line);
+    });
+    out += '</div>';
+    return out;
+  }
+
+  function renderPreview(container, content) {
+    if (!container) return;
+    var source = String(content || '');
+    if (!source.trim()) {
+      container.innerHTML = '<p class="meta p-3 mb-0">—</p>';
+      return;
+    }
+    if (/\x1b\[/.test(source)) {
+      container.innerHTML = '<div class="ansi-screen p-3">' + ansiToHTML(source) + '</div>';
+    } else {
+      container.innerHTML = '<pre class="mb-0 p-3">' + escapeHtml(source) + '</pre>';
+    }
+  }
+
   window.virtbbsAnsiPreview = {
     ansiToHTML: ansiToHTML,
-    renderPreview: function (container, content) {
+    styleCodesToHTML: styleCodesToHTML,
+    renderPreview: renderPreview
+  };
+
+  window.virtbbsComposePreview = {
+    render: function (container, content, mode) {
       if (!container) return;
       var source = String(content || '');
       if (!source.trim()) {
         container.innerHTML = '<p class="meta p-3 mb-0">—</p>';
         return;
       }
-      if (/\x1b\[/.test(source)) {
+      if (mode === 'ansi' || (mode !== 'stylecodes' && /\x1b\[/.test(source))) {
         container.innerHTML = '<div class="ansi-screen p-3">' + ansiToHTML(source) + '</div>';
+      } else if (mode === 'stylecodes') {
+        container.innerHTML = styleCodesToHTML(source);
       } else {
         container.innerHTML = '<pre class="mb-0 p-3">' + escapeHtml(source) + '</pre>';
       }

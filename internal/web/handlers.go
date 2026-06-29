@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -92,7 +93,7 @@ func (s *Server) handleMenu(w http.ResponseWriter, r *http.Request) {
 	}{
 		pageData: s.page(r),
 	}
-	if n, err := s.Deps.Messages.CountNetmail(u.Name, u.Sysop); err == nil {
+	if n := s.netmailUnreadCount(u); n > 0 {
 		data.NetmailCount = n
 	}
 	data.NewMessages = s.gatherNewMessageLines(u)
@@ -205,12 +206,13 @@ func (s *Server) handleMessages(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !confSelected {
+		rows := s.buildConferenceListRows(u, sortConferencesByNetwork(visible))
 		data := struct {
 			pageData
-			Rows []ConferenceListRow
+			Groups []ConferenceNetworkGroup
 		}{
 			pageData: s.page(r),
-			Rows:     s.buildConferenceListRows(u, visible),
+			Groups:   groupConferenceListRows(rows),
 		}
 		s.render(w, "messages.html", data)
 		return
@@ -411,51 +413,22 @@ func (s *Server) handleMessagePost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleNetmail(w http.ResponseWriter, r *http.Request) {
-	u, ok := s.requireUser(w, r)
-	if !ok {
+	if _, ok := s.requireUser(w, r); !ok {
 		return
 	}
-	msgs, err := s.Deps.Messages.ListNetmail(u.Name, u.Sysop, 0, 100)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	data := struct {
-		pageData
-		Messages []*messages.Message
-	}{
-		pageData: s.page(r),
-		Messages: msgs,
-	}
-	s.render(w, "netmail.html", data)
+	http.Redirect(w, r, "/netmail/app", http.StatusSeeOther)
 }
 
 func (s *Server) handleNetmailRead(w http.ResponseWriter, r *http.Request) {
-	u, ok := s.requireUser(w, r)
-	if !ok {
+	if _, ok := s.requireUser(w, r); !ok {
 		return
 	}
-	msgNum, _ := strconv.Atoi(r.URL.Query().Get("num"))
-	msgs, err := s.Deps.Messages.ListNetmail(u.Name, u.Sysop, msgNum, 1)
-	if err != nil || len(msgs) == 0 {
-		http.Error(w, "message not found", http.StatusNotFound)
+	num := strings.TrimSpace(r.URL.Query().Get("num"))
+	if num == "" {
+		http.Redirect(w, r, "/netmail/app", http.StatusSeeOther)
 		return
 	}
-	msg := msgs[0]
-	displayBody := FormatMessageBodyHTML(msg.Body)
-	if u.Sysop {
-		displayBody = fido.ReconstructSource(fidoSourceOpts(msg, ""))
-	}
-	data := struct {
-		messageReadData
-		Message     *messages.Message
-		DisplayBody string
-	}{
-		messageReadData: readPageData(s, r, msg),
-		Message:         msg,
-		DisplayBody:     displayBody,
-	}
-	s.render(w, "netmail_read.html", data)
+	http.Redirect(w, r, "/netmail/app?num="+url.QueryEscape(num), http.StatusSeeOther)
 }
 
 func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {

@@ -3,9 +3,14 @@
 <div class="card mb-3">
   <div class="card-header"><h2 class="h5 mb-0">{{t .Locale "messages.title"}}</h2></div>
   <div class="card-body">
-  <div class="table-responsive">
+  {{if not .Groups}}
+  <p class="meta mb-0">{{t .Locale "messages.empty"}}</p>
+  {{else}}
+  {{range .Groups}}
+  <h3 class="section-head h6 mt-0 mb-2">{{if .Network}}{{.Network}}{{else}}{{t $.Locale "conferences.group.local"}}{{end}}</h3>
+  <div class="table-responsive mb-4">
   <table class="table table-dark table-striped table-hover align-middle mb-0">
-    <thead><tr><th>{{t .Locale "common.area"}}</th><th>{{t .Locale "common.description"}}</th><th>{{t .Locale "messages.col.stats"}}</th><th></th></tr></thead>
+    <thead><tr><th>{{t $.Locale "common.area"}}</th><th>{{t $.Locale "common.description"}}</th><th>{{t $.Locale "messages.col.stats"}}</th><th></th></tr></thead>
     <tbody>
     {{range .Rows}}
     <tr>
@@ -16,12 +21,12 @@
       </td>
       <td><a href="/messages?conf={{.Conference.ID}}">{{t $.Locale "common.enter"}}</a></td>
     </tr>
-    {{else}}
-    <tr><td colspan="4">{{t .Locale "messages.empty"}}</td></tr>
     {{end}}
     </tbody>
   </table>
   </div>
+  {{end}}
+  {{end}}
   </div>
 </div>
 {{template "footer" .}}

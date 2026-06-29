@@ -38,14 +38,18 @@ func readPageData(s *Server, r *http.Request, m *messages.Message) messageReadDa
 
 type messageViewResponse struct {
 	*messages.Message
-	DisplayBody string `json:"DisplayBody,omitempty"`
-	LangLabel   string `json:"LangLabel,omitempty"`
+	DisplayBody string            `json:"DisplayBody,omitempty"`
+	LangLabel   string            `json:"LangLabel,omitempty"`
+	LangCode    string            `json:"LangCode,omitempty"`
+	Reply       *netmailReplyInfo `json:"Reply,omitempty"`
 }
 
 func buildMessageViewJSON(locale string, m *messages.Message, displayBody string) messageViewResponse {
+	langCode := fido.ParseLangFromKludges(m.FidoKludges)
 	return messageViewResponse{
 		Message:     m,
 		DisplayBody: displayBody,
 		LangLabel:   messageLangLabel(locale, m),
+		LangCode:    langCode,
 	}
 }

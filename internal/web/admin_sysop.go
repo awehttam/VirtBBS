@@ -107,12 +107,12 @@ func (s *Server) handleAdminConferences(w http.ResponseWriter, r *http.Request) 
 	list, _ := s.Deps.Conferences.List()
 	data := struct {
 		pageData
-		Conferences []*conferences.Conference
-		Networks    []string
+		Groups   []conferences.NetworkGroup
+		Networks []string
 	}{
-		pageData:    s.page(r),
-		Conferences: list,
-		Networks:    fidoNetworkNamesList(),
+		pageData: s.page(r),
+		Groups:   groupConferences(list),
+		Networks: fidoNetworkNamesList(),
 	}
 	s.render(w, "admin_conferences.html", data)
 }
@@ -144,14 +144,14 @@ func (s *Server) handleAdminMessages(w http.ResponseWriter, r *http.Request) {
 	}
 	data := struct {
 		pageData
-		Conferences []*conferences.Conference
-		Messages    []*messages.Message
-		ConfID      int
+		Groups   []conferences.NetworkGroup
+		Messages []*messages.Message
+		ConfID   int
 	}{
-		pageData:    s.page(r),
-		Conferences: allConfs,
-		Messages:    msgs,
-		ConfID:      confID,
+		pageData: s.page(r),
+		Groups:   groupConferences(allConfs),
+		Messages: msgs,
+		ConfID:   confID,
 	}
 	s.render(w, "admin_messages.html", data)
 }

@@ -1,52 +1,75 @@
 {{define "compose_editor"}}
 <div class="compose-editor" data-compose-editor data-editor-type="{{.EditorType}}">
-  <div class="mb-2">
-    <label class="form-label" for="{{.TextareaID}}">{{t .Locale "common.message"}}</label>
-    <div class="row g-2 align-items-end mb-2">
-      <div class="col-sm-6">
-        <label class="form-label form-label-sm mb-0" for="{{.TextareaID}}-markup">{{t .Locale "compose.markup_format"}}</label>
-        <select class="form-select form-select-sm" id="{{.TextareaID}}-markup" data-compose-markup>
+  <label class="form-label" for="{{.TextareaID}}">{{t .Locale "common.message"}}</label>
+
+  <div class="compose-workspace card">
+    <div class="card-header compose-toolbar-bar py-2">
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <select class="form-select form-select-sm compose-markup-select" id="{{.TextareaID}}-markup" data-compose-markup aria-label="{{t .Locale "compose.markup_format"}}">
           <option value="plain">{{t .Locale "compose.plain_text"}}</option>
           <option value="stylecodes">{{t .Locale "compose.stylecodes_label"}}</option>
           <option value="ansi">{{t .Locale "compose.ansi_label"}}</option>
         </select>
+
+        <div class="compose-toolbar btn-toolbar mb-0 d-none" data-compose-toolbar="stylecodes" role="toolbar">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-sc-action="bold" title="{{t .Locale "compose.bold"}}"><strong>B</strong></button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-sc-action="italic" title="{{t .Locale "compose.italic"}}"><em>I</em></button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-sc-action="underline" title="{{t .Locale "compose.underline"}}"><u>U</u></button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-sc-action="inverse" title="{{t .Locale "compose.inverse"}}">#</button>
+        </div>
+
+        <span class="meta small compose-mode-hint d-none" data-compose-hint="plain">{{t .Locale "compose.plain_text"}}</span>
+        <span class="meta small compose-mode-hint d-none" data-compose-hint="stylecodes">{{t .Locale "compose.stylecodes_hint"}}</span>
+
+        <div class="ms-auto d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-sm btn-outline-primary" data-compose-preview>{{t .Locale "compose.preview"}}</button>
+        </div>
       </div>
-      <div class="col-sm-6">
-        <p class="form-text mb-0">{{t .Locale "compose.markup_format_help"}}</p>
+    </div>
+
+    <div class="card-body p-0 compose-editor-body">
+      <div class="compose-ansi-host d-none" data-compose-ansi-host></div>
+      <textarea class="form-control compose-textarea border-0 rounded-0 font-monospace" id="{{.TextareaID}}" name="{{.TextareaName}}" rows="14"{{if .Required}} required{{end}}>{{.Body}}</textarea>
+    </div>
+
+    <div class="card-footer compose-footer py-2">
+      <div class="d-flex flex-wrap align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2">
+          <label class="form-label form-label-sm mb-0" for="{{.TextareaID}}-wrap">{{t .Locale "compose.hard_wrap"}}</label>
+          <select class="form-select form-select-sm compose-wrap-select" id="{{.TextareaID}}-wrap" data-compose-hard-wrap>
+            <option value="0">{{t .Locale "compose.hard_wrap_off"}}</option>
+            <option value="79">{{t .Locale "compose.hard_wrap_79"}}</option>
+            <option value="39">{{t .Locale "compose.hard_wrap_39"}}</option>
+          </select>
+          <button type="button" class="btn btn-sm btn-outline-secondary d-none" data-compose-apply-wrap>{{t .Locale "compose.apply_wrap"}}</button>
+        </div>
+        <div class="compose-stats meta mb-0 ms-auto" data-compose-stats>
+          <span data-compose-lines>0</span> · <span data-compose-bytes>0</span>
+          <span class="compose-size-warn text-warning ms-2 d-none" data-compose-size-warn></span>
+        </div>
       </div>
+      <p class="form-text mb-0 mt-1">{{t .Locale "compose.markup_format_help"}} · {{t .Locale "compose.hard_wrap_help"}}</p>
     </div>
-    <div class="compose-toolbar btn-toolbar mb-2 d-none" data-compose-toolbar="plain" role="toolbar" aria-label="{{t .Locale "compose.plain_text"}}">
-      <span class="meta small">{{t .Locale "compose.plain_text"}}</span>
-    </div>
-    <div class="compose-toolbar btn-toolbar mb-2 d-none" data-compose-toolbar="stylecodes" role="toolbar" aria-label="{{t .Locale "compose.stylecodes_label"}}">
-      <button type="button" class="btn btn-sm btn-outline-secondary" data-sc-action="bold" title="{{t .Locale "compose.bold"}}"><strong>B</strong></button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" data-sc-action="italic" title="{{t .Locale "compose.italic"}}"><em>I</em></button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" data-sc-action="underline" title="{{t .Locale "compose.underline"}}"><u>U</u></button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" data-sc-action="inverse" title="{{t .Locale "compose.inverse"}}">#</button>
-      <span class="meta small ms-2">{{t .Locale "compose.stylecodes_hint"}}</span>
-    </div>
-    <div class="compose-ansi-host d-none" data-compose-ansi-host></div>
-    <textarea class="form-control compose-textarea font-monospace" id="{{.TextareaID}}" name="{{.TextareaName}}" rows="12"{{if .Required}} required{{end}}>{{.Body}}</textarea>
-  </div>
-  <details class="compose-advanced mb-2">
-    <summary class="meta">{{t .Locale "compose.advanced_options"}}</summary>
-    <div class="mt-2">
-      <label class="form-label form-label-sm" for="{{.TextareaID}}-wrap">{{t .Locale "compose.hard_wrap"}}</label>
-      <select class="form-select form-select-sm w-auto" id="{{.TextareaID}}-wrap" data-compose-hard-wrap>
-        <option value="0">{{t .Locale "compose.hard_wrap_off"}}</option>
-        <option value="79">{{t .Locale "compose.hard_wrap_79"}}</option>
-        <option value="39">{{t .Locale "compose.hard_wrap_39"}}</option>
-      </select>
-      <p class="form-text">{{t .Locale "compose.hard_wrap_help"}}</p>
-    </div>
-  </details>
-  <div class="compose-stats meta mb-2" data-compose-stats>
-    <span data-compose-lines>0</span> · <span data-compose-bytes>0</span>
-    <span class="compose-size-warn text-warning ms-2 d-none" data-compose-size-warn></span>
   </div>
 </div>
+
+<div class="modal fade" id="compose-preview-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5">{{t .Locale "compose.preview"}}</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{t .Locale "compose.close"}}"></button>
+      </div>
+      <div class="modal-body" id="compose-preview-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{t .Locale "compose.close"}}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script type="application/json" id="compose-i18n">{{.ComposeI18nJSON}}</script>
-<script src="/static/ansi-preview.js"></script>
-<script src="/static/ansi-editor.js"></script>
-<script src="/static/compose-editor.js"></script>
+<script src="/static/ansi-preview.js" defer></script>
+<script src="/static/ansi-editor.js" defer></script>
+<script src="/static/compose-editor.js" defer></script>
 {{end}}

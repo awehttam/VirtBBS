@@ -232,6 +232,25 @@ func (s *Store) CountNetmail(forUser string, sysop bool) (int, error) {
 	return n, err
 }
 
+// CountNetmailUnread returns netmail with msg_number greater than afterMsgNum.
+func (s *Store) CountNetmailUnread(forUser string, sysop bool, afterMsgNum int) (int, error) {
+	where, args := netmailRecipientFilter(forUser, sysop)
+	args = append(args, afterMsgNum)
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM messages WHERE `+netmailBaseSQL+where+` AND msg_number > ?`, args...).Scan(&n)
+	return n, err
+}
+
+// GetNetmail returns one inbound netmail message visible to forUser.
+func (s *Store) GetNetmail(forUser string, sysop bool, msgNum int) (*Message, error) {
+	where, args := netmailRecipientFilter(forUser, sysop)
+	args = append(args, msgNum)
+	row := s.db.QueryRow(`
+		SELECT `+messageCols+`
+		FROM messages WHERE `+netmailBaseSQL+where+` AND msg_number=?`, args...)
+	return scanMessage(row)
+}
+
 // ListNetmail returns inbound netmail for forUser, oldest first.
 func (s *Store) ListNetmail(forUser string, sysop bool, startNum, limit int) ([]*Message, error) {
 	where, args := netmailRecipientFilter(forUser, sysop)

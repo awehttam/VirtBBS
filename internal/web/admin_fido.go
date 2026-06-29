@@ -320,10 +320,8 @@ func (s *Server) handleAdminFidoNetworks(w http.ResponseWriter, r *http.Request)
 		Network       string
 		IsPrimary     bool
 		Def           fido.NetworkDef
-		AreasText     string
-		FileAreasText string
-		DownlinksText string
-		AKAsText      string
+		AKAsText              string
+		NetworksI18nJSON      string
 		NodeFlags     []fido.NodeFlagDef
 		SelectedFlags []string
 		FlagSet       map[string]bool
@@ -334,10 +332,8 @@ func (s *Server) handleAdminFidoNetworks(w http.ResponseWriter, r *http.Request)
 		Network:       network,
 		IsPrimary:     strings.EqualFold(network, cfg.Fido.EffectivePrimaryName()),
 		Def:           *nd,
-		AreasText:     formatAreaMap(nd.Areas),
-		FileAreasText: formatAreaMap(nd.FileAreas),
-		DownlinksText: formatDownlinks(nd.Downlinks),
-		AKAsText:      strings.Join(nd.AKAs, "\n"),
+		AKAsText:         strings.Join(nd.AKAs, "\n"),
+		NetworksI18nJSON: adminFidoNetworksI18nJSON(localeFromRequest(r)),
 		SelectedFlags: nd.NodeFlags,
 	}
 	data.FlagSet = map[string]bool{}
@@ -396,9 +392,6 @@ func (s *Server) handleAdminFidoNetworks(w http.ResponseWriter, r *http.Request)
 			}
 		case "save":
 			merged := *config.Get()
-			areas := parseAreaMapLines(r.FormValue("areas"))
-			fileAreas := parseAreaMapLines(r.FormValue("file_areas"))
-			downlinks := parseDownlinkLines(r.FormValue("downlinks"))
 			akas := strings.Split(strings.TrimSpace(r.FormValue("akas")), "\n")
 			newName := strings.TrimSpace(r.FormValue("network_name"))
 			if strings.EqualFold(network, merged.Fido.EffectivePrimaryName()) {
@@ -418,9 +411,6 @@ func (s *Server) handleAdminFidoNetworks(w http.ResponseWriter, r *http.Request)
 				merged.Fido.NodelistURL = strings.TrimSpace(r.FormValue("nodelist_url"))
 				merged.Fido.NodelistUpdateIntervalHours = formInt(r, "nodelist_update_hours", 0)
 				merged.Fido.AKAs = akas
-				merged.Fido.Areas = areas
-				merged.Fido.FileAreas = fileAreas
-				merged.Fido.Downlinks = downlinks
 				if newName != "" {
 					merged.Fido.Name = newName
 				}
@@ -450,9 +440,6 @@ func (s *Server) handleAdminFidoNetworks(w http.ResponseWriter, r *http.Request)
 					nd.NodelistUpdateIntervalHours = formInt(r, "nodelist_update_hours", 0)
 					nd.NodelistEchoTag = strings.TrimSpace(r.FormValue("nodelist_echo_tag"))
 					nd.AKAs = akas
-					nd.Areas = areas
-					nd.FileAreas = fileAreas
-					nd.Downlinks = downlinks
 					break
 				}
 			}
@@ -470,9 +457,6 @@ func (s *Server) handleAdminFidoNetworks(w http.ResponseWriter, r *http.Request)
 		if nd != nil {
 			data.Network = network
 			data.Def = *nd
-			data.AreasText = formatAreaMap(nd.Areas)
-			data.FileAreasText = formatAreaMap(nd.FileAreas)
-			data.DownlinksText = formatDownlinks(nd.Downlinks)
 			data.AKAsText = strings.Join(nd.AKAs, "\n")
 			data.SelectedFlags = nd.NodeFlags
 		}

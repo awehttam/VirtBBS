@@ -188,7 +188,7 @@ Log in with your BBS username and password. Sysops see **Admin** in the navigati
 | Minor (x.**N**.0) | Bumped on significant feature additions |
 | Major (**N**.0.0) | Bumped on explicit request |
 
-Current version: **1.7.0**
+Current version: **1.7.1**
 
 ---
 

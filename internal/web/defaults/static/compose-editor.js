@@ -5,6 +5,7 @@
   var WRAP_KEY = 'virtbbs.compose.hardWrap';
   var MAX_BYTES = 16384;
   var WARN_BYTES = 14336;
+  var booted = false;
 
   function loadI18n() {
     var el = document.getElementById('compose-i18n');
@@ -31,6 +32,21 @@
     return editorType === 'full' ? 'ansi' : 'stylecodes';
   }
 
+  function reflowHardWrap(text, limit) {
+    if (!limit || limit < 1) return text;
+    return String(text || '').split('\n').map(function (line) {
+      var out = [];
+      while (line.length > limit) {
+        var breakAt = line.lastIndexOf(' ', limit);
+        if (breakAt <= 0) breakAt = limit;
+        out.push(line.slice(0, breakAt).replace(/\s+$/, ''));
+        line = line.slice(breakAt).replace(/^\s+/, '');
+      }
+      out.push(line);
+      return out.join('\n');
+    }).join('\n');
+  }
+
   function scAction(ta, action) {
     var ch = { bold: '*', italic: '/', underline: '_', inverse: '#' }[action];
     var ph = { bold: 'bold text', italic: 'italic text', underline: 'underlined text', inverse: 'inverse text' }[action];
@@ -53,34 +69,11 @@
     ta.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  function bindHardWrap(ta, getLimit) {
-    ta.addEventListener('keydown', function (e) {
-      var hardWrapLimit = getLimit();
-      if (!hardWrapLimit) return;
-      if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (this.selectionStart !== this.selectionEnd) return;
-      var val = this.value;
-      var pos = this.selectionStart;
-      var lineStart = val.lastIndexOf('\n', pos - 1) + 1;
-      if (pos - lineStart < hardWrapLimit) return;
-      e.preventDefault();
-      if (e.key === ' ') {
-        this.value = val.substring(0, pos) + '\n' + val.substring(pos);
-        this.selectionStart = this.selectionEnd = pos + 1;
-      } else {
-        var lineText = val.substring(lineStart, pos);
-        var lastSpaceRel = lineText.lastIndexOf(' ');
-        if (lastSpaceRel >= 0) {
-          var breakPos = lineStart + lastSpaceRel;
-          this.value = val.substring(0, breakPos) + '\n' + val.substring(breakPos + 1, pos) + e.key + val.substring(pos);
-          this.selectionStart = this.selectionEnd = pos + 1;
-        } else {
-          this.value = val.substring(0, pos) + '\n' + e.key + val.substring(pos);
-          this.selectionStart = this.selectionEnd = pos + 2;
-        }
-      }
-      this.dispatchEvent(new Event('input', { bubbles: true }));
-    });
+  function showBootstrapModal(id) {
+    var el = document.getElementById(id);
+    if (!el || !window.bootstrap || !window.bootstrap.Modal) return false;
+    window.bootstrap.Modal.getOrCreateInstance(el).show();
+    return true;
   }
 
   function ComposeEditor(root) {
@@ -90,13 +83,17 @@
     this.textarea = root.querySelector('textarea');
     this.markupSelect = root.querySelector('[data-compose-markup]');
     this.hardWrapSelect = root.querySelector('[data-compose-hard-wrap]');
+    this.applyWrapBtn = root.querySelector('[data-compose-apply-wrap]');
+    this.previewBtn = root.querySelector('[data-compose-preview]');
     this.statsLines = root.querySelector('[data-compose-lines]');
     this.statsBytes = root.querySelector('[data-compose-bytes]');
     this.sizeWarn = root.querySelector('[data-compose-size-warn]');
     this.ansiHost = root.querySelector('[data-compose-ansi-host]');
+    this.editorBody = root.querySelector('.compose-editor-body');
     this.ansiEditor = null;
     this.editorType = root.getAttribute('data-editor-type') || 'simple';
     this.hardWrapLimit = 0;
+    this.mode = 'plain';
     this.init();
   }
 
@@ -111,6 +108,8 @@
       this.hardWrapLimit = parseInt(savedWrap, 10) || 0;
     }
     this.setMode(mode);
+    this.applyWrapVisual();
+
     if (this.markupSelect) {
       this.markupSelect.addEventListener('change', function () {
         self.setMode(self.markupSelect.value);
@@ -121,58 +120,143 @@
       this.hardWrapSelect.addEventListener('change', function () {
         self.hardWrapLimit = parseInt(self.hardWrapSelect.value, 10) || 0;
         localStorage.setItem(WRAP_KEY, String(self.hardWrapLimit));
+        self.applyWrapVisual();
+        self.toggleApplyWrap();
+        if (self.hardWrapLimit) self.applyHardWrapToTextarea();
       });
     }
-    bindHardWrap(this.textarea, function () { return self.hardWrapLimit; });
+    if (this.applyWrapBtn) {
+      this.applyWrapBtn.addEventListener('click', function () {
+        self.applyHardWrapToTextarea();
+      });
+    }
+    if (this.previewBtn) {
+      this.previewBtn.addEventListener('click', function () {
+        self.openPreview();
+      });
+    }
+
     this.textarea.addEventListener('input', function () { self.updateStats(); });
-    this.textarea.addEventListener('keydown', function (e) {
-      if ((e.ctrlKey || e.metaKey) && self.markupSelect && self.markupSelect.value === 'stylecodes') {
-        if (e.key === 'b') { e.preventDefault(); scAction(self.textarea, 'bold'); }
-        if (e.key === 'i') { e.preventDefault(); scAction(self.textarea, 'italic'); }
-      }
-    });
+    this.textarea.addEventListener('keydown', function (e) { self.onKeydown(e); });
+
     this.root.querySelectorAll('[data-sc-action]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         scAction(self.textarea, btn.getAttribute('data-sc-action'));
       });
     });
+
     this.updateStats();
+    this.toggleApplyWrap();
+  };
+
+  ComposeEditor.prototype.toggleApplyWrap = function () {
+    if (!this.applyWrapBtn) return;
+    this.applyWrapBtn.classList.toggle('d-none', !this.hardWrapLimit);
+  };
+
+  ComposeEditor.prototype.applyWrapVisual = function () {
+    if (!this.textarea) return;
+    if (this.hardWrapLimit > 0) {
+      this.textarea.style.maxWidth = (this.hardWrapLimit + 2) + 'ch';
+      this.textarea.style.width = '100%';
+      this.textarea.classList.add('compose-wrap-active');
+      this.textarea.setAttribute('data-wrap-cols', String(this.hardWrapLimit));
+    } else {
+      this.textarea.style.maxWidth = '';
+      this.textarea.classList.remove('compose-wrap-active');
+      this.textarea.removeAttribute('data-wrap-cols');
+    }
+    if (this.ansiEditor && this.ansiEditor.syncRulerMetrics) {
+      this.ansiEditor.syncRulerMetrics();
+    }
+  };
+
+  ComposeEditor.prototype.applyHardWrapToTextarea = function () {
+    if (!this.hardWrapLimit || !this.textarea) return;
+    var start = this.textarea.selectionStart;
+    var end = this.textarea.selectionEnd;
+    this.textarea.value = reflowHardWrap(this.textarea.value, this.hardWrapLimit);
+    this.textarea.selectionStart = start;
+    this.textarea.selectionEnd = end;
+    this.textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  ComposeEditor.prototype.onKeydown = function (e) {
+    if ((e.ctrlKey || e.metaKey) && this.mode === 'stylecodes') {
+      if (e.key === 'b') { e.preventDefault(); scAction(this.textarea, 'bold'); return; }
+      if (e.key === 'i') { e.preventDefault(); scAction(this.textarea, 'italic'); return; }
+    }
+    if (!this.hardWrapLimit) return;
+    if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+    var val = this.textarea.value;
+    var pos = this.textarea.selectionStart;
+    if (pos !== this.textarea.selectionEnd) return;
+    var lineStart = val.lastIndexOf('\n', pos - 1) + 1;
+    var line = val.substring(lineStart, pos);
+    if (line.length <= this.hardWrapLimit) return;
+    e.preventDefault();
+    var breakAt = line.lastIndexOf(' ', this.hardWrapLimit);
+    if (breakAt <= 0) breakAt = this.hardWrapLimit;
+    var absBreak = lineStart + breakAt;
+    this.textarea.value = val.substring(0, absBreak) + '\n' + val.substring(absBreak).replace(/^\s+/, '');
+    var newPos = absBreak + 1;
+    this.textarea.selectionStart = this.textarea.selectionEnd = newPos;
+    this.textarea.dispatchEvent(new Event('input', { bubbles: true }));
   };
 
   ComposeEditor.prototype.setMode = function (mode) {
-    var self = this;
+    this.mode = mode || 'plain';
     this.root.querySelectorAll('[data-compose-toolbar]').forEach(function (tb) {
-      var active = tb.getAttribute('data-compose-toolbar') === mode;
-      tb.classList.toggle('d-none', !active);
+      tb.classList.toggle('d-none', tb.getAttribute('data-compose-toolbar') !== mode);
+    });
+    this.root.querySelectorAll('[data-compose-hint]').forEach(function (hint) {
+      hint.classList.toggle('d-none', hint.getAttribute('data-compose-hint') !== mode);
     });
     if (mode === 'ansi') {
       this.mountAnsiEditor();
       this.textarea.classList.add('font-monospace');
     } else {
       this.unmountAnsiEditor();
-      if (mode !== 'ansi') this.textarea.classList.remove('font-monospace');
+      this.textarea.classList.toggle('font-monospace', mode === 'ansi');
     }
     if (this.ansiHost) this.ansiHost.classList.toggle('d-none', mode !== 'ansi');
+    var self = this;
     setTimeout(function () {
       if (self.ansiEditor && self.ansiEditor.syncRulerMetrics) self.ansiEditor.syncRulerMetrics();
+      self.applyWrapVisual();
     }, 0);
   };
 
   ComposeEditor.prototype.mountAnsiEditor = function () {
-    if (this.ansiEditor || !this.ansiHost || !window.AnsiEditor) return;
+    if (!this.ansiHost || !window.AnsiEditor) return;
+    if (this.ansiEditor) return;
     this.ansiHost.classList.remove('d-none');
     this.ansiHost.appendChild(this.textarea);
-    this.ansiEditor = window.AnsiEditor.create(this.ansiHost);
+    this.ansiEditor = window.AnsiEditor.create(this.ansiHost, { hidePreview: true });
   };
 
   ComposeEditor.prototype.unmountAnsiEditor = function () {
-    if (!this.ansiHost) return;
+    if (!this.ansiHost || !this.editorBody) return;
     if (this.textarea.parentNode === this.ansiHost) {
-      this.ansiHost.parentNode.insertBefore(this.textarea, this.ansiHost);
+      this.editorBody.insertBefore(this.textarea, this.ansiHost);
     }
     this.ansiHost.innerHTML = '';
     this.ansiHost.classList.add('d-none');
     this.ansiEditor = null;
+  };
+
+  ComposeEditor.prototype.openPreview = function () {
+    var body = document.getElementById('compose-preview-body');
+    if (!body) return;
+    var content = this.textarea ? this.textarea.value : '';
+    if (window.virtbbsComposePreview) {
+      window.virtbbsComposePreview.render(body, content, this.mode);
+    } else if (window.virtbbsAnsiPreview) {
+      window.virtbbsAnsiPreview.renderPreview(body, content);
+    } else {
+      body.innerHTML = '<pre class="mb-0">' + content.replace(/</g, '&lt;') + '</pre>';
+    }
+    showBootstrapModal('compose-preview-modal');
   };
 
   ComposeEditor.prototype.updateStats = function () {
@@ -203,8 +287,17 @@
     }
   };
 
-  var root = null;
-  document.querySelectorAll('[data-compose-editor]').forEach(function (el) {
-    root = new ComposeEditor(el);
-  });
+  function boot() {
+    if (booted) return;
+    booted = true;
+    document.querySelectorAll('[data-compose-editor]').forEach(function (el) {
+      new ComposeEditor(el);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
 })(window, document);

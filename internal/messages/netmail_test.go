@@ -55,3 +55,50 @@ func TestListNetmail_filtersByRecipient(t *testing.T) {
 		t.Fatalf("sysop got %d messages, want 3", len(all))
 	}
 }
+
+func TestCountNetmailUnread_andGetNetmail(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	store, err := Open(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 3; i++ {
+		if err := store.Post(&Message{
+			ConferenceID: 0,
+			FromName:     "Remote",
+			ToName:       "Alice",
+			Subject:      "Test",
+			DatePosted:   time.Now(),
+			Status:       "A",
+			Body:         "body",
+			FidoOrigin:   "1:234/567",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	unread, err := store.CountNetmailUnread("Alice", false, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unread != 3 {
+		t.Fatalf("unread = %d, want 3", unread)
+	}
+	unread, err = store.CountNetmailUnread("Alice", false, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unread != 1 {
+		t.Fatalf("unread after 2 = %d, want 1", unread)
+	}
+	m, err := store.GetNetmail("Alice", false, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.MsgNumber != 2 {
+		t.Fatalf("GetNetmail msg_number = %d, want 2", m.MsgNumber)
+	}
+}

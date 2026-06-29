@@ -37,12 +37,12 @@ func (s *Server) handleQWK(w http.ResponseWriter, r *http.Request) {
 	}
 	data := struct {
 		pageData
-		Conferences []*conferences.Conference
-		Flash       string
-		Error       string
+		Groups []conferences.NetworkGroup
+		Flash  string
+		Error  string
 	}{
-		pageData:    s.page(r),
-		Conferences: readable,
+		pageData: s.page(r),
+		Groups:   groupConferences(readable),
 	}
 	if r.Method == http.MethodPost {
 		if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/") {
@@ -148,18 +148,13 @@ func (s *Server) handleSubscriptions(w http.ResponseWriter, r *http.Request) {
 	}
 	registered, _ := s.Deps.Users.ListRegistered(u.ID)
 	all, _ := s.Deps.Conferences.List()
-	type row struct {
-		Conference *conferences.Conference
-		Subscribed bool
-		NewCount   int
-	}
+	var rows []SubscriptionRow
 	counts, _ := s.Deps.Users.NewMessageCounts(u.ID)
-	var rows []row
 	for _, c := range all {
 		if !c.Echo || !canReadConference(u, c) {
 			continue
 		}
-		rows = append(rows, row{
+		rows = append(rows, SubscriptionRow{
 			Conference: c,
 			Subscribed: registered[c.ID],
 			NewCount:   counts[c.ID],
@@ -167,10 +162,10 @@ func (s *Server) handleSubscriptions(w http.ResponseWriter, r *http.Request) {
 	}
 	data := struct {
 		pageData
-		Rows []row
+		Groups []SubscriptionNetworkGroup
 	}{
 		pageData: s.page(r),
-		Rows:     rows,
+		Groups:   groupSubscriptionRows(rows),
 	}
 	s.render(w, "subscriptions.html", data)
 }
@@ -373,10 +368,7 @@ func (s *Server) handleNotify(w http.ResponseWriter, r *http.Request) {
 			newTotal += n
 		}
 	}
-	netmail := 0
-	if n, err := s.Deps.Messages.CountNetmail(u.Name, u.Sysop); err == nil {
-		netmail = n
-	}
+	netmail := s.netmailUnreadCount(u)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"new_messages": newTotal,

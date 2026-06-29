@@ -119,24 +119,132 @@
       </div>
 
       <h3 class="section-head">{{t .Locale "admin_fido_networks.section.mappings"}}</h3>
-      <div class="row g-3 mb-4">
-        <div class="col-lg-6">
-          <label class="form-label" for="network-akas">{{t .Locale "admin_fido_networks.akas"}}</label>
-          <textarea class="form-control font-monospace" id="network-akas" name="akas" rows="3">{{.AKAsText}}</textarea>
-        </div>
-        <div class="col-lg-6">
-          <label class="form-label" for="network-downlinks">{{t .Locale "admin_fido_networks.downlinks"}}</label>
-          <textarea class="form-control font-monospace" id="network-downlinks" name="downlinks" rows="3">{{.DownlinksText}}</textarea>
-        </div>
-        <div class="col-lg-6">
-          <label class="form-label" for="network-areas">{{t .Locale "admin_fido_networks.echo_areas"}}</label>
-          <textarea class="form-control font-monospace" id="network-areas" name="areas" rows="5">{{.AreasText}}</textarea>
-        </div>
-        <div class="col-lg-6">
-          <label class="form-label" for="network-file-areas">{{t .Locale "admin_fido_networks.file_areas"}}</label>
-          <textarea class="form-control font-monospace" id="network-file-areas" name="file_areas" rows="5">{{.FileAreasText}}</textarea>
+      <div class="mb-3">
+        <label class="form-label" for="network-akas">{{t .Locale "admin_fido_networks.akas"}}</label>
+        <textarea class="form-control font-monospace" id="network-akas" name="akas" rows="3">{{.AKAsText}}</textarea>
+      </div>
+
+      <div id="fido-mappings-app" class="mb-4" data-network="{{.Network}}">
+        <div id="fido-mappings-alert" class="alert d-none" role="alert"></div>
+        <div class="row g-3">
+          <div class="col-lg-4">
+            <div class="card fido-mapping-card h-100">
+              <div class="card-header d-flex align-items-center justify-content-between py-2">
+                <span class="fw-semibold">{{t .Locale "admin_fido_networks.echo_areas"}}</span>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-fido-action="add-echo">{{t .Locale "common.add"}}</button>
+              </div>
+              <ul class="list-group list-group-flush fido-mapping-list" id="echo-areas-list"></ul>
+              <div class="card-body meta small py-2 d-none" id="echo-areas-empty">{{t .Locale "admin_fido_networks.empty.echo"}}</div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="card fido-mapping-card h-100">
+              <div class="card-header d-flex align-items-center justify-content-between py-2">
+                <span class="fw-semibold">{{t .Locale "admin_fido_networks.file_areas"}}</span>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-fido-action="add-file">{{t .Locale "common.add"}}</button>
+              </div>
+              <ul class="list-group list-group-flush fido-mapping-list" id="file-areas-list"></ul>
+              <div class="card-body meta small py-2 d-none" id="file-areas-empty">{{t .Locale "admin_fido_networks.empty.file"}}</div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="card fido-mapping-card h-100">
+              <div class="card-header d-flex align-items-center justify-content-between py-2">
+                <span class="fw-semibold">{{t .Locale "admin_fido_networks.downlinks"}}</span>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-fido-action="add-downlink">{{t .Locale "common.add"}}</button>
+              </div>
+              <ul class="list-group list-group-flush fido-mapping-list" id="downlinks-list"></ul>
+              <div class="card-body meta small py-2 d-none" id="downlinks-empty">{{t .Locale "admin_fido_networks.empty.downlinks"}}</div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <div class="modal fade" id="fido-echo-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title h5" id="fido-echo-modal-title">{{t .Locale "admin_fido_networks.modal.add_echo"}}</h2>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{t .Locale "compose.close"}}"></button>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" id="fido-echo-old-tag" value="">
+              <div class="mb-3">
+                <label class="form-label" for="fido-echo-tag">{{t .Locale "admin_fido_networks.col.tag"}}</label>
+                <input class="form-control font-monospace" id="fido-echo-tag" autocomplete="off">
+              </div>
+              <div class="mb-0">
+                <label class="form-label" for="fido-echo-conf">{{t .Locale "admin_fido_networks.col.conf_id"}}</label>
+                <select class="form-select" id="fido-echo-conf"></select>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{t .Locale "common.close"}}</button>
+              <button type="button" class="btn btn-primary" id="fido-echo-save">{{t .Locale "common.save"}}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="fido-file-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title h5" id="fido-file-modal-title">{{t .Locale "admin_fido_networks.modal.add_file"}}</h2>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{t .Locale "compose.close"}}"></button>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" id="fido-file-old-tag" value="">
+              <div class="mb-3">
+                <label class="form-label" for="fido-file-tag">{{t .Locale "admin_fido_networks.col.tag"}}</label>
+                <input class="form-control font-monospace" id="fido-file-tag" autocomplete="off">
+              </div>
+              <div class="mb-0">
+                <label class="form-label" for="fido-file-dir">{{t .Locale "admin_fido_networks.col.dir_id"}}</label>
+                <select class="form-select" id="fido-file-dir"></select>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{t .Locale "common.close"}}</button>
+              <button type="button" class="btn btn-primary" id="fido-file-save">{{t .Locale "common.save"}}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="fido-downlink-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title h5" id="fido-downlink-modal-title">{{t .Locale "admin_fido_networks.modal.add_downlink"}}</h2>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{t .Locale "compose.close"}}"></button>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" id="fido-downlink-mode" value="add">
+              <div class="mb-3">
+                <label class="form-label" for="fido-downlink-name">{{t .Locale "common.name"}}</label>
+                <input class="form-control" id="fido-downlink-name" autocomplete="off">
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="fido-downlink-addr">{{t .Locale "admin_fido_networks.col.address"}}</label>
+                <input class="form-control font-monospace" id="fido-downlink-addr" autocomplete="off">
+              </div>
+              <div class="mb-0">
+                <label class="form-label" for="fido-downlink-pw">{{t .Locale "common.password"}}</label>
+                <input class="form-control font-monospace" id="fido-downlink-pw" autocomplete="off">
+                <p class="form-text mb-0" id="fido-downlink-pw-hint">{{t .Locale "admin_fido_downlinks.password_keep"}}</p>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{t .Locale "common.close"}}</button>
+              <button type="button" class="btn btn-primary" id="fido-downlink-save">{{t .Locale "common.save"}}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script type="application/json" id="admin-fido-networks-i18n">{{.NetworksI18nJSON}}</script>
+      <script src="/static/admin_fido_networks.js"></script>
 
       <div class="btn-row mb-5">
         <button class="btn btn-primary" type="submit">{{t .Locale "admin_fido_networks.save_network"}}</button>

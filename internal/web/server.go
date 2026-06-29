@@ -92,6 +92,11 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc("/netmail/app", s.handleNetmailApp)
 	mux.HandleFunc("/api/netmail", s.handleAPINetmail)
 	mux.HandleFunc("/api/netmail/compose", s.handleAPINetmailCompose)
+	mux.HandleFunc("/api/netmail/delete", s.handleAPINetmailDelete)
+	mux.HandleFunc("/api/netmail/stats", s.handleAPINetmailStats)
+	mux.HandleFunc("/api/netmail/taglines", s.handleAPINetmailTaglines)
+	mux.HandleFunc("/api/addressbook", s.handleAPIAddressBook)
+	mux.HandleFunc("/api/nodelist/search", s.handleAPINodelistSearch)
 	mux.HandleFunc("/admin", s.handleAdmin)
 	mux.HandleFunc("/admin/binkp", s.handleAdminBinkP)
 	mux.HandleFunc("/admin/users", s.handleAdminUsers)
@@ -108,6 +113,10 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc("/admin/fido/ops", s.handleAdminFidoOps)
 	mux.HandleFunc("/admin/fido/debug_poll", s.handleAdminFidoDebugPoll)
 	mux.HandleFunc("/admin/fido/networks", s.handleAdminFidoNetworks)
+	mux.HandleFunc("/api/admin/fido/networks/mappings", s.handleAPIAdminFidoNetworksMappings)
+	mux.HandleFunc("/api/admin/fido/networks/areas", s.handleAPIAdminFidoNetworksAreas)
+	mux.HandleFunc("/api/admin/fido/networks/file-areas", s.handleAPIAdminFidoNetworksFileAreas)
+	mux.HandleFunc("/api/admin/fido/networks/downlinks", s.handleAPIAdminFidoNetworksDownlinks)
 	mux.HandleFunc("/admin/fido/routing", s.handleAdminFidoRouting)
 	mux.HandleFunc("/admin/fido/join", s.handleAdminFidoJoin)
 	mux.HandleFunc("/admin/fido/downlinks", s.handleAdminFidoDownlinks)
@@ -152,6 +161,7 @@ func (s *Server) templates() (*template.Template, error) {
 			"formatSize": func(locale string, bytes int64) string { return formatDataSize(bytes, locale) },
 			"chartData": func(c StatsCharts) template.JS { return template.JS(c.ChartJSON()) },
 			"chartJSON": func(s string) template.JS { return template.JS(s) },
+			"netmailI18nJSON": func(locale string) template.JS { return template.JS(netmailI18nJSON(locale)) },
 			"webOp": func(locale, op string) string { return translateWebOp(locale, op) },
 			"safeHTML": func(s string) template.HTML { return template.HTML(s) },
 		}
